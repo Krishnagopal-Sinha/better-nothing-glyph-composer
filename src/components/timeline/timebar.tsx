@@ -23,7 +23,7 @@ export default function TimeBarComponent() {
   }
   return (
     <div
-      className="bg-red-500 h-[20px] flex cursor-pointer"
+      className="bg-red-700 h-[20px] flex cursor-pointer"
       onClick={(e) => {
         e.preventDefault();
         const oldVol = volume;
@@ -34,15 +34,19 @@ export default function TimeBarComponent() {
           setVolume(0);
           play();
           // Bug fix - audio precesion on seek due to above bug fix this offset gotta happen
-          seek(seekPosition - 0.09);
+          // Bug fix, 0.02ish is the least it'll take!
+
+          seek(seekPosition > 0.1 ? seekPosition - 0.09 : seekPosition);
 
           setTimeout(pause, 50);
           setTimeout(() => setVolume(oldVol), 50);
         } else {
-          seek(seekPosition);
+          // Bug fix, 0.02ish is the least it'll take!
+
+          seek(seekPosition > 0.1 ? seekPosition - 0.09 : seekPosition);
         }
 
-        console.warn(`seeked @-> ${seekPosition} | ${playing}`);
+        // console.warn(`seeked @-> ${seekPosition} | ${playing}`);
       }}
     >
       {row}
