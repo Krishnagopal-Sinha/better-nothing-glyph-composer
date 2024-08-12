@@ -7,10 +7,22 @@ import fileDownload from "js-file-download";
 class FFmpegService {
   private static instance: FFmpegService;
   private ffmpeg: FFmpeg;
+  private progressPercentage: number;
 
   private constructor() {
     this.ffmpeg = new FFmpeg();
-    this.ffmpeg.on("log", (message) => console.log(message));
+    this.progressPercentage = 0;
+    this.ffmpeg.on("progress", (progress) => {
+      this.progressPercentage = parseInt((progress.progress * 100).toFixed(0));
+
+      if (this.progressPercentage > 99.4) {
+        this.progressPercentage = 0;
+      }
+
+      console.log(
+        `Saving file: ${this.progressPercentage}% done, please wait...`
+      );
+    });
   }
 
   static getInstance(): FFmpegService {
@@ -80,6 +92,9 @@ class FFmpegService {
 
   getFFmpegInstance(): FFmpeg {
     return this.ffmpeg;
+  }
+  getSaveProgress(): number {
+    return this.progressPercentage;
   }
 }
 

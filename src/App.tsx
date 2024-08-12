@@ -11,6 +11,8 @@ import { FileTypeValidator } from "use-file-picker/validators";
 import ffmpegService from "./lib/ffmpeg_service";
 import { generateCSV, processEdits } from "./logic/export_logic";
 import { Button } from "./components/ui/button";
+import InstructionComponent from "./components/timeline/instructions";
+import SaveDialog from "./components/controls/save_dialog";
 
 export default function App() {
   const timelineData = useTimelineStore((state) => state.items);
@@ -97,6 +99,7 @@ export default function App() {
 
   // FFMPEG
   const [ffmpegLoaded, setFfmpegLoaded] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   //fire on page load
   useEffect(() => {
@@ -120,7 +123,7 @@ export default function App() {
   return (
     <main className="flex flex-col">
       {/* Upper UI */}
-
+      {isSaving ? <SaveDialog isOpen={true} /> : <></>}
       <div className="fixed space-y-6 px-6 pt-4 min-h-[50dvh] bg-[#222222]  flex flex-col min-w-[100dvw] ">
         {/* Phone and Config Screen */}
         <div className="flex justify-between space-x-4">
@@ -128,7 +131,7 @@ export default function App() {
             currentAudioPosition={currentPosition}
             timelineData={timelineData}
           />
-          <ControlPanelComponent />
+          <ControlPanelComponent isSaving={isSaving} />
         </div>
 
         {/* Can also use isReady, better tbh but due to load audio btn not gonna */}
@@ -231,10 +234,14 @@ export default function App() {
                     generateCSV(timelineData, duration * 1000)
                   );
                   if (inputFile && processedEditData) {
-                    await ffmpegService.saveOutput(
-                      plainFiles[0],
-                      processedEditData
-                    );
+                    setIsSaving(true);
+                    console.log("true");
+                    await ffmpegService
+                      .saveOutput(plainFiles[0], processedEditData)
+                      .then(() => {
+                        setIsSaving(false);
+                        
+                      });
                   } else {
                     console.error(
                       "Save file error: No input file was detected"
@@ -262,7 +269,7 @@ export default function App() {
           ) : (
             // Load Audio button
             <Button
-              className="w-full py-6 text-lg font-light"
+              className="w-full py-6 text-lg font-normal"
               onClick={(e) => {
                 e.preventDefault();
                 loadAudioFile();
@@ -278,11 +285,15 @@ export default function App() {
       {/* Since Upper UI is fixed positoined i.e. floating, need margin to ensure space is kept on top */}
 
       <div className="min-h-[50dvh] mt-[50dvh]">
-        <EditorComponent
-          // duration={duration}
-          timelineData={timelineData}
-          currentAudioPosition={currentPosition}
-        />
+        {!isInputLoaded ? (
+          <InstructionComponent />
+        ) : (
+          <EditorComponent
+            // duration={duration}
+            timelineData={timelineData}
+            currentAudioPosition={currentPosition}
+          />
+        )}
       </div>
     </main>
   );
