@@ -21,7 +21,7 @@ export default function ControlPanelComponent({
           Simple Glyph Composer (ツ)
           <span className="animate-pulse duration-700 text-red-600">
             {" "}
-            {isSaving ? "[Processing...]" : ""}
+            {isSaving ? "[Saving...]" : ""}
           </span>
         </h2>
 

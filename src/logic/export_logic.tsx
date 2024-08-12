@@ -12,7 +12,7 @@ export function processEdits(csv: string): string | null {
       String.fromCharCode(...new Uint8Array(compressedData))
     );
 
-    console.warn(`base64Encoded:\n${base64Data}`);
+    // console.warn(`base64Encoded:\n${base64Data}`);
 
     return base64Data;
   } catch (error) {

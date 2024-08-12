@@ -226,6 +226,9 @@ export default function App() {
                 </svg>
               </button>
               <button
+                style={{
+                  cursor: isSaving ? "not-allowed" : "auto",
+                }}
                 onClick={async (e) => {
                   e.preventDefault();
                   //DELETE THIS
@@ -233,18 +236,17 @@ export default function App() {
                   const processedEditData = processEdits(
                     generateCSV(timelineData, duration * 1000)
                   );
-                  if (inputFile && processedEditData) {
+                  if (inputFile && processedEditData && !isSaving) {
                     setIsSaving(true);
                     console.log("true");
                     await ffmpegService
                       .saveOutput(plainFiles[0], processedEditData)
                       .then(() => {
                         setIsSaving(false);
-                        
                       });
                   } else {
                     console.error(
-                      "Save file error: No input file was detected"
+                      "Save file error: No input file was detected or another save process is ongoing"
                     );
                   }
                 }}
