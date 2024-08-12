@@ -1,50 +1,69 @@
-# React + TypeScript + Vite
+# 🌟 Simple Glyph Composer (ツ)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This side project is my attempt to add a fun and creative twist to my Nothing Phone (1) experience. As an already overworked developer, I put this together in my spare time, so any help is greatly appreciated. With this app, you can craft custom ringtones from your favorite audio files and synchronize them with the light patterns on the back of your phone, known as "Glyphs". Let's light up your life with some style! 🎵🌟
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Load Audio Files**: Import your favorite `.mp3` or `.ogg` files to start creating.
+- **Media Controls**: Easily play, pause, stop, and seek through your audio tracks.
+- **Glyph Editing**: Customize Glyphs with an intuitive editor that feels like a professional timeline tool.
+- **Interactive Glyph Blocks**:
+  - Add as many glyph blocks as you'd like
+  - Don't like a glyph block? Delete it.
+  - Drag to move a block around
+  - Select to Trim and adjust
+- **Visual Navigation**: Scroll to explore your glyph edits on track effortlessly.
 
-## Expanding the ESLint configuration
+## 🎨 How to Use (Instructions)
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+1. **Load Your Audio**:
 
-- Configure the top-level `parserOptions` property like this:
+   - Start by loading your audio file (supports `.mp3` and `.ogg` formats).
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+2. **Edit Glyphs**:
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+   - **Double tap** on the track to add a Glyph block.
+   - **Right click** on a block to delete it.
+   - **Drag** from the left side to move, or from the right to resize.
+   - **Select** and select right trim handle to trim and adjust
+   - **Scroll** right and left (x-axis) to explore your track effortlessly.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+3. **Save Your Creation**:
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+   - Click the save icon (floppy disk), rename your file (make sure it ends with `.ogg`), and save it.
+
+4. **Apply Your Ringtone**:
+   - Open the official Composer app from Nothing.
+   - Go to 'Library' via the 3-dash icon (make sure you have existing recordings for the icon to appear).
+   - Use the top-right 3-dot menu to import your saved file.
+   - Scroll to the top of 'Library' if you can’t find your file, preview it, and set it as your default ringtone.
+
+## 📜 Early Release Notes
+
+- **Stay Humorous**: Remember, this is an early version, so let's keep a light-hearted approach while using it! 😄
+
+## 📫 Contributing
+
+We welcome contributions! Feel free to open issues or submit pull requests.
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3.0.
+
+---
+
+Bring your Nothing Phone's tones to life with light and sound! Enjoy crafting with Simple Glyph Composer.
+
+Happy Composing! 🎵✨
+
+---
+
+_Made with ❤️ by Krishnagopal Sinha_
+
+## TODO:
+
+-[ ] Brightness feature
+-[ ] Add various effect feature
+-[ ] Fix Timeline preview in composer or make it empty ish or somthing ?
+-[x] Port on web
+-[ ] Host on github pages!
