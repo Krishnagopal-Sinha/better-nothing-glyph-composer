@@ -23,11 +23,15 @@ class FFmpegService {
   async load(): Promise<void> {
     // console.info(`-+~ Starting to FFMPEG LOADED `);
 
-    const coreURL = `/ffmpeg-core.js`;
-    const wasmURL = `/ffmpeg-core.wasm`;
+    // Hosting did not support files more than 25mb, the local file in public/ is over 32mb sadge :(
+    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+
     await this.ffmpeg.load({
-      coreURL: await toBlobURL(coreURL, `text/javascript`),
-      wasmURL: await toBlobURL(wasmURL, `application/wasm`),
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, `text/javascript`),
+      wasmURL: await toBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        `application/wasm`
+      ),
     });
     // console.info(`Success! FFMPEG LOADED -+~`);
   }
