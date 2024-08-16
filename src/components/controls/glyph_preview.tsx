@@ -1,19 +1,34 @@
-import { GlyphBlock } from "@/logic/glyph_model";
+import useTimelineStore from "@/lib/timeline_state";
+import { useEffect, useRef, useState } from "react";
+import { useGlobalAudioPlayer } from "react-use-audio-player";
 
-type Props = {
-  currentAudioPosition: number;
-  timelineData: {
-    [key: number]: GlyphBlock[];
-  };
-};
-export default function GlyphPreviewComponent({
-  timelineData,
-  currentAudioPosition,
-}: Props) {
-  const zoneColors = ["#444444", "#444444", "#444444", "#444444", "#444444"]; //0 means off, 1 means on
+export default function GlyphPreviewComponent() {
+  const { getPosition } = useGlobalAudioPlayer();
+  // Handle live playing indicator updates for playing audio
+  const frameRef = useRef<number>();
+  const timelineData = useTimelineStore((state) => state.items);
+
+  const [currentAudioPosition, setCurrentPosition] = useState(0);
+
+  useEffect(() => {
+    const animate = () => {
+      setCurrentPosition(getPosition() * 1000); //conver to milis
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [getPosition]);
+
+  const zoneColors = ["#111111", "#111111", "#111111", "#111111", "#111111"]; //0 means off, 1 means on
 
   function computeGlyphColor() {
-    currentAudioPosition = currentAudioPosition * 1000;
+
 
     for (let i = 0; i < Object.entries(timelineData).length; i++) {
       for (let j = 0; j < timelineData[i].length; j++) {
@@ -23,8 +38,11 @@ export default function GlyphPreviewComponent({
           currentAudioPosition <=
             timelineData[i][j].startTimeMilis + timelineData[i][j].durationMilis
         ) {
-          zoneColors[timelineData[i][j].glyphId] = "#ffffff";
-        //   console.info("Encountered lit up glyph!");
+          // Sqrt cuz it gets way to dim; making dims more bright.
+          zoneColors[timelineData[i][j].glyphId] = `rgb(255 255 255 / ${
+            Math.sqrt(timelineData[i][j].brightness) / Math.sqrt(4095)
+          })`;
+          //   console.info("Encountered lit up glyph!");
           break;
           // print(
           //     '+++++++++++ ${timelineData.items[i]![j].glyphId} -> ${zoneColors[timelineData.items[i]![j].glyphId]}');
@@ -37,12 +55,12 @@ export default function GlyphPreviewComponent({
   computeGlyphColor();
 
   return (
-    <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center">
+    <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center ">
       <svg
         version="1.1"
         id="Layer_1"
         xmlns="http://www.w3.org/2000/svg"
-		className="h-[300px] w-[150px]"
+        className="h-[300px] w-[150px]"
         viewBox="-5 -20 500 1000"
       >
         <path

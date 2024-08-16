@@ -10,7 +10,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
-import ffmpegService from "@/lib/ffmpeg_service";
+import ffmpegService from "@/logic/ffmpeg_service";
 
 export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
   const [val, setVal] = useState(isOpen);
@@ -20,7 +20,7 @@ export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
   );
 
   useEffect(() => {
-    // throttle down the updates!
+    // throttle down the save percentage updates!
     const timerID = setInterval(() => refreshUi(), 500);
 
     return () => clearInterval(timerID);
@@ -47,7 +47,7 @@ export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
           <div className="text-xl">Saving file</div>
         </div>
         <DialogFooter>
-          <Button onClick={() => setVal(false)}>Close</Button>
+          <Button onClick={() => setVal(false)}>Ok</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

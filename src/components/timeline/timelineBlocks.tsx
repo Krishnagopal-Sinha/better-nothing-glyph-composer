@@ -1,7 +1,5 @@
-"use client";
-
 import { GlyphBlock } from "@/logic/glyph_model";
-import useTimelineStore from "@/logic/timeline_state";
+import useTimelineStore from "@/lib/timeline_state";
 
 import {
   ContextMenu,
@@ -21,7 +19,7 @@ type Props = {
 export default function TimelineBlockComponent({ glyphItem }: Props) {
   const removeItem = useTimelineStore((state) => state.removeItem);
   const updateItem = useTimelineStore((state) => state.updateItem);
-  const selectItem = useTimelineStore((state) => state.selectItem);
+  const selectItem = useTimelineStore((state) => state.toggleSelection);
   const [trimStart, setTrimStart] = useState<boolean>(false);
 
   //Fun fact: Early artefact, used ui delta from handler pkg - so many issue, values would randomly go over 3k in delta, had to clamp and stuff; but yea current usage with movementX is much stable and better as it works as intended...
@@ -47,7 +45,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
       });
     }
 
-    console.log(`deltaX: ${e.movementX} `);
+    // console.log(`deltaX: ${e.movementX} `);
   };
 
   const handleStop = () => {
@@ -70,8 +68,11 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
                 selectItem(glyphItem, true);
               }
             }}
-            className="bg-white h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md"
+            className=" h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md"
             style={{
+              backgroundColor: `rgb(255 255 255 / ${
+                Math.sqrt(glyphItem.brightness) / Math.sqrt(4095)
+              })`,
               width: `${(glyphItem.durationMilis / 1000) * kMagicNumber}px`,
               borderWidth: `${glyphItem.isSelected ? 3 : 0}px`,
             }}

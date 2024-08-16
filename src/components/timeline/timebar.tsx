@@ -1,4 +1,4 @@
-"use client";
+
 
 import { kMagicNumber } from "@/lib/consts";
 import { useGlobalAudioPlayer } from "react-use-audio-player";

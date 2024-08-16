@@ -53,7 +53,7 @@ class FFmpegService {
     processedGlyphData: string
   ): Promise<void> {
     await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
-    console.log("save triger");
+    // console.log("save triger");
     const composer = `Spacewar Glyph Composer`;
     const album = `custom`;
     const custom1 = `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`;
