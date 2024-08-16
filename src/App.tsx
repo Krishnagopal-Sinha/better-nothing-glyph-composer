@@ -117,7 +117,7 @@ export default function App() {
     initializeFFmpeg();
   }, []);
 
-  if (ffmpegLoaded) {
+  if (!ffmpegLoaded) {
     return <FullPageAppLoaderPage />;
   }
   return (
