@@ -59,6 +59,8 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         <DraggableCore onDrag={handleDrag} onStop={handleStop}>
           {/* Timeline Block */}
           <div
+    title="Click to select / unselect, right click to delete"
+
             onClick={(e) => {
               e.preventDefault();
               // Toggle Selection

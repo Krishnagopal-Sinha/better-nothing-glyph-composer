@@ -5,9 +5,13 @@ class DataStore {
   private data: Data = {
     multiSelect: false,
     newBlockDurationMilis: 500,
+    // tracking it for no reason
+    isAudioLoaded:false,
     // Max is 4096 but lets keep @ 4095
     newBlockBrightness: 4095,
     currentAudioPositionInMilis: 0,
+    // acceptable values 0.5 and 2.0
+    audioSpeed:1,
   };
 
   //  update
