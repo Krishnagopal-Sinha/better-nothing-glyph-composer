@@ -169,7 +169,7 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
       ) {
         addItemFinal(newItem2);
       } else {
-        console.warn("Cannot add item: overlapping detected!");
+        console.warn("Cannot add item: overlapping detected-!");
       }
     }
   },

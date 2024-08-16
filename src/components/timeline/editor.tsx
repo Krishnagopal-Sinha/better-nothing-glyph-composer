@@ -57,23 +57,24 @@ Props) {
     timelineRows.push(
       <div
         key={i}
+    title="Double tap to add a new glyph block"
+
         className=" border-t-2 border-dotted border-gray-600 flex flex-row relative"
         onDoubleClick={(e) => {
           e.preventDefault();
           addItem(
             i,
-            (e.pageX / kMagicNumber) * 1000 //convert to milis
+            (e.pageX / kMagicNumber) * 1000 - 20 //convert to milis; offset needed cuz it looks off
           );
         }}
       >
-        {/* Calc offset and palce i.e. margin wackkk */}
         {rowData}
       </div>
     );
   }
 
   return (
-    <div className="min-h-[50dvh] flex flex-col justify-end min-w-max">
+    <div className="min-h-[50dvh] flex flex-col min-w-max">
       {/* time bar */}
       <TimeBarComponent />
       <div className="grid grid-rows-5 flex-grow">

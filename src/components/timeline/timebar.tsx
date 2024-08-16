@@ -1,5 +1,3 @@
-
-
 import { kMagicNumber } from "@/lib/consts";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 
@@ -12,17 +10,14 @@ export default function TimeBarComponent() {
   const row = [];
   for (let i = 0; i < boxesToGenerate; i++) {
     row.push(
-      <div
-        className=" border-l "
-        style={{ width: `${kMagicNumber}px` }}
-        key={i}
-      >
+      <div className=" border-l pl-[10px] leading-[17px]" style={{ width: `${kMagicNumber}px` }} key={i}>
         {i}s
       </div>
     );
   }
   return (
     <div
+    title="Seek audio by touching anywhere here..."
       className="bg-red-700 h-[20px] flex cursor-pointer"
       onClick={(e) => {
         e.preventDefault();

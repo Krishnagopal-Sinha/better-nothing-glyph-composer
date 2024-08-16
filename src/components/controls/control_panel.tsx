@@ -28,7 +28,7 @@ export default function ControlPanelComponent({
   const removeSelectedItem = useTimelineStore(
     (state) => state.removeSelectedItem
   );
-  const { getPosition } = useGlobalAudioPlayer();
+  const { getPosition, setRate } = useGlobalAudioPlayer();
 
   const onMultiSelectToggle = (e: boolean) => {
     dataStore.set("multiSelect", e);
@@ -69,8 +69,28 @@ export default function ControlPanelComponent({
     }
   };
 
+  const onAudioSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    if (value >= 0.5 && value <= 2) {
+      dataStore.set("audioSpeed", value);
+      try {
+        setRate(value);
+      } catch (e) {
+        console.error(`Error while setting audio rate: ${e}`);
+      }
+    } else {
+      toast.error("Invalid Value - Audio Speed", {
+        description: "Should be between 0.5x to 2x",
+        action: {
+          label: "Ok",
+          onClick: () => {},
+        },
+      });
+    }
+  };
+
   return (
-    <div className="flex  h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between">
+    <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between">
       {/* Info Title*/}
       <div className="flex flex-col justify-between ">
         <div className="space-y-2">
@@ -88,26 +108,38 @@ export default function ControlPanelComponent({
             <br />
             Supports: Nothing Phone(1) & Phone(2)
             <br />
-            (v0.0.1)
+            (v0.0.2)
           </p>
         </div>
 
-        <div className="space-x-2 flex items-center">
+        <div className=" mt-4 sm:mt-0 space-x-2 flex items-center">
           {/* Instruction Button */}
           <OpenInstructionButton />
           {/* Command Center */}
           {isAudioLoaded && (
             <div className="border p-2 px-4 rounded-lg grid grid-cols-3 gap-4 border-white">
               {/* copy button */}
-              <button onClick={copyItems}>
+              <button
+                onClick={copyItems}
+                title={"Copy"}
+                aria-label="copy button"
+              >
                 <Copy />
               </button>
               {/* Paste button */}
-              <button onClick={() => pasteItems(getPosition() * 1000)}>
+              <button
+                onClick={() => pasteItems(getPosition() * 1000)}
+                title={"Paste"}
+                aria-label="paste button"
+              >
                 <Clipboard />
               </button>
               {/* Delete button */}
-              <button onClick={removeSelectedItem}>
+              <button
+                onClick={removeSelectedItem}
+                title={"Delete"}
+                aria-label="delete button"
+              >
                 <Trash />
               </button>
             </div>
@@ -163,6 +195,21 @@ export default function ControlPanelComponent({
             min={1}
             step={1}
           />
+
+          {/* Configure audio speed */}
+          <Label htmlFor="newBlockBrightness" className="text-lg font-light">
+            Audio Speed
+            <br />
+          </Label>
+          <Input
+            onChange={onAudioSpeedChange}
+            id="newBlockBrightness"
+            type="number"
+            defaultValue={dataStore.get("audioSpeed") ?? 1}
+            max={2}
+            min={0.5}
+            step={0.1}
+          />
         </fieldset>
       </form>
     </div>
@@ -173,7 +220,9 @@ export function OpenInstructionButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="w-44">Instruction</Button>
+        <Button className="w-44" title="Open instructions">
+          Instruction
+        </Button>
       </DialogTrigger>
       <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit overflow-auto">
         <InstructionComponent />
