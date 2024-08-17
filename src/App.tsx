@@ -17,9 +17,13 @@ import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
 
 export default function App() {
+  // App state
   const timelineData = useTimelineStore((state) => state.items);
   const resetData = useTimelineStore((state) => state.reset);
   const updateDuration = useTimelineStore((state) => state.updateDuration);
+
+  // Input file
+  const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
   const { openFilePicker, filesContent, errors, plainFiles, clear } =
     useFilePicker({
       readFilesContent: true,
@@ -28,8 +32,8 @@ export default function App() {
       multiple: false,
       validators: [new FileTypeValidator(["mp3", "ogg"])],
     });
-  const resetState = useTimelineStore((state) => state.reset);
-  const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
+
+  // Audio Player
   const {
     load,
     stop,
@@ -39,30 +43,11 @@ export default function App() {
     // isReady,
     playing,
   } = useGlobalAudioPlayer();
-  // Handle live playing indicator updates for playing audio
-  // const frameRef = useRef<number>();
-  // const [currentPosition, setCurrentPosition] = useState(0);
 
-  // useEffect(() => {
-  //   const animate = () => {
-  //     setCurrentPosition(getPosition());
-  //     frameRef.current = requestAnimationFrame(animate);
-  //   };
-
-  //   frameRef.current = window.requestAnimationFrame(animate);
-
-  //   return () => {
-  //     if (frameRef.current) {
-  //       cancelAnimationFrame(frameRef.current);
-  //     }
-  //   };
-  // }, [getPosition]);
-
-  // Effect to handle the file loading process
   useEffect(() => {
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
-        load(filesContent[0].content);
+        load(filesContent[0].content, { format: "mp3" });
         setIsInputLoaded(true);
         dataStore.set("isAudioLoaded", true);
         // set seek rate
@@ -70,14 +55,11 @@ export default function App() {
         return;
       } catch (e) {
         console.error("Error while loading audio file:", e);
-        alert(`ERROR!\n Error while loading audio file!\n${e}`);
       }
     } else if (errors.length > 0) {
-      console.error("Error while selecting file:", errors);
+      console.error("Error while selecting audio file:", errors);
       alert(
-        `ERROR!\n Error while selecting input audio file!\n${errors
-          .map((err) => err)
-          .join(", ")}`
+        `File error.\nError while loading input audio file, possible file format mismatch.`
       );
     }
     if (isInputLoaded) {
@@ -88,9 +70,9 @@ export default function App() {
   }, [filesContent, errors]);
 
   function loadAudioFile() {
-    resetData();
-    clear();
-
+    // Close audio does these clean ups
+    // resetData();
+    // clear();
     openFilePicker();
   }
 
@@ -103,7 +85,7 @@ export default function App() {
     stopAudio();
     clear();
     setIsInputLoaded(false);
-    resetState();
+    resetData();
   }
 
   if (errors.length) {
