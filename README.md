@@ -10,9 +10,9 @@ Screenshot:
 
 Videos:
 
-https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/blob/main/demo/demo_v0.0.1.mp4
+https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/raw/main/demo/demo_v0.0.1.mp4
 
-https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/blob/main/demo/demo_v0.0.2.mp4
+https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/raw/main/demo/demo_v0.0.2.mp4
 
 ## 🚀 Features
 
