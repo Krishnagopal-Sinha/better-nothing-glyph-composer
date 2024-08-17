@@ -67,3 +67,4 @@ _Made with ❤️ by Krishnagopal Sinha_
 -[ ] Add various effect feature
 
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
+
