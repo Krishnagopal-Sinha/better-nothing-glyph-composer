@@ -2,8 +2,9 @@ export default function InstructionComponent() {
   return (
     // Instructions
     <div className="p-6 ">
-      <h2 className="text-2xl font-bold text-primary ">Instructions</h2><br/>
-      <pre className="text-muted-foreground text-wrap">
+      <h2 className="text-2xl font-bold text-primary">Instructions</h2>
+      <br />
+      <pre className="text-muted-foreground text-wrap overflow-auto">
         1. Double press to add a glyph block
         <br />
         2. Right-click and press on delete to remove
@@ -25,6 +26,10 @@ export default function InstructionComponent() {
         {"--->"} Select import and load up the transfered audio file (If file is
         long, it'll take time to import, be patient and try scrolling up,
         sometime files get's hidden up top on imports!)
+        <br />
+        {">"} NOTE: On official composer app, the Glyphs/beats may look a bit off
+        after a while, but upon setting ringtone it will be correct. There's a
+        sync issue with composer app.
         <br />- Goes without saying, start off by loading the audio file
         <br />- Glyph block {"->"} indicates that glyph light will be on for
         that amount of time

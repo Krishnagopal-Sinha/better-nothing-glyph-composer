@@ -1,5 +1,6 @@
 // ffmpegService.ts
 
+import { kMajorVersion } from "@/lib/consts";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import fileDownload from "js-file-download";
@@ -55,7 +56,7 @@ class FFmpegService {
     await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
     // console.log("save triger");
     const composer = `Spacewar Glyph Composer`;
-    const album = `custom`;
+    const album = `BNGC v${kMajorVersion}`;
     const custom1 = `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`;
 
     const outputFileName = `glyph_${Date.now()

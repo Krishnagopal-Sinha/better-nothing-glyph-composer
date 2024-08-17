@@ -27,7 +27,7 @@ export function generateCSV(
   totalDurationInMilis: number
 ): string {
   const intervals = [];
-console.log('new');
+
   // Fill with all 0
   for (let i = 0; i < Math.floor(totalDurationInMilis / kTimeStepMilis); i++) {
     intervals.push([0, 0, 0, 0, 0]);

@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Copy, Clipboard, Trash } from "lucide-react";
 import useTimelineStore from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
+import { kAppName, kAppVersion } from "@/lib/consts";
 
 export default function ControlPanelComponent({
   isSaving,
@@ -95,7 +96,7 @@ export default function ControlPanelComponent({
       <div className="flex flex-col justify-between ">
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-primary ">
-            Simple Glyph Composer (ツ)
+            {kAppName}
             <span className="animate-pulse duration-700 text-red-600">
               {" "}
               {isSaving ? "[Saving...]" : ""}
@@ -108,7 +109,7 @@ export default function ControlPanelComponent({
             <br />
             Supports: Nothing Phone(1) & Phone(2)
             <br />
-            (v0.0.2)
+            (v{kAppVersion})
           </p>
         </div>
 
