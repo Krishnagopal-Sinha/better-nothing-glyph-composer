@@ -1,6 +1,18 @@
-# 🌟 Simple Glyph Composer (ツ)
+# 🌟 Better Nothing Glyph Composer (ツ)
 
 Bring your Nothing Phone's tones to life with light and sound! This side project is my attempt to add a fun and creative twist to my Nothing Phone (1) experience. As an already overworked developer, I put this together in my spare time, so any help is greatly appreciated. With this app, you can craft custom ringtones from your favorite audio files and synchronize them with the light patterns on the back of your Nothing phone, known as "Glyphs".
+
+## 👾 Demo
+
+Screenshot:
+
+![Screenshot BNGC](demo/SS.png)
+
+Videos:
+
+https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/blob/main/demo/demo_v0.0.1.mp4
+
+https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer/blob/main/demo/demo_v0.0.2.mp4
 
 ## 🚀 Features
 
