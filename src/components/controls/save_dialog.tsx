@@ -33,7 +33,8 @@ export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
 
   return (
     <Dialog open={val}>
-      <DialogHeader>Save File</DialogHeader>
+      {/* TODO: Header comes down as a banner from top, fix and reimplement */}
+      {/* <DialogHeader>Save File</DialogHeader>  */}
       <DialogContent className="overflow-auto dontClose">
         <DialogHeader>
           <DialogTitle>Saving ({saveProgress}% done)</DialogTitle>
