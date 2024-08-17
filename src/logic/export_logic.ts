@@ -1,3 +1,4 @@
+import { kTimeStepMilis } from "@/lib/consts";
 import { GlyphBlock } from "./glyph_model";
 import pako from "pako";
 
@@ -26,18 +27,18 @@ export function generateCSV(
   totalDurationInMilis: number
 ): string {
   const intervals = [];
-
+console.log('new');
   // Fill with all 0
-  for (let i = 0; i < Math.floor(totalDurationInMilis / 16); i++) {
+  for (let i = 0; i < Math.floor(totalDurationInMilis / kTimeStepMilis); i++) {
     intervals.push([0, 0, 0, 0, 0]);
   }
 
   for (let i = 0; i < Object.entries(data).length; i++) {
     for (let j = 0; j < data[i].length; j++) {
       const curr = data[i][j];
-      const startTimeIdx = Math.floor(curr.startTimeMilis / 16);
+      const startTimeIdx = Math.floor(curr.startTimeMilis / kTimeStepMilis);
       const endTimeIdx = Math.floor(
-        (curr.startTimeMilis + curr.durationMilis) / 16
+        (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
       );
       for (let z = startTimeIdx; z < endTimeIdx; z++) {
         intervals[z][i] = curr.brightness;
