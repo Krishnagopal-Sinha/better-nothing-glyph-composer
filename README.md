@@ -62,8 +62,8 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 ## TODO:
 
--[ ] Brightness feature
--[ ] Add various effect feature
--[ ] Fix Timeline preview in composer or make it empty ish or somthing ?
--[x] Port on web
--[ ] Host on github pages!
+- [ ] Brightness feature
+- [ ] Add various effect feature
+- [ ] Fix Timeline preview in composer or make it empty ish or somthing ?
+- [x] Port on web
+- [ ] Host on github pages!
