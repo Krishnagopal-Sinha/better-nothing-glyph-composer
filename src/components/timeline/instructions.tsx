@@ -27,9 +27,7 @@ export default function InstructionComponent() {
         long, it'll take time to import, be patient and try scrolling up,
         sometime files get's hidden up top on imports!)
         <br />
-        {">"} NOTE: On official composer app, the Glyphs/beats may look a bit off
-        after a while, but upon setting ringtone it will be correct. There's a
-        sync issue with composer app.
+        {">"} NOTE: Glyph brightness is also dependent on Glyph brightness set from Phone settings, phone won't allow to go past this limit.
         <br />- Goes without saying, start off by loading the audio file
         <br />- Glyph block {"->"} indicates that glyph light will be on for
         that amount of time
