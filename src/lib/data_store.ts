@@ -2,17 +2,22 @@ type Data = Record<string, unknown>;
 
 class DataStore {
   // Base config
-  private data: Data = {
+  private baseConfig: Data = {
     multiSelect: false,
     newBlockDurationMilis: 500,
     // tracking it for no reason
-    isAudioLoaded:false,
+    isAudioLoaded: false,
     // Max is 4096 but lets keep @ 4095
     newBlockBrightness: 4095,
     currentAudioPositionInMilis: 0,
     // acceptable values 0.5 and 2.0
-    audioSpeed:1,
+    audioSpeed: 1,
+    // Loop feat. position :: undefined | number
+    loopAPositionInMilis: undefined,
+    loopBPositionInMilis: undefined,
   };
+  // Actual data store
+  private data: Data = { ...this.baseConfig };
 
   //  update
   set<T>(key: string, value: T): void {
@@ -29,6 +34,10 @@ class DataStore {
 
   getAll(): Data {
     return this.data;
+  }
+
+  reset(): void {
+    this.data = {...this.baseConfig};
   }
 }
 

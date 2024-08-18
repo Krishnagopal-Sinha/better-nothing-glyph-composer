@@ -64,7 +64,7 @@ Props) {
           e.preventDefault();
           addItem(
             i,
-            (e.pageX / kMagicNumber) * 1000 - 20 //convert to milis; offset needed cuz it looks off
+            (e.pageX / kMagicNumber) * 1000 - 20 //convert to milis; offset needed cuz it looks off otherwise
           );
         }}
       >

@@ -1,9 +1,11 @@
 import { kMagicNumber } from "@/lib/consts";
+import dataStore from "@/lib/data_store";
 import { useRef, useState, useEffect } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
+import { toast } from "sonner";
 
 export default function PlayingIndicator() {
-  const { getPosition } = useGlobalAudioPlayer();
+  const { getPosition, seek } = useGlobalAudioPlayer();
 
   // Handle live playing indicator updates for playing audio
   const frameRef = useRef<number>();
@@ -24,6 +26,33 @@ export default function PlayingIndicator() {
       }
     };
   }, [getPosition]);
+
+  // Loop feature
+  const loopAPositionInMilis: number | undefined = dataStore.get(
+    "loopAPositionInMilis"
+  );
+  const loopBPositionInMilis: number | undefined = dataStore.get(
+    "loopBPositionInMilis"
+  );
+  const currentAudioPositionInMilis = currentAudioPosition * 1000;
+  if (loopAPositionInMilis && loopBPositionInMilis) {
+    // conver to milis
+    if (currentAudioPositionInMilis >= loopBPositionInMilis) {
+      // takes in seconds
+      seek(loopAPositionInMilis / 1000);
+    } else if (currentAudioPositionInMilis < loopAPositionInMilis) {
+      // takes in seconds
+      seek(loopAPositionInMilis / 1000);
+      toast.error("Loop Active", {
+        description:
+          "Since loop is set, taking you to loop. Remove loop if this is unwanted.",
+        action: {
+          label: "Ok",
+          onClick: () => {},
+        },
+      });
+    }
+  }
 
   return (
     // Playing indicator

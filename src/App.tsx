@@ -12,11 +12,35 @@ import { Button } from "./components/ui/button";
 import InstructionComponent from "./components/timeline/instructions";
 import SaveDialog from "./components/controls/save_dialog";
 import { Toaster } from "./components/ui/sonner";
-import { Pause, Play, Save, Square, X } from "lucide-react";
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronsRightLeft,
+  Pause,
+  Play,
+  Save,
+  Square,
+  X,
+} from "lucide-react";
 import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
+import { kMagicNumber } from "./lib/consts";
 
 export default function App() {
+  // Promot user for exit confimation - leave it upto browser
+
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return "";
+  //   }
+
+  //   window.addEventListener("beforeunload", beforeUnload);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", beforeUnload);
+  //   };
+  // }, []);
+
   // App state
   const timelineData = useTimelineStore((state) => state.items);
   const resetData = useTimelineStore((state) => state.reset);
@@ -41,6 +65,7 @@ export default function App() {
     setRate,
     duration,
     // isReady,
+    seek,
     playing,
   } = useGlobalAudioPlayer();
 
@@ -82,9 +107,13 @@ export default function App() {
 
   function closeAudio(e: React.MouseEvent) {
     e.preventDefault();
+    // Reset All Possible States - cleanup
     stopAudio();
     clear();
     setIsInputLoaded(false);
+    // clear up loop data
+    dataStore.set("loopAPositionInMilis", undefined);
+    dataStore.set("loopAPositionInMilis", undefined);
     resetData();
   }
 
@@ -164,26 +193,37 @@ export default function App() {
                     }`}
                   >
                     <button
-                      onClick={togglePlayPause}
-                      title={"Play / Pause"}
-                      aria-label="Toggle play or pause button"
-                    >
-                      {playing ? <Pause /> : <Play />}
-                    </button>
-                    <button
                       onClick={stopAudio}
                       title={"Stop"}
                       aria-label="Stop audio button"
                     >
                       <Square />
                     </button>
-                    <button
-                      onClick={closeAudio}
-                      title={"Close audio"}
-                      aria-label="close audio button"
-                    >
-                      <X />
+
+                    {/* scroll to middle scroll middle */}
+
+                    <button onClick={goToMiddle} title="Jump to middle">
+                      <ChevronsRightLeft />
                     </button>
+
+                    {/* scroll to start scroll start */}
+
+                    <button onClick={goToStart} title="Jump to start">
+                      <ChevronsLeft />
+                    </button>
+                    <button
+                      onClick={togglePlayPause}
+                      title={"Play / Pause"}
+                      aria-label="Toggle play or pause button"
+                    >
+                      {playing ? <Pause /> : <Play />}
+                    </button>
+                    {/* scroll to end scroll end */}
+
+                    <button onClick={goToEnd} title="Jump to end">
+                      <ChevronsRight />
+                    </button>
+
                     <button
                       title={"Save audio"}
                       aria-label="save audio button"
@@ -198,7 +238,7 @@ export default function App() {
                         );
                         if (inputFile && processedEditData && !isSaving) {
                           setIsSaving(true);
-                          console.log("save started...");
+                          console.log("Save started...");
                           await ffmpegService
                             .saveOutput(plainFiles[0], processedEditData)
                             .then(() => {
@@ -212,6 +252,13 @@ export default function App() {
                       }}
                     >
                       <Save />
+                    </button>
+                    <button
+                      onClick={closeAudio}
+                      title={"Close audio"}
+                      aria-label="close audio button"
+                    >
+                      <X />
                     </button>
                   </div>
                 ) : (
@@ -246,4 +293,22 @@ export default function App() {
       </div>
     </main>
   );
+
+  function goToStart(): void {
+    window.scrollTo({ left: 0, behavior: "smooth" });
+    // seek audio
+    seek(0);
+  }
+  function goToEnd(): void {
+    window.scrollTo({ left: document.body.scrollWidth, behavior: "smooth" });
+
+    seek(duration - 2);
+  }
+  function goToMiddle(): void {
+    window.scrollTo({
+      left: (duration / 2) * kMagicNumber - window.innerWidth / 2,
+      behavior: "smooth",
+    });
+    seek(duration / 2);
+  }
 }

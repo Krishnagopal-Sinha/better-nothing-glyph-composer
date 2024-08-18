@@ -16,7 +16,7 @@ export default function InstructionComponent() {
         5. Click on the red timeline bar to seek audio
         <br /> <br />
         Extra Info:
-        <br />- To use on phone, save the file, after downloading the tone,
+        <br />- To use generated audio on phone, save the file, after downloading the tone,
         transfer it to your phone, then: <br />
         {"--->"} Open Glyph Composer
         <br />

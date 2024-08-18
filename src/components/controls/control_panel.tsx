@@ -12,10 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import dataStore from "@/lib/data_store";
 import { toast } from "sonner";
-import { Copy, Clipboard, Trash } from "lucide-react";
+import { Copy, Clipboard, Trash, SquareDashedMousePointer } from "lucide-react";
 import useTimelineStore from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
+import { useState } from "react";
 
 export default function ControlPanelComponent({
   isSaving,
@@ -26,10 +27,17 @@ export default function ControlPanelComponent({
 }) {
   const copyItems = useTimelineStore((state) => state.copyItems);
   const pasteItems = useTimelineStore((state) => state.pasteItems);
+  const selectAllItems = useTimelineStore((state) => state.selectAll);
   const removeSelectedItem = useTimelineStore(
     (state) => state.removeSelectedItem
   );
   const { getPosition, setRate } = useGlobalAudioPlayer();
+  const [selectAll, setSelectAll] = useState<boolean>(true);
+  // easter egg
+  const [showEasterEgg, setShowEasterEgg] = useState<boolean>(false);
+  const toggleEasterEgg = () => {
+    setShowEasterEgg((v) => !v);
+  };
 
   const onMultiSelectToggle = (e: boolean) => {
     dataStore.set("multiSelect", e);
@@ -89,14 +97,13 @@ export default function ControlPanelComponent({
       });
     }
   };
-
   return (
     <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between">
       {/* Info Title*/}
       <div className="flex flex-col justify-between ">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-primary ">
-            {kAppName}
+          <h2 className="text-2xl font-bold text-primary">
+            <AppNameComponent playing={showEasterEgg} />
             <span className="animate-pulse duration-700 text-red-600">
               {" "}
               {isSaving ? "[Saving...]" : ""}
@@ -109,7 +116,9 @@ export default function ControlPanelComponent({
             <br />
             Supports: Nothing Phone(1) & Phone(2)
             <br />
-            (v{kAppVersion})
+            Use on fullscreen Desktop / Laptop
+            <br />
+            <span onDoubleClick={toggleEasterEgg} className="cursor- select-none"> (v{kAppVersion})</span>
           </p>
         </div>
 
@@ -118,7 +127,7 @@ export default function ControlPanelComponent({
           <OpenInstructionButton />
           {/* Command Center */}
           {isAudioLoaded && (
-            <div className="border p-2 px-4 rounded-lg grid grid-cols-3 gap-4 border-white">
+            <div className="border p-2 px-4 rounded-lg grid grid-cols-4 gap-4 border-white">
               {/* copy button */}
               <button
                 onClick={copyItems}
@@ -138,10 +147,20 @@ export default function ControlPanelComponent({
               {/* Delete button */}
               <button
                 onClick={removeSelectedItem}
-                title={"Delete"}
+                title={"Delete Selected"}
                 aria-label="delete button"
               >
                 <Trash />
+              </button>
+              <button
+                onClick={() => {
+                  selectAllItems(selectAll);
+                  setSelectAll((v) => !v);
+                }}
+                title={"Select / Unselect All"}
+                aria-label="select or unselect all button"
+              >
+                <SquareDashedMousePointer />
               </button>
             </div>
           )}
@@ -153,15 +172,6 @@ export default function ControlPanelComponent({
         {/* COntrol Grid  */}
         <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4">
           <legend className="-ml-1 px-1 text-sm font-medium">Settings</legend>
-          {/* MultiSelect */}
-          <Label htmlFor="multiSelect" className="text-lg font-light">
-            Enable Multi-Select
-          </Label>
-          <Switch
-            id="multiSelect"
-            onCheckedChange={onMultiSelectToggle}
-            defaultValue={dataStore.get("multiSelect")}
-          />
 
           {/* Configure block time */}
           <Label htmlFor="newBlockDurationMilis" className="text-lg font-light">
@@ -211,6 +221,15 @@ export default function ControlPanelComponent({
             min={0.5}
             step={0.1}
           />
+          {/* MultiSelect */}
+          <Label htmlFor="multiSelect" className="text-lg font-light">
+            Enable Multi-Select
+          </Label>
+          <Switch
+            id="multiSelect"
+            onCheckedChange={onMultiSelectToggle}
+            defaultValue={dataStore.get("multiSelect")}
+          />
         </fieldset>
       </form>
     </div>
@@ -234,5 +253,26 @@ export function OpenInstructionButton() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function AppNameComponent({ playing }: { playing: boolean }) {
+  const kAppNameParts = kAppName.split(" ");
+
+  return (
+    <span className={`${playing ? "neon" : ""}`}>
+      <span className={`${playing ? "flicker-vslow" : ""}`}>
+        {kAppNameParts[0]}{" "}
+      </span>
+      {kAppNameParts[1]}{" "}
+      <span className={`${playing ? "flicker-slow" : ""}`}>
+        {" "}
+        {kAppNameParts[2]}{" "}
+      </span>
+      {kAppNameParts[3]}{" "}
+      <span className={`${playing ? "flicker-fast" : ""}`}>
+        {kAppNameParts[4]}
+      </span>
+    </span>
   );
 }
