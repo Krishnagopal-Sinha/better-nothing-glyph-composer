@@ -22,6 +22,7 @@ type Action = {
   copyItems: () => void;
   pasteItems: (currentAudioPositionInMilis: number) => void;
   removeSelectedItem: () => void;
+  selectAll: (toSelect?:boolean) => void;
 };
 
 // TODO: Can be optimised, check only the neighbours not entire thing!
@@ -269,6 +270,8 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
         3: [],
         4: [],
       },
+      clipboard: [],
+      audioInformation: { durationInMilis: 0, title: "" },
     }),
 
   copyItems: () => {
@@ -412,6 +415,19 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
     // set the updated data with removals
     set({ items: updatedItems });
   },
+
+  selectAll: (toSelect:boolean = true) => {
+    const items = get().items;
+    const selectedItems = { ...items };
+    for (let i = 0; i < Object.keys(selectedItems).length; i++) {
+      for (let j = 0; j < selectedItems[i].length; j++) {
+        selectedItems[i][j].isSelected = toSelect;
+      }
+    }
+
+    set({ items: selectedItems });
+  },
+
 }));
 
 export default useTimelineStore;

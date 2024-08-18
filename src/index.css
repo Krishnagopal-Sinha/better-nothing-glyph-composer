@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+.neon {
+  color: #fff;
+  text-shadow:
+    0 0 5px #fff,
+    0 0 20px #fff,
+    0 0 50px rgb(203, 255, 255);
+}
+
+.flicker-slow{
+  animation: flicker 3s linear infinite;
+}
+
+.flicker-vslow{
+  animation: flicker 5s linear infinite;
+}
+
+.flicker-fast{
+  animation: flicker 1s linear infinite;
+}
+
+@keyframes flicker {
+	0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: .99;
+		
+	}
+	20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+		opacity: 0.4;
+	}
+}
+
+
 
 
 @layer base {
