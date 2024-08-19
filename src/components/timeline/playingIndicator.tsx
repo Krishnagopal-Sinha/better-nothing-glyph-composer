@@ -1,10 +1,15 @@
 import { kMagicNumber } from "@/lib/consts";
 import dataStore from "@/lib/data_store";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { toast } from "sonner";
 
-export default function PlayingIndicator() {
+//TODO: Animated every instance, throttle this down?
+export default function PlayingIndicator({
+  editorRows,
+}: {
+  editorRows: number;
+}) {
   const { getPosition, seek } = useGlobalAudioPlayer();
 
   // Handle live playing indicator updates for playing audio
@@ -54,13 +59,32 @@ export default function PlayingIndicator() {
     }
   }
 
+  // for efficiency
+  const rowLabels = useMemo(() => {
+    const labels = [];
+    for (let i = 0; i < editorRows; i++) {
+      labels.push(<div key={i}>{i + 1}</div>);
+    }
+    return labels;
+  }, [editorRows]);
+
+  // can fetch non reactive state as this renders every frame lul?
+  // TODO: Use reactive state cuz better
+  const showZones = dataStore.get("showEditorRowLabel") ?? false;
+
   return (
     // Playing indicator
     <div
-      className="bg-red-600 h-[48dvh] w-1 absolute z-10"
-      style={{ marginLeft: `${currentAudioPosition * kMagicNumber}px` }}
+      className="bg-red-600 h-full w-1 z-[5] absolute"
+      style={{
+        marginLeft: `${currentAudioPosition * kMagicNumber}px`,
+      }}
     >
-      {/* {currentAudioPosition} */}
+      {showZones && (
+        <div className={`pt-5 ml-3 h-full grid select-none text-slate-600`}>
+          {rowLabels}
+        </div>
+      )}
     </div>
   );
 }

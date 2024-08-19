@@ -1,6 +1,7 @@
 // ffmpegService.ts
 
 import { kMajorVersion } from "@/lib/consts";
+import dataStore, { PhoneSpecificInfo } from "@/lib/data_store";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import fileDownload from "js-file-download";
@@ -51,13 +52,26 @@ class FFmpegService {
 
   async saveOutput(
     inputAudioFile: File,
-    processedGlyphData: string
+    processedGlyphData: string,
+    currentDevice: string
   ): Promise<void> {
     await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
-    // console.log("save triger");
-    const composer = `v1-Spacewar Glyph Composer`;
-    const album = `BNGC v${kMajorVersion}`;
-    const custom1 = `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`;
+    // console.log("Initiating Save Process");
+
+    // default to NP1 on error
+    const phoneInfo: PhoneSpecificInfo =
+      dataStore.get(currentDevice) ??
+      <PhoneSpecificInfo>{
+        composer: `v1-Spacewar Glyph Composer`,
+        album: `BNGC v${kMajorVersion}`,
+        custom2: "5cols",
+        custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
+      };
+    const composer = phoneInfo.composer;
+
+    const album = phoneInfo.album;
+    const custom1 = phoneInfo.custom1;
+    const custom2 = phoneInfo.custom2;
 
     const outputFileName = `glyph_${Date.now()
       .toString()
@@ -78,6 +92,8 @@ class FFmpegService {
       `ALBUM=${album}`,
       `-metadata`,
       `CUSTOM1=${custom1}`,
+      `-metadata`,
+      `CUSTOM2=${custom2}`,
       `-c:a`,
       `opus`,
       `-vn`,

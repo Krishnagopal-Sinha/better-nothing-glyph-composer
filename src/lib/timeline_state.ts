@@ -3,12 +3,14 @@ import { GlyphBlock } from "../logic/glyph_model";
 import dataStore from "./data_store";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
+import { kAllowedModels } from "./consts";
 
 type GlyphStore = { [key: number]: GlyphBlock[] };
 export type State = {
   items: GlyphStore;
   clipboard: GlyphBlock[];
   audioInformation: { durationInMilis: number; title: string };
+  phoneModel: string;
 };
 
 type Action = {
@@ -22,7 +24,8 @@ type Action = {
   copyItems: () => void;
   pasteItems: (currentAudioPositionInMilis: number) => void;
   removeSelectedItem: () => void;
-  selectAll: (toSelect?:boolean) => void;
+  selectAll: (toSelect?: boolean) => void;
+  changePhoneModel: (phoneType: string) => void;
 };
 
 // TODO: Can be optimised, check only the neighbours not entire thing!
@@ -103,6 +106,8 @@ function canAddItem(
 }
 
 export const useTimelineStore = create<State & Action>((set, get) => ({
+  // States
+  phoneModel: "NP1",
   items: {
     0: [],
     1: [],
@@ -125,7 +130,7 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
   addItem: (glyphId: number, startTimeMilis: number) => {
     const items = get().items;
     const audioInformation = get().audioInformation;
-
+    // console.log(audioInformation);
     const newItem: GlyphBlock = {
       id: nanoid(),
       glyphId: glyphId,
@@ -261,18 +266,42 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
   },
 
   // RESET
-  reset: () =>
+  reset: () => {
+    const currentPhoneModel = get().phoneModel;
+    const newItems: GlyphStore = {};
+    // Get number of editor rows
+    let numberOfItemRows: number;
+    switch (currentPhoneModel) {
+      case "NP1":
+        numberOfItemRows = 5;
+        break;
+      case "NP1_15":
+        numberOfItemRows = 15;
+        break;
+      case "NP2_15":
+        numberOfItemRows = 15;
+        break;
+      case "NP2_33":
+        numberOfItemRows = 33;
+        break;
+      case "NP2a":
+        numberOfItemRows = 26;
+        break;
+
+      default:
+        numberOfItemRows = 5;
+    }
+    // create empty items array
+    for (let i = 0; i < numberOfItemRows; i++) {
+      newItems[i] = [];
+    }
+    // Tip: Dont reset phone model
     set({
-      items: {
-        0: [],
-        1: [],
-        2: [],
-        3: [],
-        4: [],
-      },
+      items: newItems,
       clipboard: [],
-      audioInformation: { durationInMilis: 0, title: "" },
-    }),
+      //  dont set audio info to null cuz same audio device switch is allowed
+    });
+  },
 
   copyItems: () => {
     const items = get().items;
@@ -317,15 +346,25 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
 
     for (let i = 0; i < clipboardItems.length; i++) {
       // first block's start time would be current audio position
+      // feat. brightness - also ensure brightness is there
+      const newBrightness:number =
+        dataStore.get("overwriteBrightnessWithNewBlock") ?? false
+          ? dataStore.get("newBlockBrightness") ?? clipboardItems[i].brightness
+          : clipboardItems[i].brightness;
+
+          // actual paste logic
       if (i === lowestIdx) {
         const curr: GlyphBlock = {
           ...clipboardItems[i],
+          brightness: newBrightness,
           startTimeMilis: currentAudioPositionInMilis,
         };
         get().addGlyphItemDirectly(curr);
       } else {
         const curr: GlyphBlock = {
           ...clipboardItems[i],
+          brightness: newBrightness,
+
           startTimeMilis:
             currentAudioPositionInMilis +
             (clipboardItems[i].startTimeMilis - deltaAnchor),
@@ -416,7 +455,7 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
     set({ items: updatedItems });
   },
 
-  selectAll: (toSelect:boolean = true) => {
+  selectAll: (toSelect: boolean = true) => {
     const items = get().items;
     const selectedItems = { ...items };
     for (let i = 0; i < Object.keys(selectedItems).length; i++) {
@@ -428,6 +467,17 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
     set({ items: selectedItems });
   },
 
+  changePhoneModel: (phoneType: string) => {
+    // extra check, for safety.
+    const validPhoneType = kAllowedModels.find((e) => e === phoneType);
+    if (!validPhoneType) {
+      console.error("Error Phone Model - Wrong option detected!");
+      return;
+    }
+    set({ phoneModel: phoneType });
+    // Main change model logic get into effect via reset!
+    get().reset();
+  },
 }));
 
 export default useTimelineStore;

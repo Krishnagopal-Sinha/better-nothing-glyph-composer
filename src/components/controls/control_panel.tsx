@@ -17,6 +17,7 @@ import useTimelineStore from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
 import { useState } from "react";
+import DeviceChoiceComponent from "./device_choice";
 
 export default function ControlPanelComponent({
   isSaving,
@@ -41,6 +42,10 @@ export default function ControlPanelComponent({
 
   const onMultiSelectToggle = (e: boolean) => {
     dataStore.set("multiSelect", e);
+  };
+
+  const onPasteBrightnessOverwriteToggle = (e: boolean) => {
+    dataStore.set("overwriteBrightnessWithNewBlock", e);
   };
 
   const onNewBlockDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +103,7 @@ export default function ControlPanelComponent({
     }
   };
   return (
-    <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between">
+    <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between ">
       {/* Info Title*/}
       <div className="flex flex-col justify-between ">
         <div className="space-y-2">
@@ -118,7 +123,13 @@ export default function ControlPanelComponent({
             <br />
             Use on fullscreen Desktop / Laptop
             <br />
-            <span onDoubleClick={toggleEasterEgg} className="cursor- select-none"> (v{kAppVersion})</span>
+            <span
+              onDoubleClick={toggleEasterEgg}
+              className="cursor- select-none"
+            >
+              {" "}
+              (v{kAppVersion})
+            </span>
           </p>
         </div>
 
@@ -168,10 +179,15 @@ export default function ControlPanelComponent({
       </div>
 
       {/* Config panel */}
-      <form className="space-y-2 overflow-auto ">
+      <form className="space-y-2 overflow-scroll h-[270px] ">
         {/* COntrol Grid  */}
         <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4">
           <legend className="-ml-1 px-1 text-sm font-medium">Settings</legend>
+          {/* Configure Device */}
+          <Label htmlFor="multiSelect" className="text-lg font-light">
+            Device
+          </Label>
+          <DeviceChoiceComponent />
 
           {/* Configure block time */}
           <Label htmlFor="newBlockDurationMilis" className="text-lg font-light">
@@ -229,6 +245,19 @@ export default function ControlPanelComponent({
             id="multiSelect"
             onCheckedChange={onMultiSelectToggle}
             defaultValue={dataStore.get("multiSelect")}
+          />
+
+          <Label
+            htmlFor="overwriteBrightness"
+            className="text-lg font-light"
+            title="Overwrite the brightness of blocks that would be pasted with the new block brightness value?"
+          >
+            Modify Paste Brightness
+          </Label>
+          <Switch
+            id="overwriteBrightness"
+            onCheckedChange={onPasteBrightnessOverwriteToggle}
+            defaultValue={dataStore.get("overwriteBrightnessWithNewBlock")}
           />
         </fieldset>
       </form>

@@ -77,6 +77,8 @@ _Made with ❤️ by Krishnagopal Sinha_
 ## TODO:
 
 -[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture 
+- seek position not accurate
+-[ ] Remove debug states from data store!
 
 -[ ] Read glyph data from input ogg files
 

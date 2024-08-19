@@ -2,7 +2,7 @@ import ControlPanelComponent from "@/components/controls/control_panel";
 import GlyphPreviewComponent from "@/components/controls/glyph_preview";
 import EditorComponent from "@/components/timeline/editor";
 import useTimelineStore from "@/lib/timeline_state";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { useFilePicker } from "use-file-picker";
 import { FileTypeValidator } from "use-file-picker/validators";
@@ -28,7 +28,6 @@ import { kMagicNumber } from "./lib/consts";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-
   useEffect(() => {
     function beforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
@@ -45,7 +44,9 @@ export default function App() {
   const timelineData = useTimelineStore((state) => state.items);
   const resetData = useTimelineStore((state) => state.reset);
   const updateDuration = useTimelineStore((state) => state.updateDuration);
-
+  const currentDevice = useTimelineStore((state) => state.phoneModel);
+  // Scroll ref for scrolling editor
+  const editorRef = useRef<HTMLDivElement>(null);
   // Input file
   const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
   const { openFilePicker, filesContent, errors, plainFiles, clear } =
@@ -150,165 +151,174 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* main div */}
-      <div className="grid grid-cols-1 grid-rows-[50dvh_50dvh] ">
-        {/* Upper Section */}
-        <div className="bg-red-700">
-          {/* Upper Section - Fixed */}
+      <div className="grid grid-cols-1 grid-rows-[50dvh_50dvh]">
+        {/* Upper Section - Fixed */}
 
-          <div className="fixed left-0 right-0 bg-[#222222] px-4 pb-4 pt-4 overflow-auto h-[50dvh] max-h-[50dvh] w-full overflow-y-scroll z-10">
-            {/* Mobile Only */}
-            {!isInputLoaded ? (
-              <Button
-                variant="outline"
-                className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-max"
-                onClick={(e) => {
-                  e.preventDefault();
-                  loadAudioFile();
-                }}
-              >
-                Load Audio
-              </Button>
-            ) : (
-              <></>
-            )}
-            <div className="space-y-6">
-              {/* Phone and Config Screen */}
-              <div className="flex justify-between space-x-4">
-                {/* Glyph preview */}
-                <GlyphPreviewComponent />
+        <div className="bg-[#222222] px-4 py-4 h-[50dvh] max-h-[50dvh] w-full overflow-auto">
+          {/* Mobile Only */}
+          {!isInputLoaded ? (
+            <Button
+              variant="outline"
+              className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-max"
+              onClick={(e) => {
+                e.preventDefault();
+                loadAudioFile();
+              }}
+            >
+              Load Audio
+            </Button>
+          ) : (
+            <></>
+          )}
+          <div className="space-y-4">
+            {/* Phone and Config Screen */}
+            <div className="flex justify-between space-x-4">
+              {/* Glyph preview */}
+              <GlyphPreviewComponent />
 
-                {/* Control Panel */}
-                <ControlPanelComponent
-                  isSaving={isSaving}
-                  isAudioLoaded={isInputLoaded}
-                />
-              </div>
-
-              {/* Play Controls */}
-              <div className="mt-6">
-                {isInputLoaded ? (
-                  <div
-                    className={`flex justify-evenly items-center border rounded-lg border-white p-4 ${
-                      playing ? "animate-pulse" : ""
-                    }`}
-                  >
-                    <button
-                      onClick={stopAudio}
-                      title={"Stop"}
-                      aria-label="Stop audio button"
-                    >
-                      <Square />
-                    </button>
-
-                    {/* scroll to middle scroll middle */}
-
-                    <button onClick={goToMiddle} title="Jump to middle">
-                      <ChevronsRightLeft />
-                    </button>
-
-                    {/* scroll to start scroll start */}
-
-                    <button onClick={goToStart} title="Jump to start">
-                      <ChevronsLeft />
-                    </button>
-                    <button
-                      onClick={togglePlayPause}
-                      title={"Play / Pause"}
-                      aria-label="Toggle play or pause button"
-                    >
-                      {playing ? <Pause /> : <Play />}
-                    </button>
-                    {/* scroll to end scroll end */}
-
-                    <button onClick={goToEnd} title="Jump to end">
-                      <ChevronsRight />
-                    </button>
-
-                    <button
-                      title={"Save audio"}
-                      aria-label="save audio button"
-                      className={`${
-                        isSaving ? "cursor-not-allowed" : "cursor-pointer"
-                      }`}
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        const inputFile = plainFiles[0];
-                        const processedEditData = processEdits(
-                          generateCSV(timelineData, duration * 1000)
-                        );
-                        if (inputFile && processedEditData && !isSaving) {
-                          setIsSaving(true);
-                          console.log("Save started...");
-                          await ffmpegService
-                            .saveOutput(plainFiles[0], processedEditData)
-                            .then(() => {
-                              setIsSaving(false);
-                            });
-                        } else {
-                          console.error(
-                            "Save file error: No input file detected or another save process is ongoing"
-                          );
-                        }
-                      }}
-                    >
-                      <Save />
-                    </button>
-                    <button
-                      onClick={closeAudio}
-                      title={"Close audio"}
-                      aria-label="close audio button"
-                    >
-                      <X />
-                    </button>
-                  </div>
-                ) : (
-                  <Button
-                    className="w-full py-6 text-lg font-normal hidden sm:inline-flex"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      loadAudioFile();
-                    }}
-                  >
-                    Load Audio
-                  </Button>
-                )}
-              </div>
+              {/* Control Panel */}
+              <ControlPanelComponent
+                isSaving={isSaving}
+                isAudioLoaded={isInputLoaded}
+              />
             </div>
+
+            {/* Load audio n play controls  */}
+            <PlayControlsComponent />
           </div>
         </div>
 
         {/* Lower Section - Non-Scrollable */}
-        <div
-        // className="border-t-2 border-white border-dashed"
-        >
-          {!isInputLoaded ? (
-            <InstructionComponent />
-          ) : (
-            <EditorComponent
-              timelineData={timelineData}
-              // currentAudioPosition={currentPosition}
-            />
-          )}
-        </div>
+
+        {!isInputLoaded ? (
+          <InstructionComponent />
+        ) : (
+          <EditorComponent
+            scrollRef={editorRef}
+            timelineData={timelineData}
+            // currentAudioPosition={currentPosition}
+          />
+        )}
       </div>
     </main>
   );
 
   function goToStart(): void {
-    window.scrollTo({ left: 0, behavior: "smooth" });
+    editorRef.current?.scrollTo({ left: 0, behavior: "smooth" });
     // seek audio
     seek(0);
   }
   function goToEnd(): void {
-    window.scrollTo({ left: document.body.scrollWidth, behavior: "smooth" });
+    editorRef.current?.scrollTo({
+      left: duration * kMagicNumber,
+      behavior: "smooth",
+    });
 
     seek(duration - 2);
   }
   function goToMiddle(): void {
-    window.scrollTo({
+    editorRef.current?.scrollTo({
       left: (duration / 2) * kMagicNumber - window.innerWidth / 2,
       behavior: "smooth",
     });
     seek(duration / 2);
+  }
+
+  function PlayControlsComponent(): React.ReactNode {
+    return (
+      <div className="mt-6">
+        {/* Play Controls */}
+
+        {isInputLoaded ? (
+          <div
+            className={`flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 ${
+              playing ? "animate-pulse" : ""
+            }`}
+          >
+            <button
+              onClick={stopAudio}
+              title={"Stop"}
+              aria-label="Stop audio button"
+            >
+              <Square />
+            </button>
+
+            {/* scroll to middle scroll middle */}
+
+            <button onClick={goToMiddle} title="Jump to middle">
+              <ChevronsRightLeft />
+            </button>
+
+            {/* scroll to start scroll start */}
+
+            <button onClick={goToStart} title="Jump to start">
+              <ChevronsLeft />
+            </button>
+            <button
+              onClick={togglePlayPause}
+              title={"Play / Pause"}
+              aria-label="Toggle play or pause button"
+            >
+              {playing ? <Pause /> : <Play />}
+            </button>
+            {/* scroll to end scroll end */}
+
+            <button onClick={goToEnd} title="Jump to end">
+              <ChevronsRight />
+            </button>
+
+            <button
+              title={"Save audio"}
+              aria-label="save audio button"
+              className={`${
+                isSaving ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+              onClick={async (e) => {
+                e.preventDefault();
+                const inputFile = plainFiles[0];
+                const processedEditData = processEdits(
+                  generateCSV(
+                    timelineData,
+                    duration * 1000,
+                  )
+                );
+                if (inputFile && processedEditData && !isSaving) {
+                  setIsSaving(true);
+                  console.log("Save started...");
+                  await ffmpegService
+                    .saveOutput(plainFiles[0], processedEditData, currentDevice)
+                    .then(() => {
+                      setIsSaving(false);
+                    });
+                } else {
+                  console.error(
+                    "Save file error: No input file detected or another save process is ongoing"
+                  );
+                }
+              }}
+            >
+              <Save />
+            </button>
+            <button
+              onClick={closeAudio}
+              title={"Close audio"}
+              aria-label="close audio button"
+            >
+              <X />
+            </button>
+          </div>
+        ) : (
+          <Button
+            className="w-full py-6 text-lg font-normal hidden sm:inline-flex"
+            onClick={(e) => {
+              e.preventDefault();
+              loadAudioFile();
+            }}
+          >
+            Load Audio
+          </Button>
+        )}
+      </div>
+    );
   }
 }

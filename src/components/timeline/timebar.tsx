@@ -2,6 +2,7 @@ import { kMagicNumber } from "@/lib/consts";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import TimeBarBlocks from "./timebarBlocks";
 import { useState } from "react";
+import dataStore from "@/lib/data_store";
 
 export default function TimeBarComponent() {
   const { duration, seek, playing, play, pause, setVolume, volume } =
@@ -33,12 +34,14 @@ export default function TimeBarComponent() {
   return (
     <div
       title={`Seek audio by touching anywhere here...\nRight-click for loop options`}
-      className="bg-red-700 h-[20px] flex cursor-pointer"
+      className="bg-red-700 h-[20px] flex cursor-pointer z-10 sticky top-0"
       onClick={(e) => {
         e.preventDefault();
         const oldVol = volume;
-        const seekPosition = e.pageX / kMagicNumber; //in seconds fyi
+        const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
 
+        const seekPosition = (scrollValue + e.clientX) / kMagicNumber; //in seconds fyi
+        // console.log(seekPosition);
         // Bug Fix - seek not updating position related
         if (!playing) {
           setVolume(0);
@@ -75,7 +78,9 @@ export default function TimeBarComponent() {
   );
 }
 
-      {/* loop indicator */}
+{
+  /* loop indicator */
+}
 
 export function LoopPositionIndicator({
   children,
