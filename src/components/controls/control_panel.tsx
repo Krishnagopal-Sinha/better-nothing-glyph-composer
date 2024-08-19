@@ -14,6 +14,8 @@ import {
   Trash,
   SquareDashedMousePointer,
   SquarePlus,
+  DiamondPlus,
+  CirclePlus,
 } from "lucide-react";
 import useTimelineStore from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
@@ -87,7 +89,10 @@ export default function ControlPanelComponent({
             {/* Command Center */}
             <CommandCenter />
             {/* Glyph Zone Add Center */}
-            <div className="grid grid-flow-col border border-white rounded-lg">
+            <div
+              className="grid grid-flow-col border border-white rounded-lg"
+              title="Macro Buttons - Eases New Glyph Block Addition"
+            >
               {deviceControlsToShow}
             </div>
           </div>
@@ -154,7 +159,7 @@ export default function ControlPanelComponent({
 
       case "NP1_15":
         return (
-          <>
+          <div className="grid grid-flow-rows grid-cols-6 lg:flex">
             <Button
               variant="ghost"
               onClick={() => {
@@ -173,11 +178,12 @@ export default function ControlPanelComponent({
             >
               2
             </Button>
+
             <Button
               variant="ghost"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                addItem(2, startTimeMilis);
+                fillEntireZone(2, 5, startTimeMilis);
               }}
             >
               3
@@ -185,10 +191,47 @@ export default function ControlPanelComponent({
 
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(4, startTimeMilis);
+              }}
+            >
+              3.1
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(5, startTimeMilis);
+              }}
+            >
+              3.2
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(2, startTimeMilis);
+              }}
+            >
+              3.3
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
                 addItem(3, startTimeMilis);
+              }}
+            >
+              3.4
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(7, 14, startTimeMilis);
               }}
             >
               4
@@ -196,24 +239,34 @@ export default function ControlPanelComponent({
 
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                addItem(4, startTimeMilis);
+                fillEntireZone(7, 8, startTimeMilis);
               }}
             >
-              5
+              4.1
             </Button>
+
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                addItem(5, startTimeMilis);
+                fillEntireZone(9, 11, startTimeMilis);
               }}
             >
-              6
+              4.2
             </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(12, 14, startTimeMilis);
+              }}
+            >
+              4.3
+            </Button>
+
             <Button
               variant="ghost"
               onClick={() => {
@@ -221,41 +274,9 @@ export default function ControlPanelComponent({
                 addItem(6, startTimeMilis);
               }}
             >
-              7
+              5
             </Button>
-            <Button
-              variant="ghost"
-              title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
-              onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(7, 9, startTimeMilis);
-              }}
-            >
-              8
-            </Button>
-
-            <Button
-              variant="ghost"
-              title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
-              onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(9, 11, startTimeMilis);
-              }}
-            >
-              9
-            </Button>
-
-            <Button
-              variant="ghost"
-              title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
-              onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(11, 14, startTimeMilis);
-              }}
-            >
-              10
-            </Button>
-          </>
+          </div>
         );
 
       case "NP2_15":
@@ -264,7 +285,7 @@ export default function ControlPanelComponent({
 
       case "NP2_33":
         return (
-          <>
+          <div className="grid grid-flow-rows grid-cols-8 lg:flex">
             <Button
               variant="ghost"
               onClick={() => {
@@ -295,13 +316,32 @@ export default function ControlPanelComponent({
 
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Right Glyph Zone of NP(2)"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(3, 18, startTimeMilis);
+                fillEntireZone(3, 7, startTimeMilis);
               }}
             >
               4
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(8, 14, startTimeMilis);
+              }}
+            >
+              5
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(15, 18, startTimeMilis);
+              }}
+            >
+              6
             </Button>
 
             <Button
@@ -311,7 +351,7 @@ export default function ControlPanelComponent({
                 addItem(19, startTimeMilis);
               }}
             >
-              5
+              7
             </Button>
 
             <Button
@@ -321,7 +361,7 @@ export default function ControlPanelComponent({
                 addItem(20, startTimeMilis);
               }}
             >
-              6
+              8
             </Button>
 
             <Button
@@ -331,7 +371,7 @@ export default function ControlPanelComponent({
                 addItem(21, startTimeMilis);
               }}
             >
-              7
+              9
             </Button>
 
             <Button
@@ -341,7 +381,7 @@ export default function ControlPanelComponent({
                 addItem(22, startTimeMilis);
               }}
             >
-              8
+              10
             </Button>
 
             <Button
@@ -351,18 +391,37 @@ export default function ControlPanelComponent({
                 addItem(23, startTimeMilis);
               }}
             >
-              9
+              11
             </Button>
 
             <Button
               variant="ghost"
-              title="Fill all the Battery Glyph Zones of NP(2)"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(25, 32, startTimeMilis);
+                fillEntireZone(25, 27, startTimeMilis);
               }}
             >
-              10
+              12
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(28, 30, startTimeMilis);
+              }}
+            >
+              13
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(31, 32, startTimeMilis);
+              }}
+            >
+              14
             </Button>
 
             <Button
@@ -372,9 +431,9 @@ export default function ControlPanelComponent({
                 addItem(24, startTimeMilis);
               }}
             >
-              11
+              15
             </Button>
-          </>
+          </div>
         );
 
       case "NP2a":
@@ -382,7 +441,6 @@ export default function ControlPanelComponent({
           <>
             <Button
               variant="ghost"
-              title="Fill the Entire First Glyph Zone of NP(2a)"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
                 fillEntireZone(0, 23, startTimeMilis);
@@ -394,6 +452,34 @@ export default function ControlPanelComponent({
               variant="ghost"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(0, 7, startTimeMilis);
+              }}
+            >
+              1.1
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(8, 15, startTimeMilis);
+              }}
+            >
+              1.2
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(16, 23, startTimeMilis);
+              }}
+            >
+              1.3
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
                 addItem(24, startTimeMilis);
               }}
             >
@@ -401,7 +487,6 @@ export default function ControlPanelComponent({
             </Button>
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
                 addItem(25, startTimeMilis);
@@ -493,13 +578,37 @@ export default function ControlPanelComponent({
           {currentDevice === "NP2_33" && (
             <Button
               variant="ghost"
-              title="Add all the Glyphs of NP(1) | 15 Zone Mode "
+              title="Add all the Glyphs of NP(2) "
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
                 fillEntireZone(0, 32, startTimeMilis);
               }}
             >
               <SquarePlus />
+            </Button>
+          )}
+          {currentDevice === "NP2_33" && (
+            <Button
+              variant="ghost"
+              title="Fill the Top Right Glyph Zone of NP(2) "
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(3, 18, startTimeMilis);
+              }}
+            >
+              <DiamondPlus />
+            </Button>
+          )}
+          {currentDevice === "NP2_33" && (
+            <Button
+              variant="ghost"
+              title="Fill the Battery Glyph Zone of NP(2) "
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(25, 32, startTimeMilis);
+              }}
+            >
+              <CirclePlus />
             </Button>
           )}
 

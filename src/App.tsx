@@ -151,10 +151,12 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* main div */}
-      <div className="grid grid-cols-1 grid-rows-[50dvh_50dvh]">
+      <div 
+      // className="grid grid-cols-1 grid-rows-[50dvh_50dvh]"
+      >
         {/* Upper Section - Fixed */}
 
-        <div className="bg-[#222222] px-4 py-4 h-[50dvh] max-h-[50dvh] w-full overflow-auto">
+        <div className="bg-[#222222] px-4 py-4 w-full overflow-auto">
           {/* Mobile Only */}
           {!isInputLoaded ? (
             <Button
