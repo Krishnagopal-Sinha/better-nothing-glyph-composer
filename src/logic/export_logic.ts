@@ -27,10 +27,14 @@ export function generateCSV(
   totalDurationInMilis: number
 ): string {
   const intervals = [];
+  const emptyRow: number[] = [];
+  for (let i = 0; i < Object.keys(data).length; i++) {
+    emptyRow.push(0);
+  }
 
   // Fill with all 0
   for (let i = 0; i < Math.floor(totalDurationInMilis / kTimeStepMilis); i++) {
-    intervals.push([0, 0, 0, 0, 0]);
+    intervals.push([...emptyRow]);
   }
 
   for (let i = 0; i < Object.entries(data).length; i++) {
@@ -47,7 +51,8 @@ export function generateCSV(
   }
 
   // Create CSV string
-  const csvContent = intervals.join("\r\n");
+  // Having a comma at the end versus not having it, dont seem to make a difference?
+  const csvContent = intervals.join(",\r\n") + ','; //extra comma for last line end
 
   return csvContent;
 }

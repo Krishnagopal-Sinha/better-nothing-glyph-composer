@@ -34,10 +34,12 @@ export default function TimeBarBlocks({
     setLoopAsUiPosition(posInMilis);
   };
   const onRightClickToMenu = (e: React.MouseEvent) => {
-    setRightClickPosition(e.pageX);
+    const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
+    // e.clientx alone also works, makes sense but adding scroll to make it proper
+    setRightClickPosition(e.clientX + scrollValue);
   };
   const onLoopAClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); //needed as otherwise timebar gesture will trigger
     const loopAPositionInMilis = (rightClickPosition / kMagicNumber) * 1000;
 
     const loopBPositionInMilis: number | undefined = dataStore.get(
@@ -129,14 +131,19 @@ export default function TimeBarBlocks({
     setLoopAsUiPosition(undefined);
     setLoopBsUiPosition(undefined);
   };
+
+  const onShowRowLabel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const oldValue = dataStore.get("showEditorRowLabel") ?? false;
+    dataStore.set("showEditorRowLabel", !oldValue);
+  };
+
   return (
     <ContextMenu>
-      <ContextMenuTrigger
-        className="border-r"
-        onContextMenu={onRightClickToMenu}
-      >
+      <ContextMenuTrigger onContextMenu={onRightClickToMenu}>
+        {/* Time bar blocks */}
         <div
-          className="pl-[10px] leading-[17px]"
+          className={`pl-[10px] pt-0 select-none border-r leading-[1.3]`}
           style={{ width: `${kMagicNumber}px` }}
           key={secondToRespresent}
         >
@@ -144,11 +151,12 @@ export default function TimeBarBlocks({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={onLoopAClick}>Set loop A</ContextMenuItem>
-        <ContextMenuItem onClick={onLoopBClick}>Set loop B</ContextMenuItem>
+        <ContextMenuItem onClick={onLoopAClick}>Set Loop A</ContextMenuItem>
+        <ContextMenuItem onClick={onLoopBClick}>Set Loop B</ContextMenuItem>
         <ContextMenuItem onClick={onResetLoopClick}>
-          Remove loop
+          Remove Loop
         </ContextMenuItem>
+        <ContextMenuItem onClick={onShowRowLabel}>Toggle Zones</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );
