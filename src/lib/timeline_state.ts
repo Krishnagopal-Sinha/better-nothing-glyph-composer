@@ -6,11 +6,12 @@ import { toast } from "sonner";
 import { kAllowedModels } from "./consts";
 
 type GlyphStore = { [key: number]: GlyphBlock[] };
-export type State = {
+export type AppState = {
   items: GlyphStore;
   clipboard: GlyphBlock[];
   audioInformation: { durationInMilis: number; title: string };
   phoneModel: string;
+  isZoneVisible: boolean;
 };
 
 type Action = {
@@ -26,6 +27,12 @@ type Action = {
   removeSelectedItem: () => void;
   selectAll: (toSelect?: boolean) => void;
   changePhoneModel: (phoneType: string) => void;
+  toggleZoneVisibility: () => void;
+  fillEntireZone: (
+    startGlyphId: number,
+    endGlyphId: number,
+    startTimeMilis: number
+  ) => void;
 };
 
 // TODO: Can be optimised, check only the neighbours not entire thing!
@@ -105,8 +112,9 @@ function canAddItem(
   return true;
 }
 
-export const useTimelineStore = create<State & Action>((set, get) => ({
+export const useTimelineStore = create<AppState & Action>((set, get) => ({
   // States
+  isZoneVisible: false,
   phoneModel: "NP1",
   items: {
     0: [],
@@ -347,12 +355,12 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
     for (let i = 0; i < clipboardItems.length; i++) {
       // first block's start time would be current audio position
       // feat. brightness - also ensure brightness is there
-      const newBrightness:number =
+      const newBrightness: number =
         dataStore.get("overwriteBrightnessWithNewBlock") ?? false
           ? dataStore.get("newBlockBrightness") ?? clipboardItems[i].brightness
           : clipboardItems[i].brightness;
 
-          // actual paste logic
+      // actual paste logic
       if (i === lowestIdx) {
         const curr: GlyphBlock = {
           ...clipboardItems[i],
@@ -477,6 +485,21 @@ export const useTimelineStore = create<State & Action>((set, get) => ({
     set({ phoneModel: phoneType });
     // Main change model logic get into effect via reset!
     get().reset();
+  },
+  toggleZoneVisibility: () => {
+    const oldValue = get().isZoneVisible;
+    set({ isZoneVisible: !oldValue });
+  },
+
+  fillEntireZone: (
+    startGlyphId: number,
+    endGlyphId: number,
+    startTimeMilis: number
+  ) => {
+    const addItem = get().addItem;
+    for (let i = startGlyphId; i <= endGlyphId; i++) {
+      addItem(i, startTimeMilis);
+    }
   },
 }));
 

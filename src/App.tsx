@@ -73,7 +73,7 @@ export default function App() {
   useEffect(() => {
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
-        load(filesContent[0].content, { format: "mp3" });
+        load(filesContent[0].content, { format: "mp3", loop: true });
         setIsInputLoaded(true);
         dataStore.set("isAudioLoaded", true);
         // set seek rate
@@ -277,10 +277,7 @@ export default function App() {
                 e.preventDefault();
                 const inputFile = plainFiles[0];
                 const processedEditData = processEdits(
-                  generateCSV(
-                    timelineData,
-                    duration * 1000,
-                  )
+                  generateCSV(timelineData, duration * 1000)
                 );
                 if (inputFile && processedEditData && !isSaving) {
                   setIsSaving(true);

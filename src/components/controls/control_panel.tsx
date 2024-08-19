@@ -12,7 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import dataStore from "@/lib/data_store";
 import { toast } from "sonner";
-import { Copy, Clipboard, Trash, SquareDashedMousePointer } from "lucide-react";
+import {
+  Copy,
+  Clipboard,
+  Trash,
+  SquareDashedMousePointer,
+  DiamondPlus,
+  SquarePlus,
+} from "lucide-react";
 import useTimelineStore from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
@@ -32,6 +39,9 @@ export default function ControlPanelComponent({
   const removeSelectedItem = useTimelineStore(
     (state) => state.removeSelectedItem
   );
+  const currentDevice = useTimelineStore((state) => state.phoneModel);
+  const fillEntireZone = useTimelineStore((state) => state.fillEntireZone);
+
   const { getPosition, setRate } = useGlobalAudioPlayer();
   const [selectAll, setSelectAll] = useState<boolean>(true);
   // easter egg
@@ -126,6 +136,7 @@ export default function ControlPanelComponent({
             <span
               onDoubleClick={toggleEasterEgg}
               className="cursor- select-none"
+              title="Easter egg?"
             >
               {" "}
               (v{kAppVersion})
@@ -138,7 +149,7 @@ export default function ControlPanelComponent({
           <OpenInstructionButton />
           {/* Command Center */}
           {isAudioLoaded && (
-            <div className="border p-2 px-4 rounded-lg grid grid-cols-4 gap-4 border-white">
+            <div className="border p-2 px-4 rounded-lg grid grid-flow-col gap-4 border-white">
               {/* copy button */}
               <button
                 onClick={copyItems}
@@ -163,6 +174,7 @@ export default function ControlPanelComponent({
               >
                 <Trash />
               </button>
+              {/* select all button unselect all */}
               <button
                 onClick={() => {
                   selectAllItems(selectAll);
@@ -173,6 +185,68 @@ export default function ControlPanelComponent({
               >
                 <SquareDashedMousePointer />
               </button>
+              {/* ====================== Phone Specific Controls ====================== */}
+              {/* Phone 1 full center zone add button */}
+              {currentDevice === "NP1_15" && (
+                <button
+                  title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
+                  onClick={() => {
+                    const startTimeMilis = getPosition() * 1000;
+                    fillEntireZone(2, 5, startTimeMilis);
+                  }}
+                >
+                  <SquarePlus />
+                </button>
+              )}
+              {/* Phone 1 full battery zone add button */}
+              {currentDevice === "NP1_15" && (
+                <button
+                  title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
+                  onClick={() => {
+                    const startTimeMilis = getPosition() * 1000;
+                    fillEntireZone(7, 14, startTimeMilis);
+                  }}
+                >
+                  <DiamondPlus />
+                </button>
+              )}
+              {/* Phone 2a full zone add button */}
+              {currentDevice === "NP2a" && (
+                <button
+                  title="Fill the Entire First Glyph Zone of NP(2a)"
+                  onClick={() => {
+                    const startTimeMilis = getPosition() * 1000;
+                    fillEntireZone(0, 23, startTimeMilis);
+                  }}
+                >
+                  <SquarePlus />
+                </button>
+              )}
+
+              {/* Phone 2 full middle-right zone add button */}
+              {currentDevice === "NP2_33" && (
+                <button
+                  title="Fill the Entire Middle Right Glyph Zone of NP(2)"
+                  onClick={() => {
+                    const startTimeMilis = getPosition() * 1000;
+                    fillEntireZone(3, 18, startTimeMilis);
+                  }}
+                >
+                  <SquarePlus />
+                </button>
+              )}
+              {/* Phone 2 full battery zone add button */}
+              {currentDevice === "NP2_33" && (
+                <button
+                  title="Fill the Entire Middle Right Glyph Zone of NP(2)"
+                  onClick={() => {
+                    const startTimeMilis = getPosition() * 1000;
+                    fillEntireZone(25, 32, startTimeMilis);
+                  }}
+                >
+                  <DiamondPlus />
+                </button>
+              )}
             </div>
           )}
         </div>
