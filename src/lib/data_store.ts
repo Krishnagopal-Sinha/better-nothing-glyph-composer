@@ -25,7 +25,6 @@ class DataStore {
     // Loop feat. position :: undefined | number
     loopAPositionInMilis: <number | undefined>undefined,
     loopBPositionInMilis: <number | undefined>undefined,
-    showEditorRowLabel:false,
     // scroll position
     editorScrollX: 0,
 

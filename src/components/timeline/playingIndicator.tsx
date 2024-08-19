@@ -1,5 +1,6 @@
 import { kMagicNumber } from "@/lib/consts";
 import dataStore from "@/lib/data_store";
+import useTimelineStore from "@/lib/timeline_state";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { toast } from "sonner";
@@ -68,9 +69,7 @@ export default function PlayingIndicator({
     return labels;
   }, [editorRows]);
 
-  // can fetch non reactive state as this renders every frame lul?
-  // TODO: Use reactive state cuz better
-  const showZones = dataStore.get("showEditorRowLabel") ?? false;
+  const isZoneVisible = useTimelineStore((state) => state.isZoneVisible);
 
   return (
     // Playing indicator
@@ -80,7 +79,7 @@ export default function PlayingIndicator({
         marginLeft: `${currentAudioPosition * kMagicNumber}px`,
       }}
     >
-      {showZones && (
+      {isZoneVisible && (
         <div className={`pt-5 ml-3 h-full grid select-none text-slate-600`}>
           {rowLabels}
         </div>

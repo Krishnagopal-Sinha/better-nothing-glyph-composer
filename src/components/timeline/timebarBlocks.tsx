@@ -9,6 +9,7 @@ import { useGlobalAudioPlayer } from "react-use-audio-player";
 import dataStore from "@/lib/data_store";
 import { kMagicNumber } from "@/lib/consts";
 import { toast } from "sonner";
+import useTimelineStore from "@/lib/timeline_state";
 
 type Props = {
   secondToRespresent: number;
@@ -132,10 +133,14 @@ export default function TimeBarBlocks({
     setLoopBsUiPosition(undefined);
   };
 
+  // Zone label visibility
+  const toggleZoneVisibility = useTimelineStore(
+    (state) => state.toggleZoneVisibility
+  );
+
   const onShowRowLabel = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const oldValue = dataStore.get("showEditorRowLabel") ?? false;
-    dataStore.set("showEditorRowLabel", !oldValue);
+    toggleZoneVisibility();
   };
 
   return (

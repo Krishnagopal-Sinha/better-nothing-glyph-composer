@@ -103,9 +103,14 @@ export default function NP2a_Preview({ zoneColors }: { zoneColors: string[] }) {
             stopColor={zoneColors[21] ?? KDefaultPreviewGlyphFillColor}
           />
           <stop
-            offset="95.818%"
+            offset="94.818%"
             stopColor={zoneColors[22] ?? KDefaultPreviewGlyphFillColor}
           />
+          <stop
+            offset="97%"
+            stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor}
+          />
+          {/* add 97 and 100 cuz 100 alone did not look right */}
           <stop
             offset="100%"
             stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor}
