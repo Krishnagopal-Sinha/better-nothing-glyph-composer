@@ -77,16 +77,13 @@ _Made with ❤️ by Krishnagopal Sinha_
 ## TODO:
 
 -[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture 
-- seek position not accurate
+
 -[ ] Remove debug states from data store!
 
 -[ ] Read glyph data from input ogg files
 
 -[ ] Solve existing github issues
 
--[ ] Scroll to both end pop up / control buttons ?
-
--[ ] Add nothing phone 2 and 2a generation modes
 
 -[ ] Add various effect feature
 
