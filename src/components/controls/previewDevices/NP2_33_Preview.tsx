@@ -1,5 +1,4 @@
 import { KDefaultPreviewGlyphFillColor } from "@/lib/consts";
-import React from "react";
 
 export default function NP2_33_Preview({
   zoneColors,
