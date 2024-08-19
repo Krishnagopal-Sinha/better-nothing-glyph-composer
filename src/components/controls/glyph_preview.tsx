@@ -74,7 +74,9 @@ export default function GlyphPreviewComponent() {
       break;
 
     default:
-      previewComponent = <div className="select-none p-2">Work In Progress Use NP(2) - 33 Zone Instead</div>;
+      previewComponent = (
+        <div className="select-none p-2">Feels Redundant. Scrap this?</div>
+      );
   }
 
   return (
