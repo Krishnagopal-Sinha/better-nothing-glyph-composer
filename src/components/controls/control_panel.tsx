@@ -175,13 +175,44 @@ export default function ControlPanelComponent({
             </Button>
             <Button
               variant="ghost"
-              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(2, 5, startTimeMilis);
+                addItem(2, startTimeMilis);
               }}
             >
               3
+            </Button>
+
+            <Button
+              variant="ghost"
+              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(3, startTimeMilis);
+              }}
+            >
+              4
+            </Button>
+
+            <Button
+              variant="ghost"
+              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(4, startTimeMilis);
+              }}
+            >
+              5
+            </Button>
+            <Button
+              variant="ghost"
+              title="Fill the Entire Middle Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                addItem(5, startTimeMilis);
+              }}
+            >
+              6
             </Button>
             <Button
               variant="ghost"
@@ -190,17 +221,39 @@ export default function ControlPanelComponent({
                 addItem(6, startTimeMilis);
               }}
             >
-              4
+              7
             </Button>
             <Button
               variant="ghost"
               title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
               onClick={() => {
                 const startTimeMilis = getPosition() * 1000;
-                fillEntireZone(7, 14, startTimeMilis);
+                fillEntireZone(7, 9, startTimeMilis);
               }}
             >
-              5
+              8
+            </Button>
+
+            <Button
+              variant="ghost"
+              title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(9, 11, startTimeMilis);
+              }}
+            >
+              9
+            </Button>
+
+            <Button
+              variant="ghost"
+              title="Fill the Entire Battery Glyph Zone of NP(1) | 15 Zone Mode"
+              onClick={() => {
+                const startTimeMilis = getPosition() * 1000;
+                fillEntireZone(11, 14, startTimeMilis);
+              }}
+            >
+              10
             </Button>
           </>
         );
@@ -473,7 +526,11 @@ export function OpenInstructionButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="left-0 max-w-[120px] " variant='link' title="Open instructions">
+        <Button
+          className="left-0 max-w-[120px] "
+          variant="link"
+          title="Open instructions"
+        >
           Read Instructions
         </Button>
       </DialogTrigger>
