@@ -137,6 +137,42 @@ function generateEffectData(
       }
     }
 
+    case 10: {
+      const intervalMs = 2000; // every 2 secs
+      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
+      const flashDuration = 5;
+
+      if (iterCount % intervalIdx < flashDuration) {
+        return brightness;
+      } else {
+        return 0;
+      }
+    }
+
+    case 11: {
+      const intervalMs = 4000; // every 4 secs
+      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
+      const flashDuration = 5;
+
+      if (iterCount % intervalIdx < flashDuration) {
+        return brightness;
+      } else {
+        return 0;
+      }
+    }
+
+    case 12: {
+      const intervalMs = 8000; // every 8 secs
+      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
+      const flashDuration = 5;
+
+      if (iterCount % intervalIdx < flashDuration) {
+        return brightness;
+      } else {
+        return 0;
+      }
+    }
+
     default:
       return 4095; //safety fall back value lul
   } //switch end
