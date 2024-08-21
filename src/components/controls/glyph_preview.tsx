@@ -5,6 +5,8 @@ import NP1_5_Preview from "./previewDevices/NP1_Preview";
 import NP2_33_Preview from "./previewDevices/NP2_33_Preview";
 import NP2a_Preview from "./previewDevices/NP2a_Preview";
 import NP1_15_Preview from "./previewDevices/NP1_15_Preview";
+import { generateEffectData } from "@/logic/export_logic";
+import { kTimeStepMilis } from "@/lib/consts";
 
 export default function GlyphPreviewComponent() {
   const { getPosition } = useGlobalAudioPlayer();
@@ -41,9 +43,24 @@ export default function GlyphPreviewComponent() {
           currentAudioPosition <=
             timelineData[i][j].startTimeMilis + timelineData[i][j].durationMilis
         ) {
+          const curr = timelineData[i][j];
+          // cuz in milis
+          const currTime = Math.floor(getPosition() * 1000/ kTimeStepMilis);
+          const endTimeIdx = Math.floor(
+            (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
+          );
+          const iterLimit = endTimeIdx - curr.startTimeMilis;
+          const iterCount = currTime ;
+
+          const currentEffectBrightness = generateEffectData(
+            curr.effectId,
+            curr.startingBrightness,
+            iterCount,
+            iterLimit
+          );
           // Sqrt cuz it gets way to dim; making dims more bright.
-          zoneColors[timelineData[i][j].glyphId] = `rgb(255 255 255 / ${
-            Math.sqrt(timelineData[i][j].startingBrightness) / Math.sqrt(4095)
+          zoneColors[curr.glyphId] = `rgb(255 255 255 / ${
+            Math.sqrt(currentEffectBrightness) / Math.sqrt(4095)
           })`;
           //   console.info("Encountered lit up glyph!");
           // Cuz one track can only have 1 at a time, skip and save compute
