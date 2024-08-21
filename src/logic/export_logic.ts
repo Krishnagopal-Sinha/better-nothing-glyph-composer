@@ -22,7 +22,7 @@ export function processEdits(csv: string): string | null {
   }
 }
 
-function generateEffectData(
+export function generateEffectData(
   effectId: number,
   brightness: number,
   iterCount: number,
