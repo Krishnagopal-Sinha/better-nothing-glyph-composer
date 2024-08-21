@@ -1,3 +1,5 @@
+import { kAppName } from "@/lib/consts";
+
 export default function FullPageAppLoaderPage() {
   return (
     <div className="flex items-center justify-center h-screen">
@@ -9,7 +11,7 @@ export default function FullPageAppLoaderPage() {
           <div className="h-8 w-8  bg-white rounded-full animate-bounce"></div>
         </div>
         <p className="text-2xl pt-6 font-medium  animate-pulse">Loading...</p>
-        <h1 className="text-3xl font-bold ">Simple Glyph Composer (ツ)</h1>
+        <h1 className="text-3xl font-bold ">{kAppName}</h1>
       </div>
     </div>
   );
