@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/context-menu";
 
 import { DraggableCore } from "react-draggable";
-import { kMagicNumber } from "@/lib/consts";
+import { kEffectNames, kMagicNumber } from "@/lib/consts";
 import { useState } from "react";
 
 type Props = {
@@ -53,14 +53,26 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     // console.log("stopped via handler ");
   };
 
+  const onEffectSelect = (effectId: number) => {
+    updateItem({
+      ...glyphItem,
+      effectId: effectId,
+    });
+  };
+
   return (
     <ContextMenu>
-      <ContextMenuTrigger>
+      <ContextMenuTrigger
+        onContextMenu={() => {
+          selectItem(glyphItem);
+        }}
+      >
         <DraggableCore onDrag={handleDrag} onStop={handleStop}>
           {/* Timeline Block */}
           <div
-    title="Click to select / unselect, right click to delete"
-
+            title={`Click to select / unselect, right click to delete\nEffect: ${
+              kEffectNames[glyphItem.effectId]
+            }`}
             onClick={(e) => {
               e.preventDefault();
               // Toggle Selection
@@ -73,7 +85,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             className=" h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md"
             style={{
               backgroundColor: `rgb(255 255 255 / ${
-                Math.sqrt(glyphItem.brightness) / Math.sqrt(4095)
+                Math.sqrt(glyphItem.startingBrightness) / Math.sqrt(4095)
               })`,
               width: `${(glyphItem.durationMilis / 1000) * kMagicNumber}px`,
               borderWidth: `${glyphItem.isSelected ? 3 : 0}px`,
@@ -104,6 +116,11 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         >
           Delete
         </ContextMenuItem>
+        {Object.entries(kEffectNames).map((e) => (
+          <ContextMenuItem onClick={() => onEffectSelect(parseInt(e[0]))}>
+            {e[1]}
+          </ContextMenuItem>
+        ))}
       </ContextMenuContent>
     </ContextMenu>
   );

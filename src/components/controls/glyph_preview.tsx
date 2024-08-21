@@ -43,7 +43,7 @@ export default function GlyphPreviewComponent() {
         ) {
           // Sqrt cuz it gets way to dim; making dims more bright.
           zoneColors[timelineData[i][j].glyphId] = `rgb(255 255 255 / ${
-            Math.sqrt(timelineData[i][j].brightness) / Math.sqrt(4095)
+            Math.sqrt(timelineData[i][j].startingBrightness) / Math.sqrt(4095)
           })`;
           //   console.info("Encountered lit up glyph!");
           // Cuz one track can only have 1 at a time, skip and save compute

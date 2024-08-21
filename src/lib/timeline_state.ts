@@ -144,8 +144,10 @@ export const useTimelineStore = create<AppState & Action>((set, get) => ({
       glyphId: glyphId,
       startTimeMilis: startTimeMilis,
       durationMilis: dataStore.get("newBlockDurationMilis")!,
-      brightness: dataStore.get("newBlockBrightness")!,
+      startingBrightness: dataStore.get("newBlockBrightness")!,
       isSelected: false,
+      effectId: 0,
+      effectData: [],
     };
 
     function addItemFinal(itemToAdd: GlyphBlock) {
@@ -357,21 +359,22 @@ export const useTimelineStore = create<AppState & Action>((set, get) => ({
       // feat. brightness - also ensure brightness is there
       const newBrightness: number =
         dataStore.get("overwriteBrightnessWithNewBlock") ?? false
-          ? dataStore.get("newBlockBrightness") ?? clipboardItems[i].brightness
-          : clipboardItems[i].brightness;
+          ? dataStore.get("newBlockBrightness") ??
+            clipboardItems[i].startingBrightness
+          : clipboardItems[i].startingBrightness;
 
       // actual paste logic
       if (i === lowestIdx) {
         const curr: GlyphBlock = {
           ...clipboardItems[i],
-          brightness: newBrightness,
+          startingBrightness: newBrightness,
           startTimeMilis: currentAudioPositionInMilis,
         };
         get().addGlyphItemDirectly(curr);
       } else {
         const curr: GlyphBlock = {
           ...clipboardItems[i],
-          brightness: newBrightness,
+          startingBrightness: newBrightness,
 
           startTimeMilis:
             currentAudioPositionInMilis +
