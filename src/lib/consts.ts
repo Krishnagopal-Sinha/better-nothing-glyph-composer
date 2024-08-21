@@ -21,6 +21,9 @@ export const kEffectNames: { [key: number]: string } = {
   7: "Single Heartbeat",
   8: "Chaos v2",
   9: "Metro - 1 sec",
+  10: "Metro - 2 sec",
+  11: "Metro - 4 sec",
+  12: "Metro - 8 sec",
 };
 
 // Version Info
