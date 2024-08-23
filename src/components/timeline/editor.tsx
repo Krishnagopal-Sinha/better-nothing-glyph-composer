@@ -1,11 +1,9 @@
-import { GlyphBlock } from "@/logic/glyph_model";
 import useGlobalAppStore from "@/lib/timeline_state";
-
 import TimelineBlockComponent from "./timelineBlocks";
 import TimeBarComponent from "./timebar";
-
 import PlayingIndicator from "./playingIndicator";
 import dataStore from "@/lib/data_store";
+import { GlyphBlock } from "@/lib/glyph_model";
 
 type Props = {
   // currentAudioPosition: number;

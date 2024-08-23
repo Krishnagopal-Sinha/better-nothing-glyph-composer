@@ -26,21 +26,22 @@ import {
 } from "lucide-react";
 import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
-import { toast } from "sonner";
+import { showError } from "./lib/helpers";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return "";
-    }
+  // DEBUG - uncomment after done dev
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return "";
+  //   }
 
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener("beforeunload", beforeUnload);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -164,7 +165,7 @@ export default function App() {
         } else {
           play();
         }
-        // e.preventDefault();
+        e.preventDefault();
       }
     }
     // Delete
@@ -217,14 +218,11 @@ export default function App() {
         // call it twice cuz of selection thingy to skip selection change,improve on this, same wid redo
         if (pastStates.length <= 0) {
           console.error("Error - Nothing to undo!");
-          toast.error("Action Skipped - Nothing to Undo", {
-            description: "There's nothing to Undo.",
-            action: {
-              label: "Ok",
-              onClick: () => {},
-            },
-            duration: 500,
-          });
+          showError(
+            "Action Skipped - Nothing to Undo",
+            "There's nothing to Undo."
+          );
+
           return;
         }
         undo();
@@ -236,14 +234,11 @@ export default function App() {
       if (e.ctrlKey && e.code === "KeyY") {
         if (futureStates.length <= 0) {
           console.error("Error - Nothing to Redo!");
-          toast.error("Action Skipped - Nothing to Redo", {
-            description: "There's nothing to Redo.",
-            action: {
-              label: "Ok",
-              onClick: () => {},
-            },
-            duration: 500,
-          });
+          showError(
+            "Action Skipped - Nothing to Rndo",
+            "There's nothing to Rndo."
+          );
+        
           return;
         }
         redo();

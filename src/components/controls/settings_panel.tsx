@@ -3,9 +3,9 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import DeviceChoiceComponent from "./device_choice";
 import dataStore from "@/lib/data_store";
-import { toast } from "sonner";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import useGlobalAppStore from "@/lib/timeline_state";
+import { showError } from "@/lib/helpers";
 
 export default function SettingsPanel() {
   const { setRate } = useGlobalAudioPlayer();
@@ -37,13 +37,10 @@ export default function SettingsPanel() {
     if (value >= 50 && value <= 10000) {
       dataStore.set("newBlockDurationMilis", value);
     } else {
-      toast.error("Invalid Value - Glyph Duration", {
-        description: "Should be between 50ms to 10s",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Glyph Duration",
+        "Should be between 50ms to 10s"
+      );
     }
   };
 
@@ -57,13 +54,10 @@ export default function SettingsPanel() {
     if (selectedValue >= 1 && selectedValue <= 100) {
       dataStore.set("newBlockBrightness", value);
     } else {
-      toast.error(`Invalid Value - Glyph Brightness`, {
-        description: "Should be between 1% to 100%",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Glyph Brightness",
+        "Should be between 1% to 100%"
+      );
     }
   };
 
@@ -77,13 +71,7 @@ export default function SettingsPanel() {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      toast.error("Invalid Value - Audio Speed", {
-        description: "Should be between 0.5x to 2x",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError("Invalid Value - Audio Speed", "Should be between 0.5x to 2x");
     }
   };
   return (

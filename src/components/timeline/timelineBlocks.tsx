@@ -135,7 +135,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           Delete
         </ContextMenuItem>
         {Object.entries(kEffectNames).map((e) => (
-          <ContextMenuItem onClick={() => onEffectSelect(parseInt(e[0]))}>
+          <ContextMenuItem key={e[0]} onClick={() => onEffectSelect(parseInt(e[0]))}>
             {e[1]}
           </ContextMenuItem>
         ))}

@@ -7,8 +7,8 @@ import {
 } from "@/components/ui/context-menu";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import dataStore from "@/lib/data_store";
-import { toast } from "sonner";
 import useGlobalAppStore from "@/lib/timeline_state";
+import { showError } from "@/lib/helpers";
 
 type Props = {
   secondToRespresent: number;
@@ -51,15 +51,12 @@ export default function TimeBarBlocks({
     );
     // Check for error with duration and stuff
     if (loopAPositionInMilis > duration * 1000) {
-      // show error
-      toast.error("Invalid Value - Loop A Position", {
-        description:
-          "Loop's starting point should be before the audio ends. UI may show it otherwise, but the audio has ended before this point.",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Loop A Position",
+
+        "Loop's starting point should be before the audio ends. UI may show it otherwise, but the audio has ended before this point."
+      );
+
       return;
     }
     // When loop B already
@@ -68,14 +65,11 @@ export default function TimeBarBlocks({
         // add loop a
         updateLoopA(loopAPositionInMilis);
       } else {
-        // show error
-        toast.error("Invalid Value - Loop A Position", {
-          description: "Loop's starting point should be before it's ending.",
-          action: {
-            label: "Ok",
-            onClick: () => {},
-          },
-        });
+        showError(
+          "Invalid Value - Loop A Position",
+
+          "Loop's starting point should be before it's ending."
+        );
       }
       return;
     }
@@ -94,14 +88,11 @@ export default function TimeBarBlocks({
     // Check for error with audio duration
     if (loopBPositionInMilis > duration * 1000) {
       // show error
-      toast.error("Invalid Value - Loop B Position", {
-        description:
-          "Loop's ending point should be before the audio ends. UI may show it otherwise, but the audio has ended before this point.",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Loop B Position",
+        "Loop's ending point should be before the audio ends. UI may show it otherwise, but the audio has ended before this point."
+      );
+
       return;
     }
     // When loop A already
@@ -111,15 +102,10 @@ export default function TimeBarBlocks({
         dataStore.set("loopBPositionInMilis", loopBPositionInMilis);
         setLoopBsUiPosition(loopBPositionInMilis);
       } else {
-        // show error
-        toast.error("Invalid Value - Loop B Position", {
-          description:
-            "Loop's ending point must be before it's starting point.",
-          action: {
-            label: "Ok",
-            onClick: () => {},
-          },
-        });
+        showError(
+          "Invalid Value - Loop B Position",
+          "Loop's ending point must be before it's starting point."
+        );
       }
       return;
     }
@@ -149,7 +135,7 @@ export default function TimeBarBlocks({
 
   const isMinuteMark: boolean =
     secondToRespresent !== 0 && secondToRespresent % 60 === 0;
-    const isTenSecMark: boolean =
+  const isTenSecMark: boolean =
     secondToRespresent !== 0 && secondToRespresent % 10 === 0;
 
   return (
@@ -162,12 +148,13 @@ export default function TimeBarBlocks({
           style={{
             width: `${timelinePixelFactor}px`,
             paddingLeft: timelinePixelFactor >= 40 ? "10px" : "2px",
-            backgroundColor: isMinuteMark ? "rgb(85 28 28)" : isTenSecMark ? 'rgb(155 28 28)' : 'rgb(185 28 28)',
+            backgroundColor: isMinuteMark
+              ? "rgb(85 28 28)"
+              : isTenSecMark
+              ? "rgb(155 28 28)"
+              : "rgb(185 28 28)",
             // color: isMinuteMark ? "black" : "",
-            boxShadow:
-              secondToRespresent === 0
-                ? ""
-                : `1px 0 0 #000 inset`,
+            boxShadow: secondToRespresent === 0 ? "" : `1px 0 0 #000 inset`,
 
             // borderLeftWidth: secondToRespresent != 0 ? "1px" : 0,
           }}

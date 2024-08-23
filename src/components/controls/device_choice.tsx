@@ -34,11 +34,12 @@ export default function DeviceChoiceComponent() {
         if (e === "NP1_15") {
           toast.info("Caution: NP(1) in 15 Zone Mode", {
             description:
-              "This is not well supported well by the Phone(1), premature pausing the track in the middle of the playback may cause Glyph to get stuck, toggle glyph torch On and Off to fix. This is Nothing OS issue, ask Nothing to fix!",
+              "This is not well supported well by the Phone(1), premature pausing the track in the middle of the playback may cause Glyph to get stuck, toggle glyph torch On and Off to fix. This is Nothing OS issue, please ask Nothing to fix ;-;",
             action: {
               label: "Ok",
               onClick: () => {},
             },
+            duration: 2500,
           });
         }
 

@@ -14,7 +14,7 @@ export default function NP2_33_Preview({
       y="0px"
       width="100%"
       viewBox="0 0 480 974"
-      enable-background="new 0 0 480 974"
+      enableBackground="new 0 0 480 974"
     >
       {/* zone 0 glyphid 1 */}
       <path

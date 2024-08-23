@@ -1,10 +1,10 @@
 import { create, useStore } from "zustand";
 import dataStore from "./data_store";
 import { nanoid } from "nanoid";
-import { toast } from "sonner";
 import { kAllowedModels } from "./consts";
 import { temporal, TemporalState } from "zundo";
 import { GlyphBlock, DeltaUpdateBlock } from "./glyph_model";
+import { canAddItem2, insertInSortedOrder, showError } from "./helpers";
 
 type GlyphStore = { [key: number]: GlyphBlock[] };
 type AppSettings = {
@@ -27,7 +27,7 @@ export type PartializedStoreState = Pick<GlyphEditorState, "items">;
 
 export type Action = {
   addItem: (glyphId: number, startTimeMilis: number) => void;
-  addGlyphItemDirectly: (glyphBlock: GlyphBlock) => void;
+  addItemDirectly: (newItem: GlyphBlock) => void;
   removeItem: (id: string, glyphId: number) => void;
   updateItem: (updatedItem: GlyphBlock) => void;
   updateSelectedItem: (deltaBlockTemplate: DeltaUpdateBlock) => void;
@@ -78,43 +78,36 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       // Setting update functions
-      toggleZoneVisibility: () => {
-        const oldValue = get().appSettings.isZoneVisible;
-        const newSettings: AppSettings = {
-          ...get().appSettings,
-          isZoneVisible: !oldValue,
-        };
-        set({ appSettings: newSettings });
-      },
-      toggleKeyboardGesture: () => {
-        const oldValue = get().appSettings.isKeyboardGestureEnabled;
-        const newSettings: AppSettings = {
-          ...get().appSettings,
-          isKeyboardGestureEnabled: !oldValue,
-        };
-        set({ appSettings: newSettings });
-      },
-      toggleMultiSelect: (toSelect?: boolean) => {
-        const oldValue = get().appSettings.isMultiSelectActive;
-        let newSettings: AppSettings;
-        if (toSelect) {
-          //for force selecting when shift is pressed
-          newSettings = {
-            ...get().appSettings,
-            isMultiSelectActive: true,
-          };
-        } else {
-          newSettings = {
-            ...get().appSettings,
-            isMultiSelectActive: !oldValue,
-          };
-        }
-        set({ appSettings: newSettings });
-      },
+      toggleZoneVisibility: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            isZoneVisible: !state.appSettings.isZoneVisible,
+          },
+        })),
+
+      toggleKeyboardGesture: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            isKeyboardGestureEnabled:
+              !state.appSettings.isKeyboardGestureEnabled,
+          },
+        })),
+
+      toggleMultiSelect: (toSelect?: boolean) =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            isMultiSelectActive:
+              toSelect ?? !state.appSettings.isMultiSelectActive,
+          },
+        })),
+
       decreasePixelFactor: () => {
         const oldValue = get().appSettings.timelinePixelFactor;
         const newValue = oldValue / 1.5;
-        console.log(`Dec--: ${oldValue} => ${newValue}`);
+        // console.log(`Dec--: ${oldValue} => ${newValue}`);
 
         const newSettings: AppSettings = {
           ...get().appSettings,
@@ -122,10 +115,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         };
         set({ appSettings: newSettings });
       },
+
       increasePixelFactor: () => {
         const oldValue = get().appSettings.timelinePixelFactor;
         const newValue = oldValue * 1.5;
-        console.log(`Inc++: ${oldValue} => ${newValue}`);
+        // console.log(`Inc++: ${oldValue} => ${newValue}`);
         const newSettings: AppSettings = {
           ...get().appSettings,
           timelinePixelFactor: newValue,
@@ -134,23 +128,61 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       // Update Duration
-      updateDuration: (durationInMilis: number) => {
-        const audioInformation = get().audioInformation;
-
-        const newInfo = { ...audioInformation, durationInMilis };
-
-        set({ audioInformation: newInfo });
-      },
+      updateDuration: (durationInMilis: number) =>
+        set((state) => ({
+          audioInformation: { ...state.audioInformation, durationInMilis },
+        })),
 
       // ADD
-      addItem: (glyphId: number, startTimeMilis: number) => {
-        const items = get().items;
-        const audioInformation = get().audioInformation;
+      addItemDirectly: (item: GlyphBlock) => {
+        const { items, audioInformation } = get();
 
+        const actualAdd = (newItem: GlyphBlock) => {
+          // fetch latest state n add
+          set((state) => ({
+            items: {
+              ...state.items,
+              [item.glyphId]: insertInSortedOrder(
+                state.items[item.glyphId],
+                newItem
+              ),
+            },
+          }));
+        };
+
+        if (
+          canAddItem2(
+            item,
+            items[item.glyphId],
+            audioInformation.durationInMilis
+          )
+        ) {
+          actualAdd(item);
+          get().toggleSelection(item);
+        } else {
+          // console.warn("Cannot add item: overlapping detected!");
+          const offsetItem = {
+            ...item,
+            startTimeMilis: item.startTimeMilis - 200,
+          };
+          if (
+            canAddItem2(
+              offsetItem,
+              items[item.glyphId],
+              audioInformation.durationInMilis
+            )
+          ) {
+            actualAdd(offsetItem);
+            get().toggleSelection(offsetItem);
+          }
+        }
+      },
+
+      addItem: (glyphId: number, startTimeMilis: number) => {
         const newItem: GlyphBlock = {
           id: nanoid(),
-          glyphId: glyphId,
-          startTimeMilis: startTimeMilis,
+          glyphId,
+          startTimeMilis,
           durationMilis: dataStore.get("newBlockDurationMilis")!,
           startingBrightness: dataStore.get("newBlockBrightness")!,
           isSelected: false,
@@ -158,95 +190,45 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           effectData: [],
         };
 
-        function addItemFinal(itemToAdd: GlyphBlock) {
-          const updatedItems = {
-            ...items,
-            [newItem.glyphId]: [...items[newItem.glyphId], itemToAdd],
-          };
-          // console.log(`item id: ${itemToAdd.glyphId}`);
-          // console.log(updatedItems);
-          set({ items: updatedItems });
-          // Select newly added item
-          get().toggleSelection(itemToAdd);
-        }
-
-        if (
-          canAddItem(
-            newItem,
-            items[newItem.glyphId],
-            audioInformation.durationInMilis
-          )
-        ) {
-          addItemFinal(newItem);
-        } else {
-          //retry with some offset!
-          const newItem2: GlyphBlock = {
-            ...newItem,
-            startTimeMilis: newItem.startTimeMilis - 200,
-          };
-          if (
-            canAddItem(
-              newItem2,
-              items[newItem.glyphId],
-              audioInformation.durationInMilis
-            )
-          ) {
-            addItemFinal(newItem2);
-          } else {
-            console.warn("Cannot add item: overlapping detected-!");
-          }
-        }
+        get().addItemDirectly(newItem);
       },
 
       // REMOVE
-      removeItem: (id: string, glyphId: number) => {
-        const items = get().items;
-        const updatedItems = {
-          ...items,
-          [glyphId]: items[glyphId].filter((e) => e.id !== id),
-        };
-        set({ items: updatedItems });
-      },
+      removeItem: (id: string, glyphId: number) =>
+        set((state) => ({
+          items: {
+            ...state.items,
+            [glyphId]: state.items[glyphId].filter((e) => e.id !== id),
+          },
+        })),
 
       // UPDATE
       updateItem: (updatedItem: GlyphBlock) => {
-        //Check for illelgal values, tend to happen cuz mouse movement based
-        if (updatedItem.durationMilis < 100 || updatedItem.startTimeMilis < 0)
-          return;
-        const items = get().items;
-        const audioInformation = get().audioInformation;
-
-        let updatedItemIdx = -1;
-
-        const updatedItems = {
-          ...items,
-          [updatedItem.glyphId]: items[updatedItem.glyphId].map((item, idx) => {
-            if (item.id === updatedItem.id) {
-              updatedItemIdx = idx;
-              return updatedItem;
-            }
-            return item;
-          }),
-        };
+        const { items, audioInformation } = get();
+        const updatedItemsList = items[updatedItem.glyphId].filter(
+          (item) => item.id !== updatedItem.id
+        );
 
         if (
-          updatedItemIdx >= 0 &&
-          canAddItem(
+          canAddItem2(
             updatedItem,
-            items[updatedItem.glyphId],
-            audioInformation.durationInMilis,
-            updatedItemIdx
+            updatedItemsList,
+            audioInformation.durationInMilis
           )
         ) {
-          set({ items: updatedItems });
+          const updatedItems = insertInSortedOrder(
+            updatedItemsList,
+            updatedItem
+          );
+          set((state) => ({
+            items: {
+              ...state.items,
+              [updatedItem.glyphId]: updatedItems,
+            },
+          }));
         } else {
-          console.log(`Did not update, updateIdx${updatedItemIdx} (error)`);
-          return;
+          // console.log("Error: Overlap detected...");
         }
-
-        // console.log(
-        //   `Updated start time: ${updatedItem.startTimeMilis} | dur: ${updatedItem.durationMilis}`
-        // );
       },
 
       // Only send difference of time values !
@@ -274,8 +256,9 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                   curr.startingBrightness ??
                   4095,
               };
+              // console.log(curr.durationMilis);
               // skip if outside respectable bounds
-              if (canAddItem(curr, updatedItems[i], durationInMilis, j)) {
+              if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
                 updatedItems[i][j] = curr;
               }
             }
@@ -284,39 +267,35 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         // updatee
         set({ items: updatedItems });
       },
+
       // Add - Fill all
       fillEntireZone: (
         startGlyphId: number,
         endGlyphId: number,
         startTimeMilis: number
       ) => {
+        const { items, audioInformation } = get();
+        const updatedItems = { ...items };
         // Dont call add item func, cuz undo would track each add, rather fill entire thing at once, easy for undo and redo
         // TODO: Logic repeated - abstract this and make it neater
-        const items = get().items;
-        // deselect all
         get().selectAll(false);
-
-        const updatedItems = { ...items };
-        const durationInMilis = get().audioInformation.durationInMilis;
 
         for (let i = startGlyphId; i <= endGlyphId; i++) {
           const newItem: GlyphBlock = {
             id: nanoid(),
             glyphId: i,
-            startTimeMilis: startTimeMilis,
+            startTimeMilis,
             durationMilis: dataStore.get("newBlockDurationMilis")!,
             startingBrightness: dataStore.get("newBlockBrightness")!,
             isSelected: false,
             effectId: 0,
             effectData: [],
           };
-          if (canAddItem(newItem, items[i], durationInMilis)) {
-            updatedItems[i] = [...updatedItems[i], newItem];
+          if (
+            canAddItem2(newItem, items[i], audioInformation.durationInMilis)
+          ) {
+            updatedItems[i] = insertInSortedOrder(updatedItems[i], newItem);
           }
-          //  else {
-          // Can add item would dispatch it's error can skip here
-          // console.warn("Error, skipped adding a block, overwrite detected!");
-          // }
         }
 
         set({ items: updatedItems });
@@ -325,78 +304,45 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       // SELECT
       toggleSelection: (itemToSelect: GlyphBlock, toSelect: boolean = true) => {
         // TODO: Maintain a single selection int and make if much more efficient in single select mode or something
-        const items = get().items;
-        const updatedItems = {
-          ...items,
-        };
-        const itemIdx = updatedItems[itemToSelect.glyphId].findIndex(
-          (e) => e.id === itemToSelect.id
-        );
-        //cuz -1 if not found
-        if (itemIdx !== -1) {
-          const isMutliSelectActive = get().appSettings.isMultiSelectActive;
-          if (!isMutliSelectActive) {
-            // Unselect other blocks if any
-            for (let i = 0; i < Object.keys(updatedItems).length; i++) {
-              for (let j = 0; j < updatedItems[i].length; j++) {
-                updatedItems[i][j].isSelected = false;
-              }
+        const { items, appSettings } = get();
+        const updatedItems = { ...items };
+        if (!appSettings.isMultiSelectActive) {
+          // Unselect other blocks if any
+
+          for (let i = 0; i < Object.keys(updatedItems).length; i++) {
+            for (let j = 0; j < updatedItems[i].length; j++) {
+              updatedItems[i][j].isSelected = false;
             }
           }
-          if (toSelect) {
-            updatedItems[itemToSelect.glyphId][itemIdx].isSelected = true;
-            // console.log(`Item was selected!`);
-          } else {
-            updatedItems[itemToSelect.glyphId][itemIdx].isSelected = false;
-            // console.log(`Item was UNselected!`);
-          }
-
+        }
+        const itemList = updatedItems[itemToSelect.glyphId];
+        const item = itemList.find((e) => e.id === itemToSelect.id);
+        if (item) {
+          item.isSelected = toSelect;
           set({ items: updatedItems });
-        } else {
-          console.error(`Item for selection not found!${itemIdx}`);
         }
       },
 
       // RESET
       reset: () => {
-        const currentPhoneModel = get().phoneModel;
-        const newItems: GlyphStore = {};
-        // Get number of editor rows
-        let numberOfItemRows: number;
-        switch (currentPhoneModel) {
-          case "NP1":
-            numberOfItemRows = 5;
-            break;
-          case "NP1_15":
-            numberOfItemRows = 15;
-            break;
-          case "NP2_33":
-            numberOfItemRows = 33;
-            break;
-          case "NP2a":
-            numberOfItemRows = 26;
-            break;
+        const numberOfItemRows =
+          {
+            NP1: 5,
+            NP1_15: 15,
+            NP2_33: 33,
+            NP2a: 26,
+          }[get().phoneModel] ?? 5;
 
-          default:
-            numberOfItemRows = 5;
-        }
-        // create empty items array
-        for (let i = 0; i < numberOfItemRows; i++) {
-          newItems[i] = [];
-        }
-
-        // clear undo n stuff - does not work, hekk, trigger from device dropdown change
+        // Remember: calling zundo's clear method from here didn't work, so it is being called when device dropdown changes, from that ui
         set({
-          items: newItems,
+          items: Array.from({ length: numberOfItemRows }, () => []),
           clipboard: [],
-          //  dont set audio info to null cuz same audio device switch is allowed,
         });
       },
 
       copyItems: () => {
         const items = get().items;
         const newCopyBuffer: GlyphBlock[] = [];
-        set({ clipboard: [] });
 
         for (let i = 0; i < Object.keys(items).length; i++) {
           for (let j = 0; j < items[i].length; j++) {
@@ -408,21 +354,20 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         }
 
         set({ clipboard: newCopyBuffer });
-
-        toast("Items Copied", {
-          description: "Selected items have been copied.",
-          action: {
-            label: "Ok",
-            onClick: () => {},
-          },
-          duration: 500,
-        });
+        if (newCopyBuffer.length > 500) {
+          showError(
+            `Copied Items Count - ${newCopyBuffer.length}`,
+            "This is allowed but may slow down the app, for real!",
+            1500
+          );
+        } else {
+          showError("Items Copied", "Selected items have been copied.");
+        }
       },
 
       cutItems: () => {
         const items = get().items;
         const newCopyBuffer: GlyphBlock[] = [];
-        set({ clipboard: [] });
 
         for (let i = 0; i < Object.keys(items).length; i++) {
           for (let j = 0; j < items[i].length; j++) {
@@ -436,14 +381,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         get().removeSelectedItem();
         set({ clipboard: newCopyBuffer, isCutActive: true });
 
-        toast("Items Cut", {
-          description: "Selected items have been cut.",
-          action: {
-            label: "Ok",
-            onClick: () => {},
-          },
-          duration: 500,
-        });
+        showError("Items Cut", "Selected items have been cut.");
       },
 
       pasteItems: () => {
@@ -477,22 +415,23 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           if (i === lowestIdx) {
             const curr: GlyphBlock = {
               ...clipboardItems[i],
+              id: nanoid(),
               startingBrightness: newBrightness,
               startTimeMilis: currentAudioPositionInMilis,
             };
-            get().addGlyphItemDirectly(curr);
+            get().addItemDirectly(curr);
           } else {
             const curr: GlyphBlock = {
               ...clipboardItems[i],
+              id: nanoid(),
               startingBrightness: newBrightness,
-
               startTimeMilis:
                 currentAudioPositionInMilis +
                 (clipboardItems[i].startTimeMilis - deltaAnchor),
             };
-            get().addGlyphItemDirectly(curr);
+            get().addItemDirectly(curr);
           }
-
+          // If cut active, reset cut n clipboard state
           const isCutActive = get().isCutActive;
           if (isCutActive) {
             //reset clipboard n cut status so no more that paste possible
@@ -526,7 +465,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         }
 
         if (
-          canAddItem(
+          canAddItem2(
             newItem,
             items[newItem.glyphId],
             audioInformation.durationInMilis
@@ -541,7 +480,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             startTimeMilis: newItem.startTimeMilis - 200,
           };
           if (
-            canAddItem(
+            canAddItem2(
               newItem2,
               items[newItem.glyphId],
               audioInformation.durationInMilis
@@ -621,82 +560,5 @@ export const useTemporalStore = <T>(
   selector: (state: TemporalState<PartializedStoreState>) => T,
   equality?: (a: T, b: T) => boolean
 ) => useStore(useGlobalAppStore.temporal, selector, equality);
-
-// TODO: Can be optimised, check only the neighbours not entire thing!
-function canAddItem(
-  newItem: GlyphBlock,
-  existingItems: GlyphBlock[],
-  audioDurationInMilis: number,
-  skipIndex: number = -1
-): boolean {
-  // Basic check
-  if (newItem.durationMilis > 0 && newItem.startTimeMilis >= 0) {
-    /* empty */
-  } else {
-    toast.error("Error - Item not added", {
-      description: "Invalid start time or duration.",
-      action: {
-        label: "Ok",
-        onClick: () => {},
-      },
-    });
-    return false;
-  }
-
-  // Check if item if out of bounds
-  if (
-    newItem.startTimeMilis < audioDurationInMilis &&
-    newItem.startTimeMilis + newItem.durationMilis <= audioDurationInMilis
-  ) {
-    // empty
-  } else {
-    toast.error("Error - Item not added or modified", {
-      description:
-        "Glyph timings must be within audio's time bounds.\nYes, the UI might say otherwise but the audio has reached it's end",
-      action: {
-        label: "Ok",
-        onClick: () => {},
-      },
-    });
-    return false;
-  }
-
-  for (let i = 0; i < existingItems.length; i++) {
-    const currentItem = existingItems[i];
-    if (skipIndex >= 0 && skipIndex == i) continue; //skip this iter
-    //^ for update check
-
-    if (
-      newItem.startTimeMilis <
-        currentItem.startTimeMilis + currentItem.durationMilis &&
-      newItem.startTimeMilis + newItem.durationMilis >
-        currentItem.startTimeMilis
-    ) {
-      //     console.error(`
-      // NewItem Start: ${newItem.startTimeMilis} | Dur: ${newItem.durationMilis}\n
-      // OldItem Start: ${currentItem.startTimeMilis} | Dur: ${
-      //       currentItem.durationMilis
-      //     }\n
-      // cond1: ${
-      //   newItem.startTimeMilis <
-      //   currentItem.startTimeMilis + currentItem.durationMilis
-      // }\n
-      // cond2: ${
-      //   newItem.startTimeMilis + newItem.durationMilis > currentItem.startTimeMilis
-      // }
-      // `);
-      toast.error("Error - A Block was not added or modified", {
-        description: "Overlap with another existing Glyph block detected",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
-      return false;
-    }
-  }
-
-  return true;
-}
 
 export default useGlobalAppStore;

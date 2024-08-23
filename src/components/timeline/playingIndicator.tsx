@@ -1,8 +1,8 @@
 import dataStore from "@/lib/data_store";
+import { showError } from "@/lib/helpers";
 import useGlobalAppStore from "@/lib/timeline_state";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
-import { toast } from "sonner";
 
 //TODO: Animated every instance, throttle this down?
 export default function PlayingIndicator({
@@ -11,7 +11,9 @@ export default function PlayingIndicator({
   editorRows: number;
 }) {
   const { getPosition, seek } = useGlobalAudioPlayer();
-  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
 
   // Handle live playing indicator updates for playing audio
   const frameRef = useRef<number>();
@@ -20,8 +22,8 @@ export default function PlayingIndicator({
 
   useEffect(() => {
     const animate = () => {
-      setCurrentPosition(getPosition()); 
-      dataStore.set('currentAudioPositionInMilis', getPosition()*1000); //convert into milis
+      setCurrentPosition(getPosition());
+      dataStore.set("currentAudioPositionInMilis", getPosition() * 1000); //convert into milis
       frameRef.current = requestAnimationFrame(animate);
     };
 
@@ -50,14 +52,10 @@ export default function PlayingIndicator({
     } else if (currentAudioPositionInMilis < loopAPositionInMilis) {
       // takes in seconds
       seek(loopAPositionInMilis / 1000);
-      toast.error("Loop Active", {
-        description:
-          "Since loop is set, taking you to loop. Remove loop if this is unwanted.",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Loop Active",
+        "Since loop is set, taking you to loop. Remove loop if this is unwanted."
+      );
     }
   }
 
