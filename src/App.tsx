@@ -1,7 +1,7 @@
 import ControlPanelComponent from "@/components/controls/control_panel";
 import GlyphPreviewComponent from "@/components/controls/glyph_preview";
 import EditorComponent from "@/components/timeline/editor";
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { useFilePicker } from "use-file-picker";
@@ -21,10 +21,12 @@ import {
   Save,
   Square,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
-import { kMagicNumber } from "./lib/consts";
+import { toast } from "sonner";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
@@ -41,10 +43,39 @@ export default function App() {
   }, []);
 
   // App state
-  const timelineData = useTimelineStore((state) => state.items);
-  const resetData = useTimelineStore((state) => state.reset);
-  const updateDuration = useTimelineStore((state) => state.updateDuration);
-  const currentDevice = useTimelineStore((state) => state.phoneModel);
+  const timelineData = useGlobalAppStore((state) => state.items);
+  const resetData = useGlobalAppStore((state) => state.reset);
+  const updateDuration = useGlobalAppStore((state) => state.updateDuration);
+  const currentDevice = useGlobalAppStore((state) => state.phoneModel);
+  const isKeyboardGestureEnabled = useGlobalAppStore(
+    (state) => state.appSettings.isKeyboardGestureEnabled
+  );
+  const removeSelectedItem = useGlobalAppStore(
+    (state) => state.removeSelectedItem
+  );
+  const toggleMultiSelect = useGlobalAppStore(
+    (state) => state.toggleMultiSelect
+  );
+  const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const copyItems = useGlobalAppStore((state) => state.copyItems);
+  const cutItems = useGlobalAppStore((state) => state.cutItems);
+  const pasteItems = useGlobalAppStore((state) => state.pasteItems);
+  const increasePixelFactor = useGlobalAppStore(
+    (state) => state.increasePixelFactor
+  );
+  const decreasePixelFactor = useGlobalAppStore(
+    (state) => state.decreasePixelFactor
+  );
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
+  const {
+    undo,
+    redo,
+    pastStates,
+    futureStates,
+    clear: clearUndoRedo,
+  } = useTemporalStore((state) => state);
   // Scroll ref for scrolling editor
   const editorRef = useRef<HTMLDivElement>(null);
   // Input file
@@ -63,6 +94,8 @@ export default function App() {
     load,
     stop,
     togglePlayPause,
+    play,
+    pause,
     setRate,
     duration,
     // isReady,
@@ -78,6 +111,8 @@ export default function App() {
         dataStore.set("isAudioLoaded", true);
         // set seek rate
         setRate(dataStore.get("audioSpeed") ?? 1);
+        // clear undo and stuff
+        clearUndoRedo();
         return;
       } catch (e) {
         console.error("Error while loading audio file:", e);
@@ -94,29 +129,6 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filesContent, errors]);
-
-  function loadAudioFile() {
-    // Close audio does these clean ups
-    // resetData();
-    // clear();
-    openFilePicker();
-  }
-
-  function stopAudio() {
-    stop();
-  }
-
-  function closeAudio(e: React.MouseEvent) {
-    e.preventDefault();
-    // Reset All Possible States - cleanup
-    stopAudio();
-    clear();
-    setIsInputLoaded(false);
-    // clear up loop data
-    dataStore.set("loopAPositionInMilis", undefined);
-    dataStore.set("loopAPositionInMilis", undefined);
-    resetData();
-  }
 
   if (errors.length) {
     console.error(`Failed to pick file: ${errors}`);
@@ -140,18 +152,161 @@ export default function App() {
     initializeFFmpeg();
   }, []);
 
+  // Key Gesture Handlers
+  useEffect(() => {
+    // Keyboard Controls
+
+    // Play Pause
+    function onSpaceKeyPress(e: KeyboardEvent) {
+      if (e.code === "Space") {
+        if (playing) {
+          pause();
+        } else {
+          play();
+        }
+        // e.preventDefault();
+      }
+    }
+    // Delete
+    function onDeleteOrBackspaceKeyDown(e: KeyboardEvent) {
+      if (e.code === "Delete" || e.code === "Backspace") {
+        removeSelectedItem();
+      }
+    }
+    // Toggle multi select to on when shift is pressed down
+    function onShiftKeyDown(e: KeyboardEvent) {
+      if (e.shiftKey) {
+        toggleMultiSelect(true);
+      }
+    }
+    // Toggle multi select to off when shift is pressed down
+    function onShiftKeyUp(e: KeyboardEvent) {
+      if (e.key === "Shift") {
+        toggleMultiSelect(false);
+      }
+    }
+    // Select all - intercept regular ctrl + a
+    function onCtrlAKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyA") {
+        // console.log("intercepting select all!");
+        selectAllItems();
+        e.preventDefault();
+      }
+    }
+    // Copy Selected
+    function onCtrlCKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyC") {
+        copyItems();
+      }
+    }
+    // Cut Selected
+    function onCtrlXKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyX") {
+        cutItems();
+      }
+    }
+    // Paste Selected
+    function onCtrlVKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyV") {
+        pasteItems();
+      }
+    }
+    // Undo
+    function onCtrlZKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ" && !e.shiftKey) {
+        // call it twice cuz of selection thingy to skip selection change,improve on this, same wid redo
+        if (pastStates.length <= 0) {
+          console.error("Error - Nothing to undo!");
+          toast.error("Action Skipped - Nothing to Undo", {
+            description: "There's nothing to Undo.",
+            action: {
+              label: "Ok",
+              onClick: () => {},
+            },
+            duration: 500,
+          });
+          return;
+        }
+        undo();
+        undo();
+      }
+    }
+    // Redo
+    function onCtrlYKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey && e.code === "KeyY") {
+        if (futureStates.length <= 0) {
+          console.error("Error - Nothing to Redo!");
+          toast.error("Action Skipped - Nothing to Redo", {
+            description: "There's nothing to Redo.",
+            action: {
+              label: "Ok",
+              onClick: () => {},
+            },
+            duration: 500,
+          });
+          return;
+        }
+        redo();
+        redo();
+      }
+    }
+    if (isInputLoaded && isKeyboardGestureEnabled) {
+      // play pause stuff
+      window.addEventListener("keypress", onSpaceKeyPress);
+      window.addEventListener("keydown", onDeleteOrBackspaceKeyDown);
+      window.addEventListener("keydown", onShiftKeyDown);
+      window.addEventListener("keyup", onShiftKeyUp);
+      window.addEventListener("keydown", onCtrlAKeyDown);
+      window.addEventListener("keydown", onCtrlCKeyDown);
+      window.addEventListener("keydown", onCtrlXKeyDown);
+      window.addEventListener("keydown", onCtrlVKeyDown);
+      window.addEventListener("keydown", onCtrlZKeyDown);
+      window.addEventListener("keydown", onCtrlYKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keypress", onSpaceKeyPress);
+      window.removeEventListener("keydown", onDeleteOrBackspaceKeyDown);
+      window.removeEventListener("keydown", onShiftKeyDown);
+      window.removeEventListener("keyup", onShiftKeyUp);
+      window.removeEventListener("keydown", onCtrlAKeyDown);
+      window.removeEventListener("keydown", onCtrlCKeyDown);
+      window.removeEventListener("keydown", onCtrlXKeyDown);
+      window.removeEventListener("keydown", onCtrlVKeyDown);
+      window.removeEventListener("keydown", onCtrlZKeyDown);
+      window.removeEventListener("keydown", onCtrlYKeyDown);
+    };
+  }, [
+    isKeyboardGestureEnabled,
+    isInputLoaded,
+    pause,
+    play,
+    playing,
+    removeSelectedItem,
+    toggleMultiSelect,
+    selectAllItems,
+    copyItems,
+    pasteItems,
+    undo,
+    redo,
+    pastStates,
+    futureStates,
+    cutItems,
+  ]);
+
   if (!ffmpegLoaded) {
     return <FullPageAppLoaderPage />;
   }
+
   return (
     <main>
       {/* Toast setup */}
-      <Toaster visibleToasts={2} position="top-center" />
+      <Toaster visibleToasts={2} position="top-center" duration={700} />
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* main div */}
-      <div 
+      <div
       // className="grid grid-cols-1 grid-rows-[50dvh_50dvh]"
       >
         {/* Upper Section - Fixed */}
@@ -205,6 +360,30 @@ export default function App() {
     </main>
   );
 
+  // Audio Controls
+  function loadAudioFile() {
+    // Close audio does these clean ups
+    resetData();
+    clear();
+    openFilePicker();
+  }
+
+  function stopAudio() {
+    stop();
+  }
+
+  function closeAudio(e: React.MouseEvent) {
+    e.preventDefault();
+    // Reset All Possible States - cleanup
+    stopAudio();
+    clear();
+    setIsInputLoaded(false);
+    // clear up loop data
+    dataStore.set("loopAPositionInMilis", undefined);
+    dataStore.set("loopAPositionInMilis", undefined);
+    resetData();
+  }
+
   function goToStart(): void {
     editorRef.current?.scrollTo({ left: 0, behavior: "smooth" });
     // seek audio
@@ -212,7 +391,7 @@ export default function App() {
   }
   function goToEnd(): void {
     editorRef.current?.scrollTo({
-      left: duration * kMagicNumber,
+      left: duration * timelinePixelFactor,
       behavior: "smooth",
     });
 
@@ -220,7 +399,7 @@ export default function App() {
   }
   function goToMiddle(): void {
     editorRef.current?.scrollTo({
-      left: (duration / 2) * kMagicNumber - window.innerWidth / 2,
+      left: (duration / 2) * timelinePixelFactor - window.innerWidth / 2,
       behavior: "smooth",
     });
     seek(duration / 2);
@@ -238,11 +417,18 @@ export default function App() {
             }`}
           >
             <button
-              onClick={stopAudio}
-              title={"Stop"}
-              aria-label="Stop audio button"
+              onClick={decreasePixelFactor}
+              title={"Zoom out timeline"}
+              aria-label="Zoom out timeline"
             >
-              <Square />
+              <ZoomOut />
+            </button>
+            <button
+              onClick={increasePixelFactor}
+              title={"Zoom out timeline"}
+              aria-label="Zoom out timeline"
+            >
+              <ZoomIn />
             </button>
 
             {/* scroll to middle scroll middle */}
@@ -269,6 +455,13 @@ export default function App() {
               <ChevronsRight />
             </button>
 
+            <button
+              onClick={stopAudio}
+              title={"Stop"}
+              aria-label="Stop audio button"
+            >
+              <Square />
+            </button>
             <button
               title={"Save audio"}
               aria-label="save audio button"

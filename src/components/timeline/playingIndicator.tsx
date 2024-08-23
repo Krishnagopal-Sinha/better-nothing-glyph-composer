@@ -1,6 +1,5 @@
-import { kMagicNumber } from "@/lib/consts";
 import dataStore from "@/lib/data_store";
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore from "@/lib/timeline_state";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { toast } from "sonner";
@@ -12,6 +11,7 @@ export default function PlayingIndicator({
   editorRows: number;
 }) {
   const { getPosition, seek } = useGlobalAudioPlayer();
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
 
   // Handle live playing indicator updates for playing audio
   const frameRef = useRef<number>();
@@ -20,7 +20,8 @@ export default function PlayingIndicator({
 
   useEffect(() => {
     const animate = () => {
-      setCurrentPosition(getPosition()); //conver to milis
+      setCurrentPosition(getPosition()); 
+      dataStore.set('currentAudioPositionInMilis', getPosition()*1000); //convert into milis
       frameRef.current = requestAnimationFrame(animate);
     };
 
@@ -69,14 +70,16 @@ export default function PlayingIndicator({
     return labels;
   }, [editorRows]);
 
-  const isZoneVisible = useTimelineStore((state) => state.isZoneVisible);
+  const isZoneVisible = useGlobalAppStore(
+    (state) => state.appSettings.isZoneVisible
+  );
 
   return (
     // Playing indicator
     <div
       className="bg-red-600 h-full w-1 z-[5] absolute"
       style={{
-        marginLeft: `${currentAudioPosition * kMagicNumber}px`,
+        marginLeft: `${currentAudioPosition * timelinePixelFactor}px`,
       }}
     >
       {isZoneVisible && (

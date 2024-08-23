@@ -1,5 +1,4 @@
-import { GlyphBlock } from "@/logic/glyph_model";
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore from "@/lib/timeline_state";
 
 import {
   ContextMenu,
@@ -9,40 +8,58 @@ import {
 } from "@/components/ui/context-menu";
 
 import { DraggableCore } from "react-draggable";
-import { kEffectNames, kMagicNumber } from "@/lib/consts";
+import { kEffectNames } from "@/lib/consts";
 import { useState } from "react";
+import { DeltaUpdateBlock, GlyphBlock } from "@/lib/glyph_model";
 
 type Props = {
   glyphItem: GlyphBlock;
   // duration: number;
 };
 export default function TimelineBlockComponent({ glyphItem }: Props) {
-  const removeItem = useTimelineStore((state) => state.removeItem);
-  const updateItem = useTimelineStore((state) => state.updateItem);
-  const selectItem = useTimelineStore((state) => state.toggleSelection);
+  const removeItem = useGlobalAppStore((state) => state.removeItem);
+  // const updateItem = useGlobalAppStore((state) => state.updateItem);
+  const updateSelectedItem = useGlobalAppStore(
+    (state) => state.updateSelectedItem
+  );
+  const selectItem = useGlobalAppStore((state) => state.toggleSelection);
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
   const [trimStart, setTrimStart] = useState<boolean>(false);
 
-  //Fun fact: Early artefact, used ui delta from handler pkg - so many issue, values would randomly go over 3k in delta, had to clamp and stuff; but yea current usage with movementX is much stable and better as it works as intended...
-  // const handleDrag = (e: any, ui: { deltaX: any; deltaY: any }){...}
+  function calculateMultiplier(timelinePixelFactor: number): number {
+    if (timelinePixelFactor >= 350) {
+      return timelinePixelFactor / (0.1 * Math.cbrt(timelinePixelFactor));
+    } else if (timelinePixelFactor >= 150) {
+      return timelinePixelFactor / (0.5 * Math.sqrt(timelinePixelFactor));
+    } else {
+      return timelinePixelFactor / 10;
+    }
+  }
 
-  // Type is mouse movement , have to investigate why it is not working here
+  // Investigate this type, works like mouse event but isn't
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDrag = (e: any) => {
     // CORE movement and update
 
-    // Check if its being moved over the timeline limit, stop if so.
-
+    // Bound the mouse movement on timelineFactor/scale change
+    const multiplier = calculateMultiplier(timelinePixelFactor);
     if (trimStart) {
       // Trim if trim is ON
-      updateItem({
-        ...glyphItem,
-        durationMilis: glyphItem.durationMilis + e.movementX * 10,
-      });
+      // Remember: only send difference
+      const deltaBlock: DeltaUpdateBlock = {
+        durationMilis: (e.movementX / multiplier) * timelinePixelFactor,
+      };
+      updateSelectedItem(deltaBlock);
     } else {
-      updateItem({
-        ...glyphItem,
-        startTimeMilis: glyphItem.startTimeMilis + e.movementX * 5,
-      });
+      // Drag
+      // Remember: only send difference
+
+      const deltaBlock: DeltaUpdateBlock = {
+        startTimeMilis: (e.movementX / multiplier) * timelinePixelFactor,
+      };
+      updateSelectedItem(deltaBlock);
     }
 
     // console.log(`deltaX: ${e.movementX} `);
@@ -50,14 +67,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
 
   const handleStop = () => {
     if (trimStart) setTrimStart(false);
-    // console.log("stopped via handler ");
   };
 
   const onEffectSelect = (effectId: number) => {
-    updateItem({
-      ...glyphItem,
+    const deltaBlock: DeltaUpdateBlock = {
       effectId: effectId,
-    });
+    };
+    updateSelectedItem(deltaBlock);
   };
 
   return (
@@ -87,7 +103,9 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               backgroundColor: `rgb(255 255 255 / ${
                 Math.sqrt(glyphItem.startingBrightness) / Math.sqrt(4095)
               })`,
-              width: `${(glyphItem.durationMilis / 1000) * kMagicNumber}px`,
+              width: `${
+                (glyphItem.durationMilis / 1000) * timelinePixelFactor
+              }px`,
               borderWidth: `${glyphItem.isSelected ? 3 : 0}px`,
             }}
           >
@@ -98,10 +116,10 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
                   // console.warn("started ");
                   if (!trimStart) setTrimStart(true);
                 }}
-                className="text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none p-1 pb-2"
+                className="text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none p-1 pb-2 rounded-sm"
                 // Stop text sel for handle (makeshift) icon |||
               >
-                ||
+                |
               </div>
             )}
           </div>

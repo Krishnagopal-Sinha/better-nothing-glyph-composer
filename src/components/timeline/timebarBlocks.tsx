@@ -7,9 +7,8 @@ import {
 } from "@/components/ui/context-menu";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import dataStore from "@/lib/data_store";
-import { kMagicNumber } from "@/lib/consts";
 import { toast } from "sonner";
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore from "@/lib/timeline_state";
 
 type Props = {
   secondToRespresent: number;
@@ -21,6 +20,9 @@ export default function TimeBarBlocks({
   setLoopAsUiPosition,
   setLoopBsUiPosition,
 }: Props) {
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
   const { duration } = useGlobalAudioPlayer();
   // UI trim show state
 
@@ -41,7 +43,8 @@ export default function TimeBarBlocks({
   };
   const onLoopAClick = (e: React.MouseEvent) => {
     e.stopPropagation(); //needed as otherwise timebar gesture will trigger
-    const loopAPositionInMilis = (rightClickPosition / kMagicNumber) * 1000;
+    const loopAPositionInMilis =
+      (rightClickPosition / timelinePixelFactor) * 1000;
 
     const loopBPositionInMilis: number | undefined = dataStore.get(
       "loopBPositionInMilis"
@@ -82,7 +85,8 @@ export default function TimeBarBlocks({
 
   const onLoopBClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const loopBPositionInMilis = (rightClickPosition / kMagicNumber) * 1000;
+    const loopBPositionInMilis =
+      (rightClickPosition / timelinePixelFactor) * 1000;
 
     const loopAPositionInMilis: number | undefined = dataStore.get(
       "loopAPositionInMilis"
@@ -134,7 +138,7 @@ export default function TimeBarBlocks({
   };
 
   // Zone label visibility
-  const toggleZoneVisibility = useTimelineStore(
+  const toggleZoneVisibility = useGlobalAppStore(
     (state) => state.toggleZoneVisibility
   );
 
@@ -143,16 +147,33 @@ export default function TimeBarBlocks({
     toggleZoneVisibility();
   };
 
+  const isMinuteMark: boolean =
+    secondToRespresent !== 0 && secondToRespresent % 60 === 0;
+    const isTenSecMark: boolean =
+    secondToRespresent !== 0 && secondToRespresent % 10 === 0;
+
   return (
     <ContextMenu>
       <ContextMenuTrigger onContextMenu={onRightClickToMenu}>
         {/* Time bar blocks */}
         <div
-          className={`pl-[10px] pt-0 select-none border-r leading-[1.3]`}
-          style={{ width: `${kMagicNumber}px` }}
+          className={`pt-0 select-none overflow-clip`}
+          title={secondToRespresent + "s"}
+          style={{
+            width: `${timelinePixelFactor}px`,
+            paddingLeft: timelinePixelFactor >= 40 ? "10px" : "2px",
+            backgroundColor: isMinuteMark ? "rgb(85 28 28)" : isTenSecMark ? 'rgb(155 28 28)' : 'rgb(185 28 28)',
+            // color: isMinuteMark ? "black" : "",
+            boxShadow:
+              secondToRespresent === 0
+                ? ""
+                : `1px 0 0 #000 inset`,
+
+            // borderLeftWidth: secondToRespresent != 0 ? "1px" : 0,
+          }}
           key={secondToRespresent}
         >
-          {secondToRespresent}s
+          {timelinePixelFactor < 25 ? <pre> </pre> : secondToRespresent + "s"}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

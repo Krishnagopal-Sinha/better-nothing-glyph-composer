@@ -1,10 +1,13 @@
-import { kMagicNumber } from "@/lib/consts";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import TimeBarBlocks from "./timebarBlocks";
 import { useState } from "react";
 import dataStore from "@/lib/data_store";
+import useGlobalAppStore from "@/lib/timeline_state";
 
 export default function TimeBarComponent() {
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
   const { duration, seek, playing, play, pause, setVolume, volume } =
     useGlobalAudioPlayer();
   // -> duration from audio player in Seconds; convert to milis
@@ -34,13 +37,13 @@ export default function TimeBarComponent() {
   return (
     <div
       title={`Seek audio by touching anywhere here...\nRight-click for loop options`}
-      className="bg-red-700 h-[20px] flex cursor-pointer z-10 sticky top-0"
+      className="bg-red-700 flex cursor-pointer z-10 sticky top-0"
       onClick={(e) => {
         e.preventDefault();
         const oldVol = volume;
         const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
 
-        const seekPosition = (scrollValue + e.clientX) / kMagicNumber; //in seconds fyi
+        const seekPosition = (scrollValue + e.clientX) / timelinePixelFactor; //in seconds fyi
         // console.log(seekPosition);
         // Bug Fix - seek not updating position related
         if (!playing) {
@@ -64,12 +67,18 @@ export default function TimeBarComponent() {
     >
       {/* loop indicator */}
       {loopAsUiPosition && (
-        <LoopPositionIndicator position={loopAsUiPosition}>
+        <LoopPositionIndicator
+          position={loopAsUiPosition}
+          timelinePixelFactor={timelinePixelFactor}
+        >
           A
         </LoopPositionIndicator>
       )}
       {loopBsUiPosition && loopBsUiPosition > 0 && (
-        <LoopPositionIndicator position={loopBsUiPosition}>
+        <LoopPositionIndicator
+          position={loopBsUiPosition}
+          timelinePixelFactor={timelinePixelFactor}
+        >
           B
         </LoopPositionIndicator>
       )}
@@ -85,9 +94,11 @@ export default function TimeBarComponent() {
 export function LoopPositionIndicator({
   children,
   position: positionInMilis,
+  timelinePixelFactor,
 }: {
   children: string;
   position: number;
+  timelinePixelFactor: number;
 }) {
   return (
     <div
@@ -95,7 +106,7 @@ export function LoopPositionIndicator({
       // convert back into pixel from milis
       style={{
         // minus 5 cuz offset of padding n all
-        left: `${(positionInMilis / 1000) * kMagicNumber - 4}px`,
+        left: `${(positionInMilis / 1000) * timelinePixelFactor - 4}px`,
       }}
     >
       {children}

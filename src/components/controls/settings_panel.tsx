@@ -5,12 +5,27 @@ import DeviceChoiceComponent from "./device_choice";
 import dataStore from "@/lib/data_store";
 import { toast } from "sonner";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
+import useGlobalAppStore from "@/lib/timeline_state";
 
 export default function SettingsPanel() {
   const { setRate } = useGlobalAudioPlayer();
 
-  const onMultiSelectToggle = (e: boolean) => {
-    dataStore.set("multiSelect", e);
+  // get settings
+  const isKeyboardGestureEnabled = useGlobalAppStore(
+    (state) => state.appSettings.isKeyboardGestureEnabled
+  );
+  const isMultiSelectActive = useGlobalAppStore(
+    (state) => state.appSettings.isMultiSelectActive
+  );
+  const toggleKeyboardGesture = useGlobalAppStore(
+    (state) => state.toggleKeyboardGesture
+  );
+  const toggleMultiSelect = useGlobalAppStore(
+    (state) => state.toggleMultiSelect
+  );
+
+  const onMultiSelectToggle = () => {
+    toggleMultiSelect();
   };
 
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
@@ -139,9 +154,22 @@ export default function SettingsPanel() {
           <Switch
             id="multiSelect"
             onCheckedChange={onMultiSelectToggle}
-            defaultValue={dataStore.get("multiSelect")}
+            checked={isMultiSelectActive}
           />
-
+          {/* Keyboard controls */}
+          <Label
+            htmlFor="keyboardControls"
+            className="text-lg font-light"
+            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+          >
+            Enable Keyboard Gesture
+          </Label>
+          <Switch
+            id="keyboardControls"
+            onCheckedChange={toggleKeyboardGesture}
+            checked={isKeyboardGestureEnabled}
+          />
+          {/* Modifiable paste brightness */}
           <Label
             htmlFor="overwriteBrightness"
             className="text-lg font-light"

@@ -9,12 +9,13 @@ import {
 } from "@/components/ui/select";
 import { kAllowedModels, kPhoneModelNames } from "@/lib/consts";
 
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore from "@/lib/timeline_state";
 import { toast } from "sonner";
 
 export default function DeviceChoiceComponent() {
-  const currentDevice = useTimelineStore((state) => state.phoneModel);
-  const changePhoneModel = useTimelineStore((state) => state.changePhoneModel);
+  const currentDevice = useGlobalAppStore((state) => state.phoneModel);
+  const { clear } = useGlobalAppStore.temporal.getState();
+  const changePhoneModel = useGlobalAppStore((state) => state.changePhoneModel);
 
   // Get all selectable Items
   const selectableItems = [];
@@ -42,6 +43,8 @@ export default function DeviceChoiceComponent() {
         }
 
         changePhoneModel(e);
+        // clear undo n redo states
+        clear();
       }}
     >
       <SelectTrigger className="w-[180px]">

@@ -36,12 +36,7 @@ class DataStore {
       custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
     },
     // Phone 2 Info
-    NP2_15: <PhoneSpecificInfo>{
-      composer: `v1-Pong Glyph Composer`,
-      album: `BNGC v${kMajorVersion}`,
-      custom2: "33cols",
-      custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
-    },
+    
     NP2_33: <PhoneSpecificInfo>{
       composer: `v1-Pong Glyph Composer`,
       album: `BNGC v${kMajorVersion}`,
@@ -90,13 +85,3 @@ class DataStore {
 const dataStore = new DataStore();
 
 export default dataStore;
-
-// if (
-//   !data &&
-//   key != "loopAPositionInMilis" &&
-//   key != "loopBPositionInMilis" && typeof data !== 'boolean'
-// ) {
-//   console.error(
-//     `Data Store issue, unable to read stored data. ErrorDebugLabel: ${key}`
-//   );
-// }
