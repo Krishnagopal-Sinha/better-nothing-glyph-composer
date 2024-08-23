@@ -16,8 +16,11 @@ import {
   SquarePlus,
   DiamondPlus,
   CirclePlus,
+  UndoDot,
+  RedoDot,
+  Scissors,
 } from "lucide-react";
-import useTimelineStore from "@/lib/timeline_state";
+import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
 import { useState } from "react";
@@ -30,15 +33,19 @@ export default function ControlPanelComponent({
   isSaving: boolean;
   isAudioLoaded: boolean;
 }) {
-  const copyItems = useTimelineStore((state) => state.copyItems);
-  const pasteItems = useTimelineStore((state) => state.pasteItems);
-  const selectAllItems = useTimelineStore((state) => state.selectAll);
-  const removeSelectedItem = useTimelineStore(
+  const copyItems = useGlobalAppStore((state) => state.copyItems);
+  const cutItems = useGlobalAppStore((state) => state.cutItems);
+  const pasteItems = useGlobalAppStore((state) => state.pasteItems);
+  const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const removeSelectedItem = useGlobalAppStore(
     (state) => state.removeSelectedItem
   );
-  const currentDevice = useTimelineStore((state) => state.phoneModel);
-  const fillEntireZone = useTimelineStore((state) => state.fillEntireZone);
-  const addItem = useTimelineStore((state) => state.addItem);
+  const currentDevice = useGlobalAppStore((state) => state.phoneModel);
+  const fillEntireZone = useGlobalAppStore((state) => state.fillEntireZone);
+  const addItem = useGlobalAppStore((state) => state.addItem);
+  const { undo, redo, futureStates, pastStates } = useTemporalStore(
+    (state) => state
+  );
 
   const { getPosition } = useGlobalAudioPlayer();
   const [selectAll, setSelectAll] = useState<boolean>(true);
@@ -279,10 +286,6 @@ export default function ControlPanelComponent({
           </div>
         );
 
-      case "NP2_15":
-        // TODO: ADD THIS?
-        return <div></div>;
-
       case "NP2_33":
         return (
           <div className="grid grid-flow-rows grid-cols-8 lg:flex">
@@ -515,10 +518,19 @@ export default function ControlPanelComponent({
           >
             <Copy />
           </Button>
+          {/* Cut button */}
+          <Button
+            variant="ghost"
+            onClick={cutItems}
+            title={"Cut"}
+            aria-label="cut button"
+          >
+            <Scissors />
+          </Button>
           {/* Paste button */}
           <Button
             variant="ghost"
-            onClick={() => pasteItems(getPosition() * 1000)}
+            onClick={pasteItems}
             title={"Paste"}
             aria-label="paste button"
           >
@@ -544,6 +556,33 @@ export default function ControlPanelComponent({
             aria-label="select or unselect all button"
           >
             <SquareDashedMousePointer />
+          </Button>
+          {/* Undo */}
+          <Button
+            variant="ghost"
+            title="Undo Changes"
+            disabled={pastStates.length <= 0}
+            onClick={() => {
+              // twice cuz selection changes should be skipped
+
+              undo();
+              undo();
+            }}
+          >
+            <UndoDot />
+          </Button>
+          {/* Redo */}
+          <Button
+            variant="ghost"
+            title="Redo Changes"
+            disabled={futureStates.length <= 0}
+            onClick={() => {
+              // twice cuz selection changes should be skipped
+              redo();
+              redo();
+            }}
+          >
+            <RedoDot />
           </Button>
           {/* Add All Glyphs Button */}
           {/* ========== PHONE 1  ============= */}

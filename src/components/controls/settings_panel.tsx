@@ -3,14 +3,29 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import DeviceChoiceComponent from "./device_choice";
 import dataStore from "@/lib/data_store";
-import { toast } from "sonner";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
+import useGlobalAppStore from "@/lib/timeline_state";
+import { showError } from "@/lib/helpers";
 
 export default function SettingsPanel() {
   const { setRate } = useGlobalAudioPlayer();
 
-  const onMultiSelectToggle = (e: boolean) => {
-    dataStore.set("multiSelect", e);
+  // get settings
+  const isKeyboardGestureEnabled = useGlobalAppStore(
+    (state) => state.appSettings.isKeyboardGestureEnabled
+  );
+  const isMultiSelectActive = useGlobalAppStore(
+    (state) => state.appSettings.isMultiSelectActive
+  );
+  const toggleKeyboardGesture = useGlobalAppStore(
+    (state) => state.toggleKeyboardGesture
+  );
+  const toggleMultiSelect = useGlobalAppStore(
+    (state) => state.toggleMultiSelect
+  );
+
+  const onMultiSelectToggle = () => {
+    toggleMultiSelect();
   };
 
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
@@ -22,13 +37,10 @@ export default function SettingsPanel() {
     if (value >= 50 && value <= 10000) {
       dataStore.set("newBlockDurationMilis", value);
     } else {
-      toast.error("Invalid Value - Glyph Duration", {
-        description: "Should be between 50ms to 10s",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Glyph Duration",
+        "Should be between 50ms to 10s"
+      );
     }
   };
 
@@ -42,13 +54,10 @@ export default function SettingsPanel() {
     if (selectedValue >= 1 && selectedValue <= 100) {
       dataStore.set("newBlockBrightness", value);
     } else {
-      toast.error(`Invalid Value - Glyph Brightness`, {
-        description: "Should be between 1% to 100%",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError(
+        "Invalid Value - Glyph Brightness",
+        "Should be between 1% to 100%"
+      );
     }
   };
 
@@ -62,13 +71,7 @@ export default function SettingsPanel() {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      toast.error("Invalid Value - Audio Speed", {
-        description: "Should be between 0.5x to 2x",
-        action: {
-          label: "Ok",
-          onClick: () => {},
-        },
-      });
+      showError("Invalid Value - Audio Speed", "Should be between 0.5x to 2x");
     }
   };
   return (
@@ -139,9 +142,22 @@ export default function SettingsPanel() {
           <Switch
             id="multiSelect"
             onCheckedChange={onMultiSelectToggle}
-            defaultValue={dataStore.get("multiSelect")}
+            checked={isMultiSelectActive}
           />
-
+          {/* Keyboard controls */}
+          <Label
+            htmlFor="keyboardControls"
+            className="text-lg font-light"
+            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+          >
+            Enable Keyboard Gesture
+          </Label>
+          <Switch
+            id="keyboardControls"
+            onCheckedChange={toggleKeyboardGesture}
+            checked={isKeyboardGestureEnabled}
+          />
+          {/* Modifiable paste brightness */}
           <Label
             htmlFor="overwriteBrightness"
             className="text-lg font-light"

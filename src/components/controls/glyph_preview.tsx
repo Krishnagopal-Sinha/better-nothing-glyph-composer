@@ -1,5 +1,5 @@
-import useTimelineStore from "@/lib/timeline_state";
-import { useEffect, useRef, useState } from "react";
+import useGlobalAppStore from "@/lib/timeline_state";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import NP1_5_Preview from "./previewDevices/NP1_Preview";
 import NP2_33_Preview from "./previewDevices/NP2_33_Preview";
@@ -12,25 +12,25 @@ export default function GlyphPreviewComponent() {
   const { getPosition } = useGlobalAudioPlayer();
   // Handle live playing indicator updates for playing audio
   const frameRef = useRef<number>();
-  const timelineData = useTimelineStore((state) => state.items);
-  const currentDevice = useTimelineStore((state) => state.phoneModel);
+  const timelineData = useGlobalAppStore((state) => state.items);
+  const currentDevice = useGlobalAppStore((state) => state.phoneModel);
 
   const [currentAudioPosition, setCurrentPosition] = useState(0);
+  
+  const animate = useCallback(() => {
+    setCurrentPosition(getPosition() * 1000); // Convert to milliseconds
+    frameRef.current = requestAnimationFrame(animate);
+  }, [getPosition]);
 
   useEffect(() => {
-    const animate = () => {
-      setCurrentPosition(getPosition() * 1000); //conver to milis
-      frameRef.current = requestAnimationFrame(animate);
-    };
-
-    frameRef.current = window.requestAnimationFrame(animate);
+    frameRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [getPosition]);
+  }, [animate]); // Depend on the memoized animate function
 
   const zoneColors: string[] = []; //0 means off, 1 means on
 
@@ -45,12 +45,12 @@ export default function GlyphPreviewComponent() {
         ) {
           const curr = timelineData[i][j];
           // cuz in milis
-          const currTime = Math.floor(getPosition() * 1000/ kTimeStepMilis);
+          const currTime = Math.floor((getPosition() * 1000) / kTimeStepMilis);
           const endTimeIdx = Math.floor(
             (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
           );
           const iterLimit = endTimeIdx - curr.startTimeMilis;
-          const iterCount = currTime ;
+          const iterCount = currTime;
 
           const currentEffectBrightness = generateEffectData(
             curr.effectId,

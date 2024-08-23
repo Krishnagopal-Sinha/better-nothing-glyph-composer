@@ -1,12 +1,9 @@
-import { GlyphBlock } from "@/logic/glyph_model";
-import useTimelineStore from "@/lib/timeline_state";
-
+import useGlobalAppStore from "@/lib/timeline_state";
 import TimelineBlockComponent from "./timelineBlocks";
 import TimeBarComponent from "./timebar";
-
-import { kMagicNumber, kMouseCursorOffset } from "@/lib/consts";
 import PlayingIndicator from "./playingIndicator";
 import dataStore from "@/lib/data_store";
+import { GlyphBlock } from "@/lib/glyph_model";
 
 type Props = {
   // currentAudioPosition: number;
@@ -14,17 +11,19 @@ type Props = {
   timelineData: {
     [key: number]: GlyphBlock[];
   };
-  scrollRef: React.Ref<HTMLDivElement>
+  scrollRef: React.Ref<HTMLDivElement>;
 };
 
 export default function EditorComponent({
   timelineData,
-  scrollRef
+  scrollRef,
 }: // currentAudioPosition,
 Props) {
-  const addItem = useTimelineStore((state) => state.addItem);
-  const itemsSchema = useTimelineStore((state) => state.items);
-
+  const addItem = useGlobalAppStore((state) => state.addItem);
+  const itemsSchema = useGlobalAppStore((state) => state.items);
+  const timelinePixelFactor = useGlobalAppStore(
+    (state) => state.appSettings.timelinePixelFactor
+  );
   const timelineRows = [];
 
   function generateAllTimelineBlocksForARow(
@@ -37,9 +36,9 @@ Props) {
       row.push(
         <div
           key={e.id}
-          className="h-full w-[50px] absolute inset-0 p-[4px]"
+          className="h-full w-[50px] absolute inset-0 py-[4px]"
           style={{
-            marginLeft: `${(e.startTimeMilis / 1000) * kMagicNumber}px`,
+            marginLeft: `${(e.startTimeMilis / 1000) * timelinePixelFactor}px`,
           }}
         >
           <TimelineBlockComponent
@@ -69,11 +68,9 @@ Props) {
         onDoubleClick={(e) => {
           e.preventDefault();
           const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
-
           addItem(
             i,
-            ((e.clientX + scrollValue) / kMagicNumber) * 1000 -
-              kMouseCursorOffset //convert to milis; offset needed cuz pointer has width too
+            ((e.clientX + scrollValue) / timelinePixelFactor) * 1000 //convert to milis; offset needed cuz pointer has width too
           );
         }}
       >
