@@ -100,10 +100,10 @@ export function canAddItem2(
         newItem.startTimeMilis + newItem.durationMilis >
         rightNeighbor.startTimeMilis
       ) {
-        showError(
-          "Error - A Block was not added or modified",
-          "New block duration exceeds or overlaps with the start time of the next block."
-        );
+        // showError(
+        //   "Error - A Block was not added or modified",
+        //   "New block duration exceeds or overlaps with the start time of the next block."
+        // );
         return false;
       }
     }
@@ -117,10 +117,10 @@ export function canAddItem2(
         newItem.startTimeMilis <
         leftNeighbor.startTimeMilis + leftNeighbor.durationMilis
       ) {
-        showError(
-          "Error - A Block was not added or modified",
-          "Overlap with the left neighbor Glyph block detected."
-        );
+        // showError(
+        //   "Error - A Block was not added or modified",
+        //   "Overlap with the left neighbor Glyph block detected."
+        // );
         return false;
       }
     }
