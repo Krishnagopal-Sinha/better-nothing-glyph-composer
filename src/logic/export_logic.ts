@@ -1,5 +1,5 @@
 import { kTimeStepMilis } from "@/lib/consts";
-import { GlyphBlock } from "./glyph_model";
+import { GlyphBlock } from "@/lib/glyph_model";
 import pako from "pako";
 
 export function processEdits(csv: string): string | null {
