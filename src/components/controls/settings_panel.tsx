@@ -79,7 +79,7 @@ export default function SettingsPanel() {
       {/* Config panel */}
       <form className="space-y-2  ">
         {/* COntrol Grid  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 overflow-scroll h-[270px]">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 overflow-y-scroll h-[270px]">
           <legend className="-ml-1 px-1 text-sm font-medium">Settings</legend>
           {/* Configure Device */}
           <Label htmlFor="multiSelect" className="text-lg font-light">

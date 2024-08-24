@@ -2,6 +2,7 @@
 
 import { kMajorVersion } from "@/lib/consts";
 import dataStore, { PhoneSpecificInfo } from "@/lib/data_store";
+import { getDateTime } from "@/lib/helpers";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import fileDownload from "js-file-download";
@@ -73,9 +74,7 @@ class FFmpegService {
     const custom1 = phoneInfo.custom1;
     const custom2 = phoneInfo.custom2;
 
-    const outputFileName = `glyph_${Date.now()
-      .toString()
-      .replace(" /g", "_")}.ogg`;
+    const outputFileName = `glyph_tone_${getDateTime()}.ogg`;
 
     await this.ffmpeg.exec([
       `-i`,

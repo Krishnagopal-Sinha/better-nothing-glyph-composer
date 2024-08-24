@@ -15,3 +15,5 @@ export type DeltaUpdateBlock = {
   startingBrightness?: number;
   effectId?: number;
 };
+
+export type GlyphStore = { [key: number]: GlyphBlock[] };

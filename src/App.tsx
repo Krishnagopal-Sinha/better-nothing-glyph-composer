@@ -30,18 +30,17 @@ import { showError } from "./lib/helpers";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-  // DEBUG - uncomment after done dev
-  // useEffect(() => {
-  //   function beforeUnload(e: BeforeUnloadEvent) {
-  //     e.preventDefault();
-  //     return "";
-  //   }
+  useEffect(() => {
+    function beforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      return "";
+    }
 
-  //   window.addEventListener("beforeunload", beforeUnload);
-  //   return () => {
-  //     window.removeEventListener("beforeunload", beforeUnload);
-  //   };
-  // }, []);
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
+  }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -137,8 +136,7 @@ export default function App() {
 
   useEffect(() => {
     updateDuration(duration * 1000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration]);
+  }, [duration, updateDuration]);
 
   // FFMPEG
   const [ffmpegLoaded, setFfmpegLoaded] = useState<boolean>(false);
@@ -238,7 +236,7 @@ export default function App() {
             "Action Skipped - Nothing to Rndo",
             "There's nothing to Rndo."
           );
-        
+
           return;
         }
         redo();

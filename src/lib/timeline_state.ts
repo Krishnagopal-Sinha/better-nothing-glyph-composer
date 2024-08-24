@@ -3,10 +3,15 @@ import dataStore from "./data_store";
 import { nanoid } from "nanoid";
 import { kAllowedModels } from "./consts";
 import { temporal, TemporalState } from "zundo";
-import { GlyphBlock, DeltaUpdateBlock } from "./glyph_model";
-import { canAddItem2, insertInSortedOrder, showError } from "./helpers";
+import { GlyphBlock, DeltaUpdateBlock, GlyphStore } from "./glyph_model";
+import {
+  canAddItem2,
+  insertInSortedOrder,
+  showError,
+  sortObjectByStartTimeMilis,
+  validateJsonStructure,
+} from "./helpers";
 
-type GlyphStore = { [key: number]: GlyphBlock[] };
 type AppSettings = {
   isZoneVisible: boolean;
   isKeyboardGestureEnabled: boolean;
@@ -26,6 +31,7 @@ export type GlyphEditorState = {
 export type PartializedStoreState = Pick<GlyphEditorState, "items">;
 
 export type Action = {
+  importJsonData: (json: string) => void;
   addItem: (glyphId: number, startTimeMilis: number) => void;
   addItemDirectly: (newItem: GlyphBlock) => void;
   removeItem: (id: string, glyphId: number) => void;
@@ -69,7 +75,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       clipboard: [],
       isCutActive: false,
       audioInformation: { durationInMilis: 0, title: "" },
-      // App Settings State
+      // App Settings State  ============================================
       appSettings: {
         isZoneVisible: false,
         isKeyboardGestureEnabled: true,
@@ -132,6 +138,34 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           audioInformation: { ...state.audioInformation, durationInMilis },
         })),
+
+      // Import feat  ===================================================
+      importJsonData: (json: string) => {
+        const data = JSON.parse(json);
+        if (validateJsonStructure(data)) {
+          // Ensure current selected phone model's Glyph data is being loaded
+          // Otherwise phone 1 will load up 33 zone cuz it item.length dependent lulz
+          if (Object.keys(get().items).length !== Object.keys(data).length) {
+            showError(
+              "Import Error - Phone Model Mismatch",
+              "Are you sure correct Phone model is selected?",
+              2500
+            );
+            return;
+          }
+          // caution: sort for safety
+          const sortedData = sortObjectByStartTimeMilis(data);
+          set({ items: sortedData });
+        } else {
+          showError(
+            "Import Error - Glyph data",
+            "Format error in Glyph data detected, skipping import.",
+            2100
+          );
+        }
+      },
+
+      // CRUD feat ======================================================
 
       // ADD
       addItemDirectly: (item: GlyphBlock) => {
@@ -329,7 +363,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           {
             NP1: 5,
             NP1_15: 15,
-            NP2_33: 33,
+            NP2: 33,
             NP2a: 26,
           }[get().phoneModel] ?? 5;
 
