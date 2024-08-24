@@ -48,7 +48,7 @@ export default function DeviceChoiceComponent() {
         clear();
       }}
     >
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger>
         <SelectValue placeholder={kPhoneModelNames[currentDevice]} />
       </SelectTrigger>
       <SelectContent>

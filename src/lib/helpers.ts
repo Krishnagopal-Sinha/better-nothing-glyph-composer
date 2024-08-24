@@ -1,5 +1,81 @@
 import { toast } from "sonner";
-import { GlyphBlock } from "./glyph_model";
+import { GlyphBlock, GlyphStore } from "./glyph_model";
+
+// sort
+export function sortObjectByStartTimeMilis(input: GlyphStore): GlyphStore {
+  const sortedObject: GlyphStore = {};
+
+  for (let i = 0; i < Object.keys(input).length; i++) {
+    sortedObject[i] = input[i].sort(
+      (a: GlyphBlock, b: GlyphBlock) => a.startTimeMilis - b.startTimeMilis
+    );
+  }
+
+  return sortedObject;
+}
+
+// Validate imported JSON
+export function validateJsonStructure(obj: unknown): obj is GlyphStore {
+  if (typeof obj !== "object" || obj === null) {
+    return false;
+  }
+
+  for (const key in obj as Record<string, unknown>) {
+    const value = (obj as Record<string, unknown>)[key];
+
+    // value must be an array
+    if (!Array.isArray(value)) {
+      return false;
+    }
+
+    // validate each item cuz some guy definitely gonna manually n mess up a .json just to feel something
+    for (const item of value) {
+      if (typeof item !== "object" || item === null) {
+        return false;
+      }
+
+      if (typeof item.id !== "string") return false;
+      if (typeof item.glyphId !== "number" || item.glyphId < 0)
+        return false;
+      if (
+        typeof item.startTimeMilis !== "number" ||
+        item.startTimeMilis < 0
+      )
+        return false;
+      if (
+        typeof item.durationMilis !== "number" ||
+        item.durationMilis < 0
+      )
+        return false;
+      if (
+        typeof item.startingBrightness !== "number" ||
+        item.startingBrightness < 0
+      )
+        return false;
+      if (typeof item.isSelected !== "boolean") return false;
+      if (typeof item.effectId !== "number" || item.effectId < 0)
+        return false;
+      if (!Array.isArray(item.effectData)) return false;
+    }
+  }
+
+  return true;
+}
+
+// get pretty date - for file names
+export function getDateTime(): string {
+  const now = new Date(Date.now());
+
+  const formattedDate =
+    `${now.getFullYear()}-${(now.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")}@` +
+    `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+  return formattedDate;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function throttle(func: (...args: any[]) => void, limit: number) {

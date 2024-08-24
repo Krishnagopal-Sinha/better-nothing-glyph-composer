@@ -2,7 +2,7 @@ import useGlobalAppStore from "@/lib/timeline_state";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import NP1_5_Preview from "./previewDevices/NP1_Preview";
-import NP2_33_Preview from "./previewDevices/NP2_33_Preview";
+import NP2_Preview from "./previewDevices/NP2_Preview";
 import NP2a_Preview from "./previewDevices/NP2a_Preview";
 import NP1_15_Preview from "./previewDevices/NP1_15_Preview";
 import { generateEffectData } from "@/logic/export_logic";
@@ -16,7 +16,7 @@ export default function GlyphPreviewComponent() {
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
 
   const [currentAudioPosition, setCurrentPosition] = useState(0);
-  
+
   const animate = useCallback(() => {
     setCurrentPosition(getPosition() * 1000); // Convert to milliseconds
     frameRef.current = requestAnimationFrame(animate);
@@ -83,8 +83,8 @@ export default function GlyphPreviewComponent() {
     case "NP1_15":
       previewComponent = <NP1_15_Preview zoneColors={zoneColors} />;
       break;
-    case "NP2_33":
-      previewComponent = <NP2_33_Preview zoneColors={zoneColors} />;
+    case "NP2":
+      previewComponent = <NP2_Preview zoneColors={zoneColors} />;
       break;
     case "NP2a":
       previewComponent = <NP2a_Preview zoneColors={zoneColors} />;

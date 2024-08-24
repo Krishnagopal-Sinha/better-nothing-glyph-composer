@@ -25,6 +25,7 @@ import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
 import { useState } from "react";
 import SettingsPanel from "./settings_panel";
+import MoreMenuButton from "./more_menu_button";
 
 export default function ControlPanelComponent({
   isSaving,
@@ -286,7 +287,7 @@ export default function ControlPanelComponent({
           </div>
         );
 
-      case "NP2_33":
+      case "NP2":
         return (
           <div className="grid grid-flow-rows grid-cols-8 lg:flex">
             <Button
@@ -614,7 +615,7 @@ export default function ControlPanelComponent({
           )}
 
           {/* Phone 2 | 33 Zone Mode | Add all glyphs */}
-          {currentDevice === "NP2_33" && (
+          {currentDevice === "NP2" && (
             <Button
               variant="ghost"
               title="Add all the Glyphs of NP(2) "
@@ -626,7 +627,7 @@ export default function ControlPanelComponent({
               <SquarePlus />
             </Button>
           )}
-          {currentDevice === "NP2_33" && (
+          {currentDevice === "NP2" && (
             <Button
               variant="ghost"
               title="Fill the Top Right Glyph Zone of NP(2) "
@@ -638,7 +639,7 @@ export default function ControlPanelComponent({
               <DiamondPlus />
             </Button>
           )}
-          {currentDevice === "NP2_33" && (
+          {currentDevice === "NP2" && (
             <Button
               variant="ghost"
               title="Fill the Battery Glyph Zone of NP(2) "
@@ -664,6 +665,10 @@ export default function ControlPanelComponent({
               <SquarePlus />
             </Button>
           )}
+
+          {/* More menu items */}
+          <MoreMenuButton/>
+         
         </div>
       </>
     );

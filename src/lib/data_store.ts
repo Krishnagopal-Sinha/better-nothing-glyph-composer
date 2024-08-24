@@ -37,7 +37,7 @@ class DataStore {
     },
     // Phone 2 Info
     
-    NP2_33: <PhoneSpecificInfo>{
+    NP2: <PhoneSpecificInfo>{
       composer: `v1-Pong Glyph Composer`,
       album: `BNGC v${kMajorVersion}`,
       custom2: "33cols",
