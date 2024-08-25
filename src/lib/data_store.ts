@@ -1,4 +1,4 @@
-import { kMajorVersion } from "./consts";
+import { kMajorVersion, kMaxBrightness } from "./consts";
 
 type Data = Record<string, unknown>;
 //Base info - title and author should must from other sources!
@@ -18,7 +18,7 @@ class DataStore {
     // tracking it for no reason
     isAudioLoaded: false,
     // Max is 4095 but 4096 was working fine too in app.
-    newBlockBrightness: 4095,
+    newBlockBrightness: kMaxBrightness,
     currentAudioPositionInMilis: 0,
     // acceptable values 0.5 and 2.0
     audioSpeed: 1,
@@ -36,7 +36,7 @@ class DataStore {
       custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
     },
     // Phone 2 Info
-    
+
     NP2: <PhoneSpecificInfo>{
       composer: `v1-Pong Glyph Composer`,
       album: `BNGC v${kMajorVersion}`,

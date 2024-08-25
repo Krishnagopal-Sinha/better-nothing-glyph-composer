@@ -15,10 +15,11 @@ export default function GlyphPreviewComponent() {
   const timelineData = useGlobalAppStore((state) => state.items);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
 
-  const [currentAudioPosition, setCurrentPosition] = useState(0);
+  // only for refreshing preview every sec audio played
+  const [, setCurrentPosition] = useState(0);
 
   const animate = useCallback(() => {
-    setCurrentPosition(getPosition() * 1000); // Convert to milliseconds
+    setCurrentPosition(getPosition() * 1000); // Convert to millis
     frameRef.current = requestAnimationFrame(animate);
   }, [getPosition]);
 
@@ -30,27 +31,25 @@ export default function GlyphPreviewComponent() {
         cancelAnimationFrame(frameRef.current);
       }
     };
-  }, [animate]); // Depend on the memoized animate function
+  }, [animate]);
 
-  const zoneColors: string[] = []; //0 means off, 1 means on
+  const zoneColors: string[] = [];
 
   function computeGlyphColor() {
-    for (let i = 0; i < Object.entries(timelineData).length; i++) {
+    const currentPositionMilis = getPosition() * 1000; // Convert to millis
+    for (let i = 0; i < Object.keys(timelineData).length; i++) {
       for (let j = 0; j < timelineData[i].length; j++) {
-        //No need to set back to default color as it is being init @ every frame rendered.
-        if (
-          currentAudioPosition >= timelineData[i][j].startTimeMilis &&
-          currentAudioPosition <=
-            timelineData[i][j].startTimeMilis + timelineData[i][j].durationMilis
-        ) {
-          const curr = timelineData[i][j];
-          // cuz in milis
-          const currTime = Math.floor((getPosition() * 1000) / kTimeStepMilis);
-          const endTimeIdx = Math.floor(
-            (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
-          );
-          const iterLimit = endTimeIdx - curr.startTimeMilis;
-          const iterCount = currTime;
+        const curr = timelineData[i][j];
+        const startTime = curr.startTimeMilis;
+        const endTime = startTime + curr.durationMilis;
+
+        if (currentPositionMilis >= startTime && currentPositionMilis <= endTime) {
+          const currTime = Math.floor(currentPositionMilis / kTimeStepMilis);
+          const startTimeIdx = Math.floor(startTime / kTimeStepMilis);
+          const endTimeIdx = Math.floor(endTime / kTimeStepMilis);
+          // see export logic to see main logic, almost copy n paste of that
+          const iterCount = currTime - startTimeIdx;
+          const iterLimit = endTimeIdx - startTimeIdx;
 
           const currentEffectBrightness = generateEffectData(
             curr.effectId,
@@ -58,17 +57,13 @@ export default function GlyphPreviewComponent() {
             iterCount,
             iterLimit
           );
-          // Sqrt cuz it gets way to dim; making dims more bright.
-          zoneColors[curr.glyphId] = `rgb(255 255 255 / ${
-            Math.sqrt(currentEffectBrightness) / Math.sqrt(4095)
-          })`;
-          //   console.info("Encountered lit up glyph!");
-          // Cuz one track can only have 1 at a time, skip and save compute
-          break;
-          // print(
-          //     '+++++++++++ ${timelineData.items[i]![j].glyphId} -> ${zoneColors[timelineData.items[i]![j].glyphId]}');
+
+          // sqrt to brighten up dim lights
+          const adjustedBrightness =
+            Math.sqrt(currentEffectBrightness) / Math.sqrt(4095);
+
+          zoneColors[curr.glyphId] = `rgb(255 255 255 / ${adjustedBrightness})`;
         }
-        // console.info(`no glyph lit at @${currentAudioPosition}`);
       }
     }
   }

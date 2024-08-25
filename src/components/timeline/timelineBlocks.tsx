@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/context-menu";
 
 import { DraggableCore } from "react-draggable";
-import { kEffectNames } from "@/lib/consts";
+import { kEffectNames, kMaxBrightness } from "@/lib/consts";
 import { useState } from "react";
 import { DeltaUpdateBlock, GlyphBlock } from "@/lib/glyph_model";
 
@@ -73,6 +73,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     const deltaBlock: DeltaUpdateBlock = {
       effectId: effectId,
     };
+
     updateSelectedItem(deltaBlock);
   };
 
@@ -86,9 +87,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         <DraggableCore onDrag={handleDrag} onStop={handleStop}>
           {/* Timeline Block */}
           <div
-            title={`Click to select / unselect, right click to delete\nEffect: ${
+            title={`Click to select / unselect, right click to delete\nStart Time: ${(glyphItem.startTimeMilis/1000) .toFixed(
+              2
+            )} s\nDuration: ${(glyphItem.durationMilis/1000).toFixed(
+              2
+            )} s\nEffect: ${
               kEffectNames[glyphItem.effectId]
-            }`}
+            }\nStarting Brightness: ${glyphItem.startingBrightness / kMaxBrightness *100}%`}
             onClick={(e) => {
               e.preventDefault();
               // Toggle Selection
@@ -135,7 +140,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           Delete
         </ContextMenuItem>
         {Object.entries(kEffectNames).map((e) => (
-          <ContextMenuItem key={e[0]} onClick={() => onEffectSelect(parseInt(e[0]))}>
+          <ContextMenuItem key={e[0]} onClick={() => onEffectSelect(+e[0])}>
             {e[1]}
           </ContextMenuItem>
         ))}

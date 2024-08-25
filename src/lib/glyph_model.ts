@@ -16,4 +16,14 @@ export type DeltaUpdateBlock = {
   effectId?: number;
 };
 
+export type GlyphGenerationModel = {
+  generationStartTimeMilis: number;
+  generationEndTimeMilis: number;
+  generationDurationMilis: number;
+  generationBlockBrightnessPercentage: number;
+  generationBlockEffectId: number;
+  generationGapMilis: number;
+  generationGlyphZone: number;
+};
+
 export type GlyphStore = { [key: number]: GlyphBlock[] };
