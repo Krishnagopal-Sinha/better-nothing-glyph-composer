@@ -9,7 +9,7 @@ import { showError } from "@/lib/helpers";
 import { kMaxBrightness } from "@/lib/consts";
 
 export default function SettingsPanel() {
-  const { setRate } = useGlobalAudioPlayer();
+  const { setRate, duration } = useGlobalAudioPlayer();
 
   // get settings
   const isKeyboardGestureEnabled = useGlobalAppStore(
@@ -21,6 +21,16 @@ export default function SettingsPanel() {
   const showAudioTimeStamp = useGlobalAppStore(
     (state) => state.appSettings.showAudioTimeStamp
   );
+  const snapToBpmActive = useGlobalAppStore(
+    (state) => state.appSettings.snapToBpmActive
+  );
+  const snapSensitivity = useGlobalAppStore(
+    (state) => state.appSettings.snapSensitivity
+  );
+  const alsoSnapDuration = useGlobalAppStore(
+    (state) => state.appSettings.alsoSnapDuration
+  );
+  const bpmValue = useGlobalAppStore((state) => state.appSettings.bpmValue);
   const toggleShowAudioTimeStamp = useGlobalAppStore(
     (state) => state.toggleShowAudioTimeStamp
   );
@@ -30,13 +40,33 @@ export default function SettingsPanel() {
   const toggleMultiSelect = useGlobalAppStore(
     (state) => state.toggleMultiSelect
   );
-
-  const onMultiSelectToggle = () => {
-    toggleMultiSelect();
-  };
+  const toggleAlsoSnapBlockDuration = useGlobalAppStore(
+    (state) => state.toggleAlsoSnapBlockDuration
+  );
+  const toggleSnapToBpm = useGlobalAppStore((state) => state.toggleSnapToBpm);
+  const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
+  const setSnapSensitivity = useGlobalAppStore(
+    (state) => state.setSnapSensitivity
+  );
 
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
     dataStore.set("overwriteBrightnessWithNewBlock", e);
+  };
+  const onBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.currentTarget.value);
+    if (value * 60 > duration) {
+      showError(
+        "Warning!",
+        "The BPM is on the low side, may cause bad experience with Snap to BPM feature. Provided it is on.",
+        1500
+      );
+    }
+    setBpmForSnap(value);
+  };
+  
+  const onSnapSensitivityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.currentTarget.value);
+    setSnapSensitivity(value);
   };
 
   const onNewBlockDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +159,11 @@ export default function SettingsPanel() {
           />
 
           {/* Configure audio speed */}
-          <Label htmlFor="newBlockBrightness" className="text-lg font-light">
+          <Label
+            htmlFor="newBlockBrightness"
+            className="text-lg font-light"
+            title="Set audio's playback speed. Values can range from 0.5x till 2x, in steps of 0.1x, if needed."
+          >
             Audio Speed
             <br />
           </Label>
@@ -148,7 +182,7 @@ export default function SettingsPanel() {
           </Label>
           <Switch
             id="multiSelect"
-            onCheckedChange={onMultiSelectToggle}
+            onCheckedChange={toggleMultiSelect}
             checked={isMultiSelectActive}
           />
           {/* Keyboard controls */}
@@ -177,6 +211,72 @@ export default function SettingsPanel() {
             id="showAudioTimeStamp"
             onCheckedChange={toggleShowAudioTimeStamp}
             checked={showAudioTimeStamp}
+          />
+
+          {/* Snap to BPM feat. */}
+          <Label
+            htmlFor="snapToBPM"
+            className="text-lg font-light"
+            title="Enable for blocks to snap to Audio BPM?"
+          >
+            Snap to BPM
+          </Label>
+          <Switch
+            id="snapToBPM"
+            onCheckedChange={toggleSnapToBpm}
+            checked={snapToBpmActive}
+          />
+
+          {/* Snap to BPM feat. - allow duration to also snap */}
+          <Label
+            htmlFor="snapToDurationToBPM"
+            className="text-lg font-light"
+            title="Enable for blocks' duration to also snap to Audio BPM? Snap to BPM must be switched on too, for this to apply."
+          >
+            Snap Duration to BPM
+          </Label>
+          <Switch
+            id="snapToDurationToBPM"
+            onCheckedChange={toggleAlsoSnapBlockDuration}
+            checked={alsoSnapDuration}
+          />
+
+          {/* Configure BPM */}
+          <Label
+            htmlFor="setBPM"
+            className="text-lg font-light"
+            title="Set audio's BPM. Applies to and used to configure the above, Snap to BPM settings."
+          >
+            Audio BPM
+            <br />
+          </Label>
+          <Input
+            onChange={onBpmChange}
+            id="setBPM"
+            type="number"
+            defaultValue={bpmValue}
+            max={700}
+            min={1}
+            step={1}
+          />
+
+          {/* Configure Snap Sens */}
+          <Label
+            htmlFor="snapSens"
+            className="text-lg font-light"
+            title="Higher value here means lower sensitivity overall."
+          >
+            Snap Inverse Sensitivity
+            <br />
+          </Label>
+          <Input
+            onChange={onSnapSensitivityChange}
+            id="snapSens"
+            type="number"
+            defaultValue={snapSensitivity}
+            max={60}
+            min={1}
+            step={1}
           />
 
           {/* Modifiable paste brightness */}

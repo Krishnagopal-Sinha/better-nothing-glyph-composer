@@ -337,7 +337,6 @@ export default function SettingDialogContent({
       generationBlockEffectId: generationBlockEffectId,
       generationGlyphZone: generationGlyphZone,
     };
-    // console.log("✌️generatorInputData --->", generatorInputData);
 
     generateGlyphs(generatorInputData);
   }

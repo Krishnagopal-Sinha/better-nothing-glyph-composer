@@ -4,6 +4,7 @@ import TimeBarComponent from "./timebar";
 import PlayingIndicator from "./playingIndicator";
 import dataStore from "@/lib/data_store";
 import { GlyphBlock } from "@/lib/glyph_model";
+import { calculateBeatDurationInMilis } from "@/lib/helpers";
 
 type Props = {
   // currentAudioPosition: number;
@@ -20,11 +21,38 @@ export default function EditorComponent({
 }: // currentAudioPosition,
 Props) {
   const addItem = useGlobalAppStore((state) => state.addItem);
+  const bpmValue = useGlobalAppStore((state) => state.appSettings.bpmValue);
+  const snapToBpmActive = useGlobalAppStore(
+    (state) => state.appSettings.snapToBpmActive
+  );
+  const durationInMilis = useGlobalAppStore(
+    (state) => state.audioInformation.durationInMilis
+  );
   const itemsSchema = useGlobalAppStore((state) => state.items);
   const timelinePixelFactor = useGlobalAppStore(
     (state) => state.appSettings.timelinePixelFactor
   );
   const timelineRows = [];
+  const bpmSnapGridLines: JSX.Element[] = [];
+
+  function generateBPMSnapGridLines() {
+    const beatDurationInMilis = calculateBeatDurationInMilis(bpmValue);
+    const gridWidth = (beatDurationInMilis / 1000) * timelinePixelFactor;
+    let iter = 0;
+    for (let i = 0; i < durationInMilis; i = i + beatDurationInMilis) {
+      bpmSnapGridLines.push(
+        <div
+          key={i}
+          className="absolute h-full outline-dashed outline-gray-700 z-[-10]"
+          style={{
+            width: `${gridWidth}px`,
+            left: `${gridWidth * iter}px`,
+          }}
+        ></div>
+      );
+      iter++;
+    }
+  }
 
   function generateAllTimelineBlocksForARow(
     rownumber: number
@@ -83,6 +111,9 @@ Props) {
     dataStore.set("editorScrollX", e.currentTarget.scrollLeft);
   };
 
+  if (snapToBpmActive) {
+    generateBPMSnapGridLines();
+  }
   return (
     // added to for scroll
     <div
@@ -96,6 +127,8 @@ Props) {
 
         {/* playing indicator */}
         <PlayingIndicator editorRows={numberOfRowsToGenerate} />
+
+        <div className="">{bpmSnapGridLines}</div>
         {timelineRows}
       </div>
     </div>

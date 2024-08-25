@@ -1,6 +1,22 @@
 import { toast } from "sonner";
 import { GlyphBlock, GlyphStore } from "./glyph_model";
 
+// Snap To BPM feat.
+export function calculateBeatDurationInMilis(bpm: number): number {
+  return (60 * 1000) / bpm; //in millis
+}
+export function snapToNearestBeat(
+  timeInMillis: number,
+  beatDuration: number,
+  direction: "left" | "right"
+): number {
+  if (direction === "right") {
+    return Math.ceil(timeInMillis / beatDuration) * beatDuration;
+  } else {
+    return Math.floor(timeInMillis / beatDuration) * beatDuration;
+  }
+}
+
 // sort
 export function sortObjectByStartTimeMilis(input: GlyphStore): GlyphStore {
   const sortedObject: GlyphStore = {};

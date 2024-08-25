@@ -66,7 +66,7 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 
 Contributions are welcomed! Feel free to open issues or submit pull requests.
 
-## Credits 🙌
+## 🙌 Credits 
 - Special thanks to the amazing contributors behind [custom-nothing-glyph-tools](https://github.com/SebiAi/custom-nothing-glyph-tools)! For their comprehensive technical documentation. It guided me through the process and demystified the magic behind Nothing Glyphs! 🚀 
 - A huge thank you to SebiAi (creator of the above) for generously dedicating time to checkout and test my project. His feedback and support were invaluable! 🙏🎉
 
@@ -83,7 +83,7 @@ Disclaimer: I am not affiliated with Nothing. This is just a personal hobby proj
 
 _Made with ❤️ by Krishnagopal Sinha_
 
-## :eyes: Donation Links
+## 🤝 Donation Links
 
 [![Donate with PayPal](https://raw.githubusercontent.com/stefan-niedermann/paypal-donate-button/master/paypal-donate-button.png)](https://paypal.me/krishnagopalsinha)
 
@@ -96,6 +96,10 @@ _Made with ❤️ by Krishnagopal Sinha_
 -[ ] Solve existing github issues
 
 -[X] Add various effect feature
+
+-[X] Snap to grid feature added, with BPM support and stuff!
+
+-[X] Custom Rom Glyph Data Export
 
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
 
