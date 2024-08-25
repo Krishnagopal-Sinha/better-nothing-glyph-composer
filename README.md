@@ -66,7 +66,7 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 
 Contributions are welcomed! Feel free to open issues or submit pull requests.
 
-## Credits 🙌
+## 🙌 Credits 
 - Special thanks to the amazing contributors behind [custom-nothing-glyph-tools](https://github.com/SebiAi/custom-nothing-glyph-tools)! For their comprehensive technical documentation. It guided me through the process and demystified the magic behind Nothing Glyphs! 🚀 
 - A huge thank you to SebiAi (creator of the above) for generously dedicating time to checkout and test my project. His feedback and support were invaluable! 🙏🎉
 
