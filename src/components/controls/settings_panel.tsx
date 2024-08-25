@@ -6,6 +6,7 @@ import dataStore from "@/lib/data_store";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import useGlobalAppStore from "@/lib/timeline_state";
 import { showError } from "@/lib/helpers";
+import { kMaxBrightness } from "@/lib/consts";
 
 export default function SettingsPanel() {
   const { setRate } = useGlobalAudioPlayer();
@@ -33,7 +34,7 @@ export default function SettingsPanel() {
   };
 
   const onNewBlockDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.round(parseInt(e.target.value));
+    const value = Math.round(parseInt(e.currentTarget.value));
     if (value >= 50 && value <= 10000) {
       dataStore.set("newBlockDurationMilis", value);
     } else {
@@ -48,7 +49,7 @@ export default function SettingsPanel() {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     // Max val -> 4095
-    const selectedValue = parseInt(e.target.value);
+    const selectedValue = parseInt(e.currentTarget.value);
     const value = Math.round((selectedValue / 100) * 4095);
     // console.log(value);
     if (selectedValue >= 1 && selectedValue <= 100) {
@@ -62,7 +63,7 @@ export default function SettingsPanel() {
   };
 
   const onAudioSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value);
+    const value = parseFloat(e.currentTarget.value);
     if (value >= 0.5 && value <= 2) {
       dataStore.set("audioSpeed", value);
       try {
@@ -113,7 +114,7 @@ export default function SettingsPanel() {
             type="number"
             defaultValue={
               (((dataStore.get("newBlockBrightness") as number) ?? 3072) /
-                4095) *
+              kMaxBrightness) *
               100
             }
             max={100}

@@ -2,6 +2,7 @@ export const kTimeStepMilis = 16.666;
 export const KDefaultPreviewGlyphFillColor = "#111111";
 export const kAllowedModels = ["NP1", "NP1_15", "NP2", "NP2a"];
 export const kMouseCursorOffset = 32;
+export const kMaxBrightness = 4095;
 export const kPhoneModelNames: { [key: string]: string } = {
   NP1: "Phone (1)",
   NP1_15: "Phone (1) | 15 Zone",
@@ -18,17 +19,16 @@ export const kEffectNames: { [key: number]: string } = {
   6: "Chaos",
   7: "Single Heartbeat",
   8: "Chaos v2",
-  9: "Metro - 1 sec",
-  10: "Metro - 2 sec",
-  11: "Metro - 4 sec",
-  12: "Metro - 8 sec",
+  9: "Max Strobe!",
+  10: "Pulse End",
+  11: "Metronome - 1s",
 };
 
 // Version Info
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
 export const kMinorVersion = 1;
-export const kPatchVersion = 3;
+export const kPatchVersion = 4;
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 

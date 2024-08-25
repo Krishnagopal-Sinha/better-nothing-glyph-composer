@@ -35,17 +35,10 @@ export function validateJsonStructure(obj: unknown): obj is GlyphStore {
       }
 
       if (typeof item.id !== "string") return false;
-      if (typeof item.glyphId !== "number" || item.glyphId < 0)
+      if (typeof item.glyphId !== "number" || item.glyphId < 0) return false;
+      if (typeof item.startTimeMilis !== "number" || item.startTimeMilis < 0)
         return false;
-      if (
-        typeof item.startTimeMilis !== "number" ||
-        item.startTimeMilis < 0
-      )
-        return false;
-      if (
-        typeof item.durationMilis !== "number" ||
-        item.durationMilis < 0
-      )
+      if (typeof item.durationMilis !== "number" || item.durationMilis < 0)
         return false;
       if (
         typeof item.startingBrightness !== "number" ||
@@ -53,8 +46,7 @@ export function validateJsonStructure(obj: unknown): obj is GlyphStore {
       )
         return false;
       if (typeof item.isSelected !== "boolean") return false;
-      if (typeof item.effectId !== "number" || item.effectId < 0)
-        return false;
+      if (typeof item.effectId !== "number" || item.effectId < 0) return false;
       if (!Array.isArray(item.effectData)) return false;
     }
   }
@@ -134,7 +126,8 @@ export function canAddItem2(
   newItem: GlyphBlock,
   existingItems: GlyphBlock[],
   audioDurationInMilis: number,
-  skipIndex: number = -1
+  skipIndex: number = -1,
+  suppressErrorIfOffsetTryRemaining: boolean = false
 ): boolean {
   if (newItem.durationMilis <= 0 || newItem.startTimeMilis < 0) {
     showError("Error - Item not added", "Invalid start time or duration.");
@@ -152,7 +145,7 @@ export function canAddItem2(
     return false;
   }
 
-  if (newItem.durationMilis <= 20) {
+  if (newItem.durationMilis < 20) {
     showError(
       "Error - Item not added or modified",
       "Glyph block duration must be least 20s!"
@@ -176,10 +169,14 @@ export function canAddItem2(
         newItem.startTimeMilis + newItem.durationMilis >
         rightNeighbor.startTimeMilis
       ) {
-        // showError(
-        //   "Error - A Block was not added or modified",
-        //   "New block duration exceeds or overlaps with the start time of the next block."
-        // );
+        // Error dispatched, suppress if offset try is remaining!
+        if (!suppressErrorIfOffsetTryRemaining) {
+          showError(
+            "Error - A Block was not added or modified",
+            "New block duration exceeds or overlaps with the start time of the next block."
+          );
+        }
+
         return false;
       }
     }
@@ -193,10 +190,14 @@ export function canAddItem2(
         newItem.startTimeMilis <
         leftNeighbor.startTimeMilis + leftNeighbor.durationMilis
       ) {
-        // showError(
-        //   "Error - A Block was not added or modified",
-        //   "Overlap with the left neighbor Glyph block detected."
-        // );
+        // Error dispatched, suppress if offset try is remaining!
+        if (!suppressErrorIfOffsetTryRemaining) {
+          showError(
+            "Error - A Block was not added or modified",
+            "Overlap with the left neighbor Glyph block detected."
+          );
+        }
+
         return false;
       }
     }
@@ -258,4 +259,56 @@ function findInsertionIndex(
   }
 
   return low;
+}
+
+// TODO: Optimize this if possible
+export function basicCanAddCheck(
+  newItem: GlyphBlock,
+  existingItems: GlyphBlock[],
+  audioDurationInMilis: number,
+  skipIndex: number = -1
+): boolean {
+  // Basic check
+  if (newItem.durationMilis > 0 && newItem.startTimeMilis >= 0) {
+    /* empty */
+  } else {
+    showError("Error - Item not added", "Invalid start time or duration.");
+    return false;
+  }
+
+  // Check if item if out of bounds
+  if (
+    newItem.startTimeMilis < audioDurationInMilis &&
+    newItem.startTimeMilis + newItem.durationMilis <= audioDurationInMilis
+  ) {
+    // empty
+  } else {
+    showError(
+      "Error - Item not added",
+      "Glyph timings must be within audio's time bounds.\nYes, the UI might say otherwise but the audio has reached it's end"
+    );
+    return false;
+  }
+
+  for (let i = 0; i < existingItems.length; i++) {
+    const currentItem = existingItems[i];
+    if (skipIndex >= 0 && skipIndex === i) continue; //skip this iter
+    //^ for update check
+
+    if (
+      newItem.startTimeMilis <
+        currentItem.startTimeMilis + currentItem.durationMilis &&
+      newItem.startTimeMilis + newItem.durationMilis >
+        currentItem.startTimeMilis
+    ) {
+      showError(
+        "Error - Item not added or modified",
+        "Overlap with another existing Glyph detected"
+      );
+
+      return false;
+    }
+  }
+
+  return true;
 }

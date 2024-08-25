@@ -667,7 +667,7 @@ export default function ControlPanelComponent({
           )}
 
           {/* More menu items */}
-          <MoreMenuButton/>
+          <MoreMenuButton />
          
         </div>
       </>

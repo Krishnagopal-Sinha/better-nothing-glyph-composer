@@ -1,4 +1,4 @@
-import { kTimeStepMilis } from "@/lib/consts";
+import { kMaxBrightness, kTimeStepMilis } from "@/lib/consts";
 import { GlyphBlock } from "@/lib/glyph_model";
 import pako from "pako";
 
@@ -30,25 +30,30 @@ export function generateEffectData(
 ): number {
   iterCount++; //cuz it starts from 0 ;p
 
+  const smoothCalculation = (value: number) => {
+    return value < 1 ? Math.ceil(value) : Math.round(value);
+  };
+
   switch (effectId) {
     case 0:
       return brightness;
+
     case 1: {
-      // Smooth Zen Face, based on sin func curves~
+      // Smooth Zen Fade, based on sin func curves~
       const sineValue = Math.sin((Math.PI * iterCount) / iterLimit); //0 to pi
-      return Math.round(brightness * sineValue);
+      return smoothCalculation(brightness * sineValue);
     }
     case 2:
       {
         //  fade in
         const increaseBy = brightness / iterLimit;
-        return Math.round(increaseBy * iterCount);
+        return smoothCalculation(increaseBy * iterCount);
       }
       break;
     case 3: {
       //  fade out | start->newBlockBright | end->0
       const decreaseFactor = brightness / iterLimit;
-      return Math.round(brightness - decreaseFactor * (iterCount - 1));
+      return smoothCalculation(brightness - decreaseFactor * (iterCount - 1));
     }
 
     case 4: {
@@ -57,11 +62,11 @@ export function generateEffectData(
       if (iterCount <= halfIterLimit) {
         // fade in
         const increaseBy = brightness / halfIterLimit;
-        return Math.round(increaseBy * iterCount);
+        return smoothCalculation(increaseBy * iterCount);
       } else {
         // fade out
         const decreaseFactor = brightness / halfIterLimit;
-        return Math.round(
+        return smoothCalculation(
           brightness - decreaseFactor * (iterCount - halfIterLimit)
         );
       }
@@ -78,13 +83,13 @@ export function generateEffectData(
       const spikeFactor = Math.sin(
         (Math.PI * randomness * iterCount) / iterLimit
       );
-      const intensity = Math.round(brightness * spikeFactor);
+      const intensity = brightness * spikeFactor;
 
       //Random decision maker attempt
       if (randomness > 0.9) {
-        return 4095;
+        return kMaxBrightness;
       } else if (randomness > 0.5) {
-        return intensity;
+        return smoothCalculation(intensity);
       } else {
         return 0;
       }
@@ -94,38 +99,60 @@ export function generateEffectData(
       // heartbeat try
       const pulseDuration = Math.floor(iterLimit / 5);
       if (iterCount < pulseDuration) {
-        return Math.round(brightness * (iterCount / pulseDuration)); // 1st pulse up
+        return smoothCalculation(brightness * (iterCount / pulseDuration));
       } else if (iterCount < 2 * pulseDuration) {
-        return Math.round(
+        return smoothCalculation(
           brightness * (1 - (iterCount - pulseDuration) / pulseDuration)
-        ); // 1st pulse down
+        );
       } else if (iterCount < 3 * pulseDuration) {
-        return Math.round(
+        return smoothCalculation(
           brightness * 0.5 * ((iterCount - 2 * pulseDuration) / pulseDuration)
-        ); // 2nd pulse up
+        );
       } else if (iterCount < 4 * pulseDuration) {
-        return Math.round(
+        return smoothCalculation(
           brightness *
             0.5 *
             (1 - (iterCount - 3 * pulseDuration) / pulseDuration)
-        ); // 2nd pulse down
+        );
       } else {
-        return 0; // Pause
+        return 0;
       }
     }
     case 8: {
       // chaos v2, is different enough or scap?
       const chaosFactor = Math.random();
       if (chaosFactor > 0.8) {
-        return 4095; // Abrupt maximum brightness
+        return kMaxBrightness; //  maximum brightness
       } else if (chaosFactor > 0.6) {
         return 0; // Abrupt darkness
       } else {
-        return Math.round(brightness * (0.5 + Math.random() * 0.5)); // Random moderate brightness
+        return smoothCalculation(brightness * (0.5 + Math.random() * 0.5)); // rando moderate brightness
       }
     }
 
     case 9: {
+      const blinkInterval = 2;
+      return iterCount % (blinkInterval * 2) < blinkInterval ? brightness : 0;
+    }
+
+    case 10: {
+      // End with bang - pulse
+      const breathDuration = iterLimit * 0.8;
+      const pulseDuration = iterLimit * 0.2;
+
+      if (iterCount <= breathDuration) {
+        const progress = iterCount / breathDuration;
+        const brightnessValue = Math.sin(progress * Math.PI);
+        return Math.round(brightness * brightnessValue);
+      } else {
+        // Sharp pulse effect
+        const pulseProgress = (iterCount - breathDuration) / pulseDuration;
+        return Math.round(brightness * (1 - Math.pow(pulseProgress, 2)));
+      }
+    }
+
+    case 11: {
+      // Dev - Metro, depracated
       const intervalMs = 1000; // every sec
       const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
       const flashDuration = 5;
@@ -137,44 +164,8 @@ export function generateEffectData(
       }
     }
 
-    case 10: {
-      const intervalMs = 2000; // every 2 secs
-      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
-      const flashDuration = 5;
-
-      if (iterCount % intervalIdx < flashDuration) {
-        return brightness;
-      } else {
-        return 0;
-      }
-    }
-
-    case 11: {
-      const intervalMs = 4000; // every 4 secs
-      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
-      const flashDuration = 5;
-
-      if (iterCount % intervalIdx < flashDuration) {
-        return brightness;
-      } else {
-        return 0;
-      }
-    }
-
-    case 12: {
-      const intervalMs = 8000; // every 8 secs
-      const intervalIdx = Math.floor(intervalMs / kTimeStepMilis);
-      const flashDuration = 5;
-
-      if (iterCount % intervalIdx < flashDuration) {
-        return brightness;
-      } else {
-        return 0;
-      }
-    }
-
     default:
-      return 4095; //safety fall back value lul
+      return kMaxBrightness; //safety fall back value lul
   } //switch end
 }
 

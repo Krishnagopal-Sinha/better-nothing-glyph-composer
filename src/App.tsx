@@ -30,6 +30,7 @@ import { showError } from "./lib/helpers";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
+
   useEffect(() => {
     function beforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
@@ -168,7 +169,10 @@ export default function App() {
     }
     // Delete
     function onDeleteOrBackspaceKeyDown(e: KeyboardEvent) {
-      if (e.code === "Delete" || e.code === "Backspace") {
+      if (
+        e.code === "Delete" ||
+        (e.code === "Backspace" && !dataStore.get("isMoreMenuOpen"))
+      ) {
         removeSelectedItem();
       }
     }

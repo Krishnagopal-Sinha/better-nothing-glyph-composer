@@ -1,10 +1,16 @@
 import { create, useStore } from "zustand";
 import dataStore from "./data_store";
 import { nanoid } from "nanoid";
-import { kAllowedModels } from "./consts";
+import { kAllowedModels, kMaxBrightness } from "./consts";
 import { temporal, TemporalState } from "zundo";
-import { GlyphBlock, DeltaUpdateBlock, GlyphStore } from "./glyph_model";
 import {
+  GlyphBlock,
+  DeltaUpdateBlock,
+  GlyphStore,
+  GlyphGenerationModel,
+} from "./glyph_model";
+import {
+  basicCanAddCheck,
   canAddItem2,
   insertInSortedOrder,
   showError,
@@ -17,6 +23,8 @@ type AppSettings = {
   isKeyboardGestureEnabled: boolean;
   isMultiSelectActive: boolean;
   timelinePixelFactor: number;
+  isSettingsDialogOpen: boolean;
+  settingDialogContentIndex: number;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
@@ -37,6 +45,7 @@ export type Action = {
   removeItem: (id: string, glyphId: number) => void;
   updateItem: (updatedItem: GlyphBlock) => void;
   updateSelectedItem: (deltaBlockTemplate: DeltaUpdateBlock) => void;
+  updateSelectedItemAbsolutely: (glyphBlockTemplate: DeltaUpdateBlock) => void;
   toggleSelection: (itemToSelect: GlyphBlock, toSelect?: boolean) => void;
   reset: () => void;
   updateDuration: (durationInMilis: number) => void;
@@ -51,13 +60,16 @@ export type Action = {
     endGlyphId: number,
     startTimeMilis: number
   ) => void;
+  generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => void;
 
   // Settings
-  toggleKeyboardGesture: () => void;
+  toggleKeyboardGesture: (value?: boolean) => void;
   toggleMultiSelect: (toSelect?: boolean) => void;
   toggleZoneVisibility: () => void;
   increasePixelFactor: () => void;
   decreasePixelFactor: () => void;
+  setIsSettingsDialogOpen: (value: boolean) => void;
+  setSettingsDialogContentIndex: (value: number) => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -81,6 +93,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         isKeyboardGestureEnabled: true,
         isMultiSelectActive: false,
         timelinePixelFactor: 160,
+        isSettingsDialogOpen: false,
+        settingDialogContentIndex: 0,
       },
 
       // Setting update functions
@@ -92,14 +106,43 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           },
         })),
 
-      toggleKeyboardGesture: () =>
+      setIsSettingsDialogOpen: (value: boolean) => {
+        // disable keyboard gesture when dialog is open
+        set({
+          appSettings: {
+            ...get().appSettings,
+            isSettingsDialogOpen: value,
+            isKeyboardGestureEnabled: !value,
+          },
+        });
+      },
+
+      setSettingsDialogContentIndex: (value: number) => {
+        set({
+          appSettings: {
+            ...get().appSettings,
+            settingDialogContentIndex: value,
+          },
+        });
+      },
+
+      toggleKeyboardGesture: (value?: boolean) => {
+        if (value) {
+          set((state) => ({
+            appSettings: {
+              ...state.appSettings,
+              isKeyboardGestureEnabled: value,
+            },
+          }));
+        }
         set((state) => ({
           appSettings: {
             ...state.appSettings,
             isKeyboardGestureEnabled:
               !state.appSettings.isKeyboardGestureEnabled,
           },
-        })),
+        }));
+      },
 
       toggleMultiSelect: (toSelect?: boolean) =>
         set((state) => ({
@@ -188,7 +231,9 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           canAddItem2(
             item,
             items[item.glyphId],
-            audioInformation.durationInMilis
+            audioInformation.durationInMilis,
+            -1, //default value for skipping index while updating, doesn't let skip by default. 
+            true,
           )
         ) {
           actualAdd(item);
@@ -266,6 +311,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       // Only send difference of time values !
+      // Effect's not a bug. When holding down shift key, if user lets go before right click, it toggles multiselect off, thus the effect does not apply as other block (apart from the right clicked one) aren't selected :P
       updateSelectedItem: (deltaBlock: DeltaUpdateBlock) => {
         const items = get().items;
         const updatedItems = {
@@ -288,8 +334,9 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 startingBrightness:
                   deltaBlock.startingBrightness ??
                   curr.startingBrightness ??
-                  4095,
+                  kMaxBrightness,
               };
+
               // console.log(curr.durationMilis);
               // skip if outside respectable bounds
               if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
@@ -298,8 +345,50 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             }
           }
         }
+
         // updatee
         set({ items: updatedItems });
+      },
+
+      // Direct supply all values, Using Delta update as it has nullable val support
+      updateSelectedItemAbsolutely: (glyphUpdateTemplate: DeltaUpdateBlock) => {
+        const items = get().items;
+        const updatedItems = {
+          ...items,
+        };
+        const durationInMilis = get().audioInformation.durationInMilis;
+
+        // find selections
+        for (let i = 0; i < Object.keys(updatedItems).length; i++) {
+          for (let j = 0; j < updatedItems[i].length; j++) {
+            let curr: GlyphBlock = { ...updatedItems[i][j] };
+            if (curr.isSelected) {
+              curr = {
+                ...curr,
+                startTimeMilis:
+                  glyphUpdateTemplate.startTimeMilis ??
+                  curr.startTimeMilis ??
+                  0,
+                durationMilis:
+                  glyphUpdateTemplate.durationMilis ??
+                  curr.durationMilis ??
+                  dataStore.get("newBlockDurationMilis"),
+                effectId: glyphUpdateTemplate.effectId ?? curr.effectId ?? 0,
+                startingBrightness:
+                  glyphUpdateTemplate.startingBrightness ??
+                  curr.startingBrightness ??
+                  dataStore.get("newBlockBrightness"),
+              };
+              // skip if outside respectable bounds
+              if (basicCanAddCheck(curr, updatedItems[i], durationInMilis, j)) {
+                updatedItems[i][j] = curr;
+              }
+            }
+          }
+        }
+
+        // updatee & sort the entire stuf
+        set({ items: sortObjectByStartTimeMilis(updatedItems) });
       },
 
       // Add - Fill all
@@ -577,6 +666,84 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set({ phoneModel: phoneType });
         // Main change model logic get into effect via reset!
         get().reset();
+      },
+      generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => {
+        // handle fill range
+        // Ensure it's all added in 1 step, for 1 step better undo n redo
+        const items = get().items;
+        const audioInfo = get().audioInformation;
+        const updatedItems = { ...items };
+
+        const interval =
+          glyphGenerateData.generationDurationMilis +
+          glyphGenerateData.generationGapMilis; //in ms
+
+        // i.e. fill all zones
+        if (glyphGenerateData.generationGlyphZone === 101) {
+          for (
+            let i = glyphGenerateData.generationStartTimeMilis;
+            i < glyphGenerateData.generationEndTimeMilis;
+            i = i + interval
+          ) {
+            // add for all glyph zones
+            for (let j = 0; j < Object.keys(items).length; j++) {
+              const newItem: GlyphBlock = {
+                id: nanoid(),
+                glyphId: j,
+                startTimeMilis: i,
+                durationMilis: glyphGenerateData.generationDurationMilis,
+                startingBrightness:
+                  (glyphGenerateData.generationBlockBrightnessPercentage /
+                    100) *
+                  kMaxBrightness, //percentage to actual value
+                isSelected: false,
+                effectId: glyphGenerateData.generationBlockEffectId,
+                effectData: [],
+              };
+              if (
+                canAddItem2(newItem, updatedItems[j], audioInfo.durationInMilis)
+              ) {
+                updatedItems[j] = [
+                  ...insertInSortedOrder(updatedItems[j], newItem),
+                ];
+              }
+            }
+          }
+        } else {
+          for (
+            let i = glyphGenerateData.generationStartTimeMilis;
+            i < glyphGenerateData.generationEndTimeMilis;
+            i = i + interval
+          ) {
+            const newItem: GlyphBlock = {
+              id: nanoid(),
+              glyphId: glyphGenerateData.generationGlyphZone,
+              startTimeMilis: i,
+              durationMilis: glyphGenerateData.generationDurationMilis,
+              startingBrightness:
+                (glyphGenerateData.generationBlockBrightnessPercentage / 100) *
+                kMaxBrightness,
+              effectId: glyphGenerateData.generationBlockEffectId,
+              isSelected: false,
+              effectData: [],
+            };
+            if (
+              canAddItem2(
+                newItem,
+                updatedItems[glyphGenerateData.generationGlyphZone],
+                audioInfo.durationInMilis
+              )
+            ) {
+              updatedItems[glyphGenerateData.generationGlyphZone] = [
+                ...insertInSortedOrder(
+                  updatedItems[glyphGenerateData.generationGlyphZone],
+                  newItem
+                ),
+              ];
+            }
+          }
+        }
+        set({ items: updatedItems });
       },
     }),
     // only track items, rest are needless and config states may actually cause issues - eg. audio duration n all
