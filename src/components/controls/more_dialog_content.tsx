@@ -459,7 +459,7 @@ export default function SettingDialogContent({
       effectId: blockEffectId,
       startingBrightness: blockBrightnessPercentage,
     };
-    console.log(deltaBlock);
+    // console.log(deltaBlock);
 
     updateSelectedItemAbsolutely(deltaBlock);
   }
