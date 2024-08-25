@@ -11,9 +11,11 @@ import {
 } from "./glyph_model";
 import {
   basicCanAddCheck,
+  calculateBeatDurationInMilis,
   canAddItem2,
   insertInSortedOrder,
   showError,
+  snapToNearestBeat,
   sortObjectByStartTimeMilis,
   validateJsonStructure,
 } from "./helpers";
@@ -22,10 +24,15 @@ type AppSettings = {
   isZoneVisible: boolean;
   isKeyboardGestureEnabled: boolean;
   isMultiSelectActive: boolean;
+  // Used for Seconds to Pixel! Not milis, remember!
   timelinePixelFactor: number;
   isSettingsDialogOpen: boolean;
   settingDialogContentIndex: number;
   showAudioTimeStamp: boolean;
+  snapToBpmActive: boolean;
+  alsoSnapDuration: boolean;
+  bpmValue: number;
+  snapSensitivity: number;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
@@ -72,6 +79,10 @@ export type Action = {
   setIsSettingsDialogOpen: (value: boolean) => void;
   setSettingsDialogContentIndex: (value: number) => void;
   toggleShowAudioTimeStamp: () => void;
+  toggleSnapToBpm: () => void;
+  toggleAlsoSnapBlockDuration: () => void;
+  setBpmForSnap: (value: number) => void;
+  setSnapSensitivity: (value: number) => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -98,6 +109,10 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         isSettingsDialogOpen: false,
         settingDialogContentIndex: 0,
         showAudioTimeStamp: false,
+        bpmValue: 60,
+        snapToBpmActive: false,
+        alsoSnapDuration: false,
+        snapSensitivity: 20,
       },
 
       // Setting update functions
@@ -145,14 +160,15 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               isKeyboardGestureEnabled: value,
             },
           }));
+        } else {
+          set((state) => ({
+            appSettings: {
+              ...state.appSettings,
+              isKeyboardGestureEnabled:
+                !state.appSettings.isKeyboardGestureEnabled,
+            },
+          }));
         }
-        set((state) => ({
-          appSettings: {
-            ...state.appSettings,
-            isKeyboardGestureEnabled:
-              !state.appSettings.isKeyboardGestureEnabled,
-          },
-        }));
       },
 
       toggleMultiSelect: (toSelect?: boolean) =>
@@ -163,6 +179,52 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               toSelect ?? !state.appSettings.isMultiSelectActive,
           },
         })),
+
+      toggleSnapToBpm: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            snapToBpmActive: !state.appSettings.snapToBpmActive,
+          },
+        })),
+
+      toggleAlsoSnapBlockDuration: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            alsoSnapDuration: !state.appSettings.alsoSnapDuration,
+          },
+        })),
+
+      setBpmForSnap: (value: number) => {
+        if (value < 1 || value > 700) {
+          showError("Invalid Value - BPM", "BPM must be between 1 and 700.");
+          return;
+        }
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            bpmValue: value,
+          },
+        }));
+      },
+
+      setSnapSensitivity: (value: number) => {
+        if (value < 1 || value > 70) {
+          showError(
+            "Invalid Value - Snap Sensitivity",
+            "BPM must be between 1 and 70. Setting value not updated.",
+            1500
+          );
+          return;
+        }
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            snapSensitivity: value,
+          },
+        }));
+      },
 
       decreasePixelFactor: () => {
         const oldValue = get().appSettings.timelinePixelFactor;
@@ -325,6 +387,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       // Effect's not a bug. When holding down shift key, if user lets go before right click, it toggles multiselect off, thus the effect does not apply as other block (apart from the right clicked one) aren't selected :P
       updateSelectedItem: (deltaBlock: DeltaUpdateBlock) => {
         const items = get().items;
+        const { snapToBpmActive, alsoSnapDuration, bpmValue, snapSensitivity } =
+          get().appSettings;
         const updatedItems = {
           ...items,
         };
@@ -348,10 +412,72 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                   kMaxBrightness,
               };
 
-              // console.log(curr.durationMilis);
-              // skip if outside respectable bounds
-              if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
-                updatedItems[i][j] = curr;
+              //Was too fast, had to put up accumulators
+              if (snapToBpmActive) {
+                const beatDuration = calculateBeatDurationInMilis(bpmValue);
+                const startTimeAccu: number = dataStore.get(
+                  "startTimeAccumulator"
+                )!;
+                const durationAccu: number = dataStore.get(
+                  "durationAccumulator"
+                )!;
+                const accuLimit = snapSensitivity;
+
+                if (deltaBlock.durationMilis) {
+                  // Determine the snapping direction based on the deltaBlock's trend
+                  if (alsoSnapDuration) {
+                    dataStore.set("durationAccumulator", durationAccu + 1);
+                    if (durationAccu >= accuLimit) {
+                      const direction =
+                        deltaBlock.durationMilis > 0 ? "right" : "left";
+                      curr.durationMilis = snapToNearestBeat(
+                        curr.durationMilis,
+                        beatDuration,
+                        direction
+                      );
+                      dataStore.set("durationAccumulator", 0);
+                      if (
+                        canAddItem2(curr, updatedItems[i], durationInMilis, j)
+                      ) {
+                        updatedItems[i][j] = curr;
+                      }
+                    }
+                  } else {
+                    if (
+                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
+                    ) {
+                      updatedItems[i][j] = curr;
+                    }
+                  }
+                }
+
+                if (deltaBlock.startTimeMilis) {
+                  // Determine the snapping direction based on the deltaBlock's trend
+
+                  dataStore.set("startTimeAccumulator", startTimeAccu + 1);
+                  if (startTimeAccu >= accuLimit) {
+                    const direction =
+                      deltaBlock.startTimeMilis > 0 ? "right" : "left";
+                    curr.startTimeMilis = snapToNearestBeat(
+                      curr.startTimeMilis,
+                      beatDuration,
+                      direction
+                    );
+                    dataStore.set("startTimeAccumulator", 0);
+                    if (
+                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
+                    ) {
+                      updatedItems[i][j] = curr;
+                    }
+                  }
+                }
+              } else {
+                // do normal update
+                // skip if outside respectable bounds
+
+                if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
+                  updatedItems[i][j] = curr;
+                }
               }
             }
           }

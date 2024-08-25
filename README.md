@@ -97,6 +97,10 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 -[X] Add various effect feature
 
+-[X] Snap to grid feature added, with BPM support and stuff!
+
+-[X] Custom Rom Glyph Data Export
+
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
 
 -[ ] UI Refresh :eyes:

@@ -27,6 +27,9 @@ class DataStore {
     loopBPositionInMilis: <number | undefined>undefined,
     // scroll position
     editorScrollX: 0,
+    // for snap to bpm to slow
+    startTimeAccumulator:0,
+    durationAccumulator:0,
 
     // Base Phone 1 Info
     NP1: <PhoneSpecificInfo>{
