@@ -54,6 +54,30 @@ export function validateJsonStructure(obj: unknown): obj is GlyphStore {
   return true;
 }
 
+// get pretty time - for audio position display; does not account for hours
+export function getPrettyTime(currentTime: number, duration: number): string {
+  function formatTime(seconds: number): string {
+    const fullSeconds = Math.floor(seconds);
+    const minutes = Math.floor(fullSeconds / 60);
+    const secs = fullSeconds % 60;
+
+    const milliseconds = Math.floor((seconds - fullSeconds) * 1000);
+    const milliString = String(milliseconds).padStart(3, "0").slice(0, 2);
+
+    if (minutes > 0) {
+      const formattedSeconds = String(secs).padStart(2, "0");
+      return `${minutes}:${formattedSeconds}`;
+    } else {
+      return `${secs}.${milliString}`;
+    }
+  }
+
+  const formattedCurrentTime = formatTime(currentTime);
+  const formattedDuration = formatTime(duration);
+
+  return `${formattedCurrentTime} / ${formattedDuration}`;
+}
+
 // get pretty date - for file names
 export function getDateTime(): string {
   const now = new Date(Date.now());

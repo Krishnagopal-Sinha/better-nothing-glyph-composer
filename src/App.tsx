@@ -30,7 +30,6 @@ import { showError } from "./lib/helpers";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-
   useEffect(() => {
     function beforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
@@ -328,7 +327,7 @@ export default function App() {
             {/* Phone and Config Screen */}
             <div className="flex justify-between space-x-4">
               {/* Glyph preview */}
-              <GlyphPreviewComponent />
+              <GlyphPreviewComponent     isAudioLoaded={isInputLoaded} />
 
               {/* Control Panel */}
               <ControlPanelComponent
