@@ -18,6 +18,12 @@ export default function SettingsPanel() {
   const isMultiSelectActive = useGlobalAppStore(
     (state) => state.appSettings.isMultiSelectActive
   );
+  const showAudioTimeStamp = useGlobalAppStore(
+    (state) => state.appSettings.showAudioTimeStamp
+  );
+  const toggleShowAudioTimeStamp = useGlobalAppStore(
+    (state) => state.toggleShowAudioTimeStamp
+  );
   const toggleKeyboardGesture = useGlobalAppStore(
     (state) => state.toggleKeyboardGesture
   );
@@ -114,7 +120,7 @@ export default function SettingsPanel() {
             type="number"
             defaultValue={
               (((dataStore.get("newBlockBrightness") as number) ?? 3072) /
-              kMaxBrightness) *
+                kMaxBrightness) *
               100
             }
             max={100}
@@ -158,6 +164,21 @@ export default function SettingsPanel() {
             onCheckedChange={toggleKeyboardGesture}
             checked={isKeyboardGestureEnabled}
           />
+
+          {/* Show audio timestamp */}
+          <Label
+            htmlFor="showAudioTimeStamp"
+            className="text-lg font-light"
+            title="Overwrite the brightness of blocks that would be pasted with the new block brightness value?"
+          >
+            Show Audio TimeStamp
+          </Label>
+          <Switch
+            id="showAudioTimeStamp"
+            onCheckedChange={toggleShowAudioTimeStamp}
+            checked={showAudioTimeStamp}
+          />
+
           {/* Modifiable paste brightness */}
           <Label
             htmlFor="overwriteBrightness"

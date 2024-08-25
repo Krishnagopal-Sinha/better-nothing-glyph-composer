@@ -25,6 +25,7 @@ type AppSettings = {
   timelinePixelFactor: number;
   isSettingsDialogOpen: boolean;
   settingDialogContentIndex: number;
+  showAudioTimeStamp: boolean;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
@@ -70,6 +71,7 @@ export type Action = {
   decreasePixelFactor: () => void;
   setIsSettingsDialogOpen: (value: boolean) => void;
   setSettingsDialogContentIndex: (value: number) => void;
+  toggleShowAudioTimeStamp: () => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -95,6 +97,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         timelinePixelFactor: 160,
         isSettingsDialogOpen: false,
         settingDialogContentIndex: 0,
+        showAudioTimeStamp: false,
       },
 
       // Setting update functions
@@ -103,6 +106,14 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           appSettings: {
             ...state.appSettings,
             isZoneVisible: !state.appSettings.isZoneVisible,
+          },
+        })),
+
+      toggleShowAudioTimeStamp: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            showAudioTimeStamp: !state.appSettings.showAudioTimeStamp,
           },
         })),
 
@@ -232,8 +243,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             item,
             items[item.glyphId],
             audioInformation.durationInMilis,
-            -1, //default value for skipping index while updating, doesn't let skip by default. 
-            true,
+            -1, //default value for skipping index while updating, doesn't let skip by default.
+            true
           )
         ) {
           actualAdd(item);

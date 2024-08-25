@@ -7,13 +7,21 @@ import NP2a_Preview from "./previewDevices/NP2a_Preview";
 import NP1_15_Preview from "./previewDevices/NP1_15_Preview";
 import { generateEffectData } from "@/logic/export_logic";
 import { kTimeStepMilis } from "@/lib/consts";
+import { getPrettyTime } from "@/lib/helpers";
 
-export default function GlyphPreviewComponent() {
-  const { getPosition } = useGlobalAudioPlayer();
+export default function GlyphPreviewComponent({
+  isAudioLoaded,
+}: {
+  isAudioLoaded: boolean;
+}) {
+  const { getPosition, duration } = useGlobalAudioPlayer();
   // Handle live playing indicator updates for playing audio
   const frameRef = useRef<number>();
   const timelineData = useGlobalAppStore((state) => state.items);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
+  const showAudioTimeStamp = useGlobalAppStore(
+    (state) => state.appSettings.showAudioTimeStamp
+  );
 
   // only for refreshing preview every sec audio played
   const [, setCurrentPosition] = useState(0);
@@ -43,7 +51,10 @@ export default function GlyphPreviewComponent() {
         const startTime = curr.startTimeMilis;
         const endTime = startTime + curr.durationMilis;
 
-        if (currentPositionMilis >= startTime && currentPositionMilis <= endTime) {
+        if (
+          currentPositionMilis >= startTime &&
+          currentPositionMilis <= endTime
+        ) {
           const currTime = Math.floor(currentPositionMilis / kTimeStepMilis);
           const startTimeIdx = Math.floor(startTime / kTimeStepMilis);
           const endTimeIdx = Math.floor(endTime / kTimeStepMilis);
@@ -92,8 +103,16 @@ export default function GlyphPreviewComponent() {
   }
 
   return (
+    // Phone bg
     <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center ">
+      {/* actual glyphs lights */}
       {previewComponent}
+      {/* Time component */}
+      {isAudioLoaded && showAudioTimeStamp && (
+        <div className="absolute text-sm text-center text-gray-700">
+          {`${getPrettyTime(getPosition(), duration)}`}
+        </div>
+      )}
     </div>
   );
 }

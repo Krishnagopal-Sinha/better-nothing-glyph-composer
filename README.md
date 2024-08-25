@@ -26,7 +26,12 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
   - Don't like a glyph block? Delete it.
   - Drag to move a block around
   - Select to Trim and adjust
+  - Keyboard gestures like spacebar to play/pause
+  - Auto Generate Glyph effects
+  - Generate Glyph Blocks on basis of custom parameters
+  - ...and tons more
 - **Visual Navigation**: Scroll to explore your glyph edits on track effortlessly.
+- **Tip**: Hovering over elements for a while will show a helpful pop up with tips in most cases!
 
 ## 🎨 How to Use (Instructions)
 
@@ -55,6 +60,7 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 ## 📜 Early Release Notes
 
 - **Stay Humorous**: Remember, this is an early version, so let's keep a light-hearted approach while using it! 😄
+- **More Demo & Discussion**: Available on this forum on [Nothing's official discord server channel](https://discord.com/channels/930878214237200394/1275717674634051661)
 
 ## 📫 Contributing
 
@@ -70,23 +76,29 @@ This project is licensed under the GNU General Public License v3.0.
 
 ---
 
-Happy Composing! 🎵✨
+Happy Composing! 🎵✨ 
+Disclaimer: I am not affiliated with Nothing. This is just a personal hobby project.
 
 ---
 
 _Made with ❤️ by Krishnagopal Sinha_
 
+## :eyes: Donation Links
+
+[![Donate with PayPal](https://raw.githubusercontent.com/stefan-niedermann/paypal-donate-button/master/paypal-donate-button.png)](https://paypal.me/krishnagopalsinha)
+
 ## TODO:
 
 -[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture 
-
--[ ] Remove debug states from data store!
 
 -[ ] Read glyph data from input ogg files
 
 -[ ] Solve existing github issues
 
-
--[ ] Add various effect feature
+-[X] Add various effect feature
 
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
+
+-[ ] UI Refresh :eyes:
+
+-[ ] Add visualizer or would that just slow the website down ?
