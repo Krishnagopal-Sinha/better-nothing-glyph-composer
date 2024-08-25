@@ -83,7 +83,7 @@ Disclaimer: I am not affiliated with Nothing. This is just a personal hobby proj
 
 _Made with ❤️ by Krishnagopal Sinha_
 
-## :eyes: Donation Links
+## 🤝 Donation Links
 
 [![Donate with PayPal](https://raw.githubusercontent.com/stefan-niedermann/paypal-donate-button/master/paypal-donate-button.png)](https://paypal.me/krishnagopalsinha)
 
