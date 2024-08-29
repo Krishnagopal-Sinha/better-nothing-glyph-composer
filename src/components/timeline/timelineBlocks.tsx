@@ -18,7 +18,6 @@ type Props = {
 };
 export default function TimelineBlockComponent({ glyphItem }: Props) {
   const removeItem = useGlobalAppStore((state) => state.removeItem);
-  // const updateItem = useGlobalAppStore((state) => state.updateItem);
   const updateSelectedItem = useGlobalAppStore(
     (state) => state.updateSelectedItem
   );

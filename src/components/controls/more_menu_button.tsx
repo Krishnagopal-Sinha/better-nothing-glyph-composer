@@ -110,7 +110,7 @@ export default function MoreMenuButton() {
                   Import Glyph Data
                 </MenubarItem>
                 <MenubarItem onClick={onExportGlyphClick}>
-                  Export Glyph Data (.json) | BNGC
+                  Export Project (.json) | BNGC
                 </MenubarItem>
 
                 <MenubarItem onClick={onExportGlyphCsvClick}>

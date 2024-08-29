@@ -1,5 +1,6 @@
 import { kMaxBrightness, kTimeStepMilis } from "@/lib/consts";
-import { GlyphBlock } from "@/lib/glyph_model";
+import { GlyphBlock, GlyphStore } from "@/lib/glyph_model";
+import { convertArrayToObjects } from "@/lib/helpers";
 import pako from "pako";
 
 export function processEdits(csv: string): string | null {
@@ -20,6 +21,49 @@ export function processEdits(csv: string): string | null {
     console.error(`Error: while processing final glyph data -> ${error}`);
     return null;
   }
+}
+
+export function restoreAppGlyphData(
+  base64Data: string
+): GlyphStore | undefined {
+  try {
+    // to binary
+    const binaryString = atob(base64Data);
+
+    //  binary to uint8arr
+    const binaryArray = new Uint8Array(
+      Array.from(binaryString).map((char) => char.charCodeAt(0))
+    );
+
+    const decompressedData = pako.inflate(binaryArray, { to: "string" });
+
+    return actuallyRestoreGlyphData(decompressedData);
+  } catch (error) {
+    console.error(`Error: while decompressing glyph data -> ${error}`);
+  }
+  return;
+}
+
+export function actuallyRestoreGlyphData(csvString: string): GlyphStore {
+  // convert into arr[][]
+
+  function csvStringToNumberArray(csvString: string): number[][] {
+    return csvString
+      .trim()
+      .split("\n")
+      .map((row) =>
+        row
+          .split(",")
+          .filter((cell) => cell.trim() !== "") // Remove empty cells resulting from trailing commas
+          .map((cell) => {
+            const trimmedCell = cell.trim();
+            return trimmedCell !== "" ? parseInt(trimmedCell, 10) : 0;
+          })
+      );
+  }
+  const csv = csvStringToNumberArray(csvString);
+
+  return convertArrayToObjects(csv, 3);
 }
 
 export function generateEffectData(
@@ -191,18 +235,25 @@ export function generateCSV(
       const endTimeIdx = Math.floor(
         (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
       );
-
+      // const iterLimit = endTimeIdx - startTimeIdx;
       for (let z = startTimeIdx; z < endTimeIdx; z++) {
         const iterCount = z - startTimeIdx;
-        const iterLimit = endTimeIdx - startTimeIdx;
-        const brightnessValue = generateEffectData(
-          curr.effectId,
-          curr.startingBrightness,
-          iterCount,
-          iterLimit
-        );
-
-        intervals[z][i] = brightnessValue;
+        // Use below if you wanna recreate/revalidate effect from some reason - probably has stopped working cuz of changes done
+        // const brightnessValue = generateEffectData(
+        //   curr.effectId,
+        //   curr.startingBrightness,
+        //   iterCount,
+        //   iterLimit
+        // );
+        // using precomputed values
+        const brightnessValue = curr.effectData[iterCount];
+        // Bug temp fix, few old ogg making interval become undefined, hekk.
+        // TODO: Rework
+        if (typeof intervals[z] !== "undefined") {
+          if (typeof intervals[z][i] !== "undefined") {
+            intervals[z][i] = brightnessValue;
+          }
+        }
       }
     }
   }

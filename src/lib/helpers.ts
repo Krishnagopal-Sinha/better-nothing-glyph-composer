@@ -1,5 +1,60 @@
 import { toast } from "sonner";
 import { GlyphBlock, GlyphStore } from "./glyph_model";
+import { nanoid } from "nanoid";
+import dataStore from "./data_store";
+import { kTimeStepMilis } from "./consts";
+import { generateEffectData } from "@/logic/export_logic";
+
+// Remove extra blocks on imported .ogg
+export function removeAudioBoundsViolators(effects: GlyphStore, audioDuration: number): GlyphStore {
+  const finalData: GlyphStore = {};
+
+
+  Object.keys(effects).forEach((key:string) => {
+
+    finalData[+key] = effects[+key].filter(block => {
+      // Check if the effect's start time or end time exceeds the audio duration
+      return block.startTimeMilis < audioDuration &&
+      block.startTimeMilis + block.durationMilis > 0;
+    });
+  });
+
+  return finalData;
+}
+
+export function generateNewGlyphBlock(
+  glyphId: number,
+  startTimeMilis: number,
+  durationMilis?: number,
+  startingBrightness?: number,
+  effectId?: number
+): GlyphBlock {
+  const blockEffectId = effectId ?? 0;
+  const blockDuration =
+    durationMilis ?? dataStore.get("newBlockDurationMilis") ?? 500; //safety
+  const blockStartingBrightness =
+    startingBrightness ?? dataStore.get("newBlockBrightness") ?? 4095;
+  const effectData: number[] = [];
+
+  // generate effect data
+  const endIndex = Math.floor(blockDuration / kTimeStepMilis);
+  for (let i = 0; i < endIndex; i++) {
+    effectData.push(
+      generateEffectData(blockEffectId, blockStartingBrightness, i, endIndex)
+    );
+  }
+  // console.log(effectData);
+  return {
+    id: nanoid(),
+    glyphId,
+    startTimeMilis,
+    durationMilis: blockDuration,
+    startingBrightness: blockStartingBrightness,
+    isSelected: false,
+    effectId: blockEffectId,
+    effectData: effectData,
+  };
+}
 
 // Snap To BPM feat.
 export function calculateBeatDurationInMilis(bpm: number): number {
@@ -351,4 +406,58 @@ export function basicCanAddCheck(
   }
 
   return true;
+}
+
+
+export function convertArrayToObjects(arr: number[][], lookAheadLimit: number = 3): GlyphStore {
+  const result: GlyphStore = {};
+  const arrayLength = arr[0].length;
+  const timeInterval = 16.66;
+
+  for (let col = 0; col < arrayLength; col++) {
+      result[col] = []; // Initialize empty array for each column
+
+      let row = 0;
+      while (row < arr.length) {
+          if (arr[row][col] > 0) {
+              const startTimeMilis = row * timeInterval;
+              let durationMilis = timeInterval;
+              const effectData = [arr[row][col]];
+
+              let lookAheadCount = 0;
+              for (let lookAhead = 1; lookAhead + row < arr.length; lookAhead++) {
+                  const currentValue = arr[row + lookAhead][col];
+                  if (currentValue > 0) {
+                      effectData.push(currentValue);
+                      durationMilis += timeInterval;
+                      lookAheadCount = 0;  // Reset look-ahead count when a non-zero value is found
+                  } else {
+                      lookAheadCount++;
+                      if (lookAheadCount >= lookAheadLimit) {
+                          break;
+                      }
+                  }
+              }
+
+              const data = {
+                  id: nanoid(),
+                  glyphId: col,
+                  startTimeMilis,
+                  durationMilis,
+                  startingBrightness: arr[row][col],
+                  isSelected: false,
+                  effectId: 101,
+                  effectData,
+              };
+
+              result[col].push(data);
+
+              // Move row pointer to end of the effect's duration
+              row += Math.floor(durationMilis / timeInterval) - 1;
+          }
+          row++;
+      }
+  }
+
+  return result;
 }

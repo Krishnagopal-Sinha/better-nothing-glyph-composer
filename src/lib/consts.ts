@@ -22,6 +22,7 @@ export const kEffectNames: { [key: number]: string } = {
   9: "Max Strobe!",
   10: "Pulse End",
   11: "Metronome - 1s",
+  101: "No Data - Imported"
 };
 
 // Version Info
