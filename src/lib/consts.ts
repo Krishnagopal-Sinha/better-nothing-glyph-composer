@@ -28,7 +28,7 @@ export const kEffectNames: { [key: number]: string } = {
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
 export const kMinorVersion = 1;
-export const kPatchVersion = 4;
+export const kPatchVersion = 5;
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 
