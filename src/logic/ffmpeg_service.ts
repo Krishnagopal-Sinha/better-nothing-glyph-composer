@@ -2,7 +2,7 @@
 
 import { kMajorVersion } from "@/lib/consts";
 import dataStore, { PhoneSpecificInfo } from "@/lib/data_store";
-import { getDateTime } from "@/lib/helpers";
+import { getDateTime, showError } from "@/lib/helpers";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import fileDownload from "js-file-download";
@@ -11,20 +11,23 @@ class FFmpegService {
   private static instance: FFmpegService;
   private ffmpeg: FFmpeg;
   private progressPercentage: number;
+  private logs: string[];
 
   private constructor() {
     this.ffmpeg = new FFmpeg();
     this.progressPercentage = 0;
+    this.logs = [];
     this.ffmpeg.on("progress", (progress) => {
       this.progressPercentage = parseInt((progress.progress * 100).toFixed(0));
-
       if (this.progressPercentage > 99.4) {
         this.progressPercentage = 0;
       }
-
-      console.log(
-        `Saving file: ${this.progressPercentage}% done, please wait...`
-      );
+      // console.log(
+      //   `Saving file: ${this.progressPercentage}% done, please wait...`
+      // );
+    });
+    this.ffmpeg.on("log", ({ message }) => {
+      this.logs.push(message);
     });
   }
 
@@ -104,6 +107,42 @@ class FFmpegService {
     const outputFile = await this.ffmpeg.readFile(`${outputFileName}`);
 
     fileDownload(outputFile, outputFileName);
+  }
+
+  async getGlyphData(inputAudioFile: File): Promise<string | null> {
+    this.logs = [];
+    await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
+
+    await this.ffmpeg.exec(["-i", "input.ogg", "-f", "null", "-"]);
+
+    const author = this.extractAuthor(this.logs.join("\n"));
+
+    // console.log("EXTRACTed:", author);
+    if (!author) {
+      console.error("Input file is not a valid Glyph composed file!");
+      showError(
+        "Import Error",
+        "Input file is not a valid Glyph composed file!",
+        1800
+      );
+    }
+    return author;
+  }
+
+  private extractAuthor(ffmpegOutput: string): string | null {
+    // Regex to match AUTHOR data, allowing for multiline values
+    const authorRegex = /AUTHOR\s*:\s*([\s\S]*?)(?:\n\s*\w+|$)/i;
+
+    const match = ffmpegOutput.match(authorRegex);
+
+    if (match && match[1]) {
+      let cleanBase64Str = match[1].trim().replace(/:/g, "");
+
+      cleanBase64Str = cleanBase64Str.replace(/\s+/g, "");
+      return cleanBase64Str;
+    }
+
+    return null;
   }
 
   getFFmpegInstance(): FFmpeg {

@@ -5,9 +5,8 @@ import NP1_5_Preview from "./previewDevices/NP1_Preview";
 import NP2_Preview from "./previewDevices/NP2_Preview";
 import NP2a_Preview from "./previewDevices/NP2a_Preview";
 import NP1_15_Preview from "./previewDevices/NP1_15_Preview";
-import { generateEffectData } from "@/logic/export_logic";
-import { kTimeStepMilis } from "@/lib/consts";
 import { getPrettyTime } from "@/lib/helpers";
+import { kTimeStepMilis } from "@/lib/consts";
 
 export default function GlyphPreviewComponent({
   isAudioLoaded,
@@ -48,32 +47,32 @@ export default function GlyphPreviewComponent({
     for (let i = 0; i < Object.keys(timelineData).length; i++) {
       for (let j = 0; j < timelineData[i].length; j++) {
         const curr = timelineData[i][j];
-        const startTime = curr.startTimeMilis;
-        const endTime = startTime + curr.durationMilis;
+        const startTimeMilis = curr.startTimeMilis;
+        const endTimeMilis = startTimeMilis + curr.durationMilis;
 
         if (
-          currentPositionMilis >= startTime &&
-          currentPositionMilis <= endTime
+          currentPositionMilis >= startTimeMilis &&
+          currentPositionMilis <= endTimeMilis
         ) {
-          const currTime = Math.floor(currentPositionMilis / kTimeStepMilis);
-          const startTimeIdx = Math.floor(startTime / kTimeStepMilis);
-          const endTimeIdx = Math.floor(endTime / kTimeStepMilis);
-          // see export logic to see main logic, almost copy n paste of that
-          const iterCount = currTime - startTimeIdx;
-          const iterLimit = endTimeIdx - startTimeIdx;
-
-          const currentEffectBrightness = generateEffectData(
-            curr.effectId,
-            curr.startingBrightness,
-            iterCount,
-            iterLimit
+          // get how much time has passed since start, acces that time's effect brightness from computed effect data
+          const iterCount = Math.floor(
+            (currentPositionMilis - startTimeMilis) / kTimeStepMilis
           );
-
+          const currentEffectBrightness = curr.effectData[iterCount];
+          // console.log(currentEffectBrightness); //debug
           // sqrt to brighten up dim lights
           const adjustedBrightness =
             Math.sqrt(currentEffectBrightness) / Math.sqrt(4095);
 
           zoneColors[curr.glyphId] = `rgb(255 255 255 / ${adjustedBrightness})`;
+        }
+
+        // break away from current trackId for loop when ahead than current pos as the data is all stored in sorted way :] #efficiency
+        if (
+          j + 1 < timelineData[i].length &&
+          timelineData[i][j + 1].startTimeMilis > currentPositionMilis
+        ) {
+          break;
         }
       }
     }

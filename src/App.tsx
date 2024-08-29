@@ -7,7 +7,11 @@ import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { useFilePicker } from "use-file-picker";
 import { FileTypeValidator } from "use-file-picker/validators";
 import ffmpegService from "./logic/ffmpeg_service";
-import { generateCSV, processEdits } from "./logic/export_logic";
+import {
+  generateCSV,
+  processEdits,
+  restoreAppGlyphData,
+} from "./logic/export_logic";
 import { Button } from "./components/ui/button";
 import InstructionComponent from "./components/timeline/instructions";
 import SaveDialog from "./components/controls/save_dialog";
@@ -30,22 +34,26 @@ import { showError } from "./lib/helpers";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return "";
-    }
+  // DEBUG remove comments
 
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", beforeUnload);
-    };
-  }, []);
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return "";
+  //   }
+
+  //   window.addEventListener("beforeunload", beforeUnload);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
   const resetData = useGlobalAppStore((state) => state.reset);
-  const updateDuration = useGlobalAppStore((state) => state.updateDuration);
+  const updateDuration = useGlobalAppStore(
+    (state) => state.updateAudioDuration
+  );
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
@@ -57,6 +65,7 @@ export default function App() {
     (state) => state.toggleMultiSelect
   );
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const importJsonData = useGlobalAppStore((state) => state.importJsonData);
   const copyItems = useGlobalAppStore((state) => state.copyItems);
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
@@ -104,11 +113,28 @@ export default function App() {
   } = useGlobalAudioPlayer();
 
   useEffect(() => {
+    async function extractGlyphData(inputFile: File) {
+      const compressedGlyphData = await ffmpegService.getGlyphData(inputFile);
+      if (compressedGlyphData) {
+        const restoredGlyphData = restoreAppGlyphData(compressedGlyphData);
+        if (restoredGlyphData) {
+          importJsonData(JSON.stringify(restoredGlyphData));
+        }
+      }
+    }
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
-        load(filesContent[0].content, { format: "mp3", loop: true });
+        load(filesContent[0].content, { format: "mp3" });
         setIsInputLoaded(true);
         dataStore.set("isAudioLoaded", true);
+        if (plainFiles[0] && plainFiles[0].type === "audio/ogg") {
+          showError(
+            "Trying to extract Glyph Data",
+            "Working in background to get data",
+            2500
+          );
+          extractGlyphData(plainFiles[0]);
+        }
         // set seek rate
         setRate(dataStore.get("audioSpeed") ?? 1);
         // clear undo and stuff
@@ -327,7 +353,7 @@ export default function App() {
             {/* Phone and Config Screen */}
             <div className="flex justify-between space-x-4">
               {/* Glyph preview */}
-              <GlyphPreviewComponent     isAudioLoaded={isInputLoaded} />
+              <GlyphPreviewComponent isAudioLoaded={isInputLoaded} />
 
               {/* Control Panel */}
               <ControlPanelComponent

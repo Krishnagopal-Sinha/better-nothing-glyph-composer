@@ -52,7 +52,7 @@ export default function SettingDialogContent({
   const [generationStartTimeMilis, setGenerationStartTimeMilis] =
     useState<number>(+(getPosition() * 1000).toFixed(2));
   const [generationEndTimeMilis, setGenerationEndTimeMilis] =
-    useState<number>(5000);
+    useState<number>(+(getPosition() * 1000 + 5000).toFixed(2));
   const [generationBlockDurationMilis, setGenerationBlockDurationMilis] =
     useState<number>(500);
   const [generationBlockBrightness, setGenerationBlockBrightness] =
