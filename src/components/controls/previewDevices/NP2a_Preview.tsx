@@ -11,7 +11,7 @@ export default function NP2a_Preview({ zoneColors }: { zoneColors: string[] }) {
       width="100%"
       className="h-[300px] w-[150px]"
       viewBox="210 -40 400 900"
-      enable-background="new 0 0 800 800"
+      enableBackground="new 0 0 800 800"
     >
       <defs>
         <linearGradient
