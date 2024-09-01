@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://github.com/Krishnagopal-Sinha/better-nothing-glyph-composer",
+  "homepage": "https://Krishnagopal-Sinha.github.io/better-nothing-glyph-composer",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
