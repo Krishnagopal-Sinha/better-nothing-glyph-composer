@@ -51,7 +51,7 @@ Props) {
         onDoubleClick={(e) => {
           e.preventDefault();
           const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
-          console.log("double clicked?");
+          // console.log("double clicked?");
           addItem(
             i,
             ((e.clientX + scrollValue) / timelinePixelFactor) * 1000 //convert to milis; offset needed cuz pointer has width too
