@@ -28,6 +28,7 @@ class FFmpegService {
     });
     this.ffmpeg.on("log", ({ message }) => {
       this.logs.push(message);
+      // console.log(message); //debug
     });
   }
 
@@ -63,14 +64,12 @@ class FFmpegService {
     // console.log("Initiating Save Process");
 
     // default to NP1 on error
-    const phoneInfo: PhoneSpecificInfo =
-      dataStore.get(currentDevice) ??
-      <PhoneSpecificInfo>{
-        composer: `v1-Spacewar Glyph Composer`,
-        album: `BNGC v${kMajorVersion}`,
-        custom2: "5cols",
-        custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
-      };
+    const phoneInfo: PhoneSpecificInfo = dataStore.get(currentDevice) ?? {
+      composer: `v1-Spacewar Glyph Composer`,
+      album: `BNGC v${kMajorVersion}`,
+      custom2: "5cols",
+      custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`,
+    };
     const composer = phoneInfo.composer;
 
     const album = phoneInfo.album;
@@ -109,40 +108,60 @@ class FFmpegService {
     fileDownload(outputFile, outputFileName);
   }
 
-  async getGlyphData(inputAudioFile: File): Promise<string | null> {
+  async getGlyphData(inputAudioFile: File): Promise<string[] | null> {
     this.logs = [];
     await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
 
-    await this.ffmpeg.exec(["-i", "input.ogg", "-f", "null", "-"]);
+    await this.ffmpeg.exec([
+      "-i",
+      "input.ogg",
+      "-map",
+      "0",
+      "-c",
+      "copy",
+      "-f",
+      "ffmetadata",
+      "-",
+    ]);
 
     const author = this.extractAuthor(this.logs.join("\n"));
 
-    // console.log("EXTRACTed:", author);
+    // console.warn("EXTRACTed:", author);
     if (!author) {
-      console.error("Input file is not a valid Glyph composed file!");
+      console.warn("Input file is not a valid Glyph composed file!");
       showError(
         "Import Error",
-        "Input file is not a valid Glyph composed file!",
+        "Input file is not a valid Glyph composed file! But you can change that, by composing ;D",
         1800
       );
     }
     return author;
   }
 
-  private extractAuthor(ffmpegOutput: string): string | null {
-    // Regex to match AUTHOR data, allowing for multiline values
-    const authorRegex = /AUTHOR\s*:\s*([\s\S]*?)(?:\n\s*\w+|$)/i;
+  private extractAuthor(ffmpegOutput: string): string[] | null {
+    const aData = [];
+    const authorRegexStrat1 = /AUTHOR\s*:\s*([\s\S]*?)(?:\n\s*\w+|$)/i;
+    const authorRegexStrat2 = /AUTHOR\s*=\s*([^\n\r;]+)/;
 
-    const match = ffmpegOutput.match(authorRegex);
+    const match = ffmpegOutput.match(authorRegexStrat1);
+    const match2 = ffmpegOutput.match(authorRegexStrat2);
 
     if (match && match[1]) {
       let cleanBase64Str = match[1].trim().replace(/:/g, "");
 
       cleanBase64Str = cleanBase64Str.replace(/\s+/g, "");
-      return cleanBase64Str;
+      aData.push(cleanBase64Str);
     }
+    if (match2 && match2[1]) {
+      let cleanBase64Str = match2[1].trim().replace(/:/g, "");
 
-    return null;
+      cleanBase64Str = cleanBase64Str.replace(/\s+/g, "");
+      aData.push(cleanBase64Str);
+    }
+    if (!aData[0] && !aData[1]) {
+      return null;
+    }
+    return aData;
   }
 
   getFFmpegInstance(): FFmpeg {

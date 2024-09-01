@@ -9,6 +9,8 @@ export default function NP2_Preview({ zoneColors }: { zoneColors: string[] }) {
       x="0px"
       y="0px"
       width="100%"
+      className="h-[300px] w-[150px]"
+
       viewBox="0 0 480 974"
       enableBackground="new 0 0 480 974"
     >

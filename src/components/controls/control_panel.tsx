@@ -57,7 +57,6 @@ export default function ControlPanelComponent({
   };
 
   const deviceControlsToShow = generateDeviceControls();
-
   return (
     <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between ">
       {/* Info Title*/}
@@ -75,7 +74,7 @@ export default function ControlPanelComponent({
           <p className="text-muted-foreground">
             This app is usable but is still being actively being worked upon!
             <br />
-            Supports: Nothing Phone(1) & Phone(2)
+            Supports: Nothing Phone (1), (2), (2a) / (2a) Plus
             <br />
             Use on fullscreen Desktop / Laptop
             <br />
@@ -668,7 +667,6 @@ export default function ControlPanelComponent({
 
           {/* More menu items */}
           <MoreMenuButton />
-         
         </div>
       </>
     );
@@ -703,7 +701,7 @@ export function AppNameComponent({ playing }: { playing: boolean }) {
   const kAppNameParts = kAppName.split(" ");
 
   return (
-    <span className={`${playing ? "neon" : ""}`}>
+    <span className={`${playing ? "neon" : ""} `}>
       <span className={`${playing ? "flicker-vslow" : ""}`}>
         {kAppNameParts[0]}{" "}
       </span>

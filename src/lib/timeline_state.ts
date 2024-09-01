@@ -1,7 +1,12 @@
 import { create, useStore } from "zustand";
 import dataStore from "./data_store";
 import { nanoid } from "nanoid";
-import { kAllowedModels, kMaxBrightness, kTimeStepMilis } from "./consts";
+import {
+  kAllowedModels,
+  kMaxBrightness,
+  kPhoneZones,
+  kTimeStepMilis,
+} from "./consts";
 import { temporal, TemporalState } from "zundo";
 import {
   GlyphBlock,
@@ -36,6 +41,7 @@ type AppSettings = {
   alsoSnapDuration: boolean;
   bpmValue: number;
   snapSensitivity: number;
+  showHeavyUi: boolean;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
@@ -85,6 +91,7 @@ export type Action = {
   toggleAlsoSnapBlockDuration: () => void;
   setBpmForSnap: (value: number) => void;
   setSnapSensitivity: (value: number) => void;
+  toggleShowShowHeavyUi: () => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -114,7 +121,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         bpmValue: 60,
         snapToBpmActive: false,
         alsoSnapDuration: false,
-        snapSensitivity: 20,
+        snapSensitivity: 15,
+        showHeavyUi: false,
       },
 
       // Setting update functions
@@ -131,6 +139,14 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           appSettings: {
             ...state.appSettings,
             showAudioTimeStamp: !state.appSettings.showAudioTimeStamp,
+          },
+        })),
+
+      toggleShowShowHeavyUi: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            showHeavyUi: !state.appSettings.showHeavyUi,
           },
         })),
 
@@ -212,10 +228,10 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       setSnapSensitivity: (value: number) => {
-        if (value < 1 || value > 70) {
+        if (value < 13 || value > 25) {
           showError(
             "Invalid Value - Snap Sensitivity",
-            "BPM must be between 1 and 70. Setting value not updated.",
+            "BPM range is between 13 and 25. Invserve Sensitivity value not updated.",
             1500
           );
           return;
@@ -263,23 +279,38 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         if (validateJsonStructure(data)) {
           // Ensure current selected phone model's Glyph data is being loaded
           // Otherwise phone 1 will load up 33 zone cuz it item.length dependent lulz
-          if (Object.keys(get().items).length !== Object.keys(data).length) {
+          const zonesInImportedData = Object.keys(data).length;
+          if (Object.keys(get().items).length !== zonesInImportedData) {
             showError(
               "Import Error - Phone Model Mismatch",
-              "Are you sure correct Phone model is selected?",
-              2500
+              `Are you sure correct Phone model is selected? ${
+                kPhoneZones[zonesInImportedData]
+                  ? `Hint: Try with ${kPhoneZones[
+                      zonesInImportedData
+                    ].toUpperCase()}`
+                  : ""
+              }`,
+              2800
             );
             return;
           }
           // caution: sort for safety
           const sortedData = sortObjectByStartTimeMilis(data);
-          // caution: remove glyphs beyond audio, old compositions have frequent violators!
-          const finalData = removeAudioBoundsViolators(
-            sortedData,
-            get().audioInformation.durationInMilis
-          );
 
-          set({ items: finalData });
+          // TODO: Fix, duration is 0 when file's just loaded, delay the firing or smthin
+          // caution: remove glyphs beyond audio, old compositions have frequent violators!
+
+          async function scheme(sortedData: GlyphStore) {
+            setTimeout(() => {
+              const finalData = removeAudioBoundsViolators(
+                sortedData,
+                get().audioInformation.durationInMilis
+              );
+              set({ items: finalData });
+            }, 100);
+          }
+
+          scheme(sortedData);
         } else {
           showError(
             "Import Error - Glyph data",
@@ -343,7 +374,6 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           glyphId,
           startTimeMilis
         );
-
         get().addItemDirectly(newItem);
       },
 
@@ -358,7 +388,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
       // UPDATE
 
-      // Only send difference of time values !
+      //  Delta shiz, only send delta
       // Effect's not a bug. When holding down shift key, if user lets go before right click, it toggles multiselect off, thus the effect does not apply as other block (apart from the right clicked one) aren't selected :P
       updateSelectedItem: (deltaBlock: DeltaUpdateBlock) => {
         const items = get().items;
@@ -393,29 +423,23 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 const startTimeAccu: number = dataStore.get(
                   "startTimeAccumulator"
                 )!;
-                const durationAccu: number = dataStore.get(
-                  "durationAccumulator"
-                )!;
                 const accuLimit = snapSensitivity;
-
+// No need for duration accumulator check as only one event fired at last user movement # efficiency
                 if (deltaBlock.durationMilis) {
                   // Determine the snapping direction based on the deltaBlock's trend
                   if (alsoSnapDuration) {
-                    dataStore.set("durationAccumulator", durationAccu + 1);
-                    if (durationAccu >= accuLimit) {
-                      const direction =
-                        deltaBlock.durationMilis > 0 ? "right" : "left";
-                      curr.durationMilis = snapToNearestBeat(
-                        curr.durationMilis,
-                        beatDuration,
-                        direction
-                      );
-                      dataStore.set("durationAccumulator", 0);
-                      if (
-                        canAddItem2(curr, updatedItems[i], durationInMilis, j)
-                      ) {
-                        updatedItems[i][j] = curr;
-                      }
+                    const direction =
+                      deltaBlock.durationMilis > 0 ? "right" : "left";
+                    curr.durationMilis = snapToNearestBeat(
+                      curr.durationMilis,
+                      beatDuration,
+                      direction
+                    );
+                    dataStore.set("durationAccumulator", 0);
+                    if (
+                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
+                    ) {
+                      updatedItems[i][j] = curr;
                     }
                   } else {
                     if (
@@ -461,6 +485,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 deltaBlock.durationMilis ||
                 deltaBlock.startingBrightness
               ) {
+                // console.log("should not hit");
                 const updatedEffectData: number[] = [];
                 const endTimeIdx = Math.floor(
                   curr.durationMilis / kTimeStepMilis

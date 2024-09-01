@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -36,11 +36,16 @@ export default function TimeBarBlocks({
     dataStore.set("loopAPositionInMilis", posInMilis);
     setLoopAsUiPosition(posInMilis);
   };
-  const onRightClickToMenu = (e: React.MouseEvent) => {
-    const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
-    // e.clientx alone also works, makes sense but adding scroll to make it proper
-    setRightClickPosition(e.clientX + scrollValue);
-  };
+
+  const onRightClickToMenu = useCallback(
+    (e: React.MouseEvent) => {
+      const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
+      // e.clientX alone also works, makes sense but adding scroll to make it proper
+      setRightClickPosition(e.clientX + scrollValue);
+    },
+    [setRightClickPosition]
+  );
+
   const onLoopAClick = (e: React.MouseEvent) => {
     e.stopPropagation(); //needed as otherwise timebar gesture will trigger
     const loopAPositionInMilis =
@@ -143,11 +148,11 @@ export default function TimeBarBlocks({
       <ContextMenuTrigger onContextMenu={onRightClickToMenu}>
         {/* Time bar blocks */}
         <div
-          className={`pt-0 select-none overflow-clip`}
-          title={secondToRespresent + "s"}
+          className={`pt-0 select-none overflow-clip relative text-opacity-90 text-white`}
+          title={`${secondToRespresent} second(s)`}
           style={{
             width: `${timelinePixelFactor}px`,
-            paddingLeft: timelinePixelFactor >= 40 ? "10px" : "2px",
+            paddingLeft: timelinePixelFactor >= 40 ? "6px" : "1px",
             backgroundColor: isMinuteMark
               ? "rgb(85 28 28)"
               : isTenSecMark
@@ -160,7 +165,15 @@ export default function TimeBarBlocks({
           }}
           key={secondToRespresent}
         >
-          {timelinePixelFactor < 25 ? <pre> </pre> : secondToRespresent + "s"}
+          <pre> </pre>
+          {timelinePixelFactor > 25 && (
+            <div className="absolute left-[5%] inset-0 z-[5]">
+              {secondToRespresent + "s"}
+            </div>
+          )}
+          <div className="absolute inset-0 h-[50%] my-auto  left-[25%] bg-black w-[1px]"></div>
+          <div className="absolute inset-0 h-[50%] my-auto  left-[50%] bg-black w-[1px]"></div>
+          <div className="absolute inset-0 h-[50%] my-auto  left-[75%] bg-black w-[1px]"></div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

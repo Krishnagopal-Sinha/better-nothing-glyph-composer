@@ -31,6 +31,9 @@ export default function SettingsPanel() {
     (state) => state.appSettings.alsoSnapDuration
   );
   const bpmValue = useGlobalAppStore((state) => state.appSettings.bpmValue);
+  const showHeavyUi = useGlobalAppStore(
+    (state) => state.appSettings.showHeavyUi
+  );
   const toggleShowAudioTimeStamp = useGlobalAppStore(
     (state) => state.toggleShowAudioTimeStamp
   );
@@ -42,6 +45,9 @@ export default function SettingsPanel() {
   );
   const toggleAlsoSnapBlockDuration = useGlobalAppStore(
     (state) => state.toggleAlsoSnapBlockDuration
+  );
+  const toggleShowShowHeavyUi = useGlobalAppStore(
+    (state) => state.toggleShowShowHeavyUi
   );
   const toggleSnapToBpm = useGlobalAppStore((state) => state.toggleSnapToBpm);
   const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
@@ -63,7 +69,7 @@ export default function SettingsPanel() {
     }
     setBpmForSnap(value);
   };
-  
+
   const onSnapSensitivityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.currentTarget.value);
     setSnapSensitivity(value);
@@ -117,7 +123,9 @@ export default function SettingsPanel() {
       <form className="space-y-2  ">
         {/* COntrol Grid  */}
         <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 overflow-y-scroll h-[270px]">
-          <legend className="-ml-1 px-1 text-sm font-medium">Settings</legend>
+          <legend className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide">
+            SETTINGS
+          </legend>
           {/* Configure Device */}
           <Label htmlFor="multiSelect" className="text-lg font-light">
             Device
@@ -274,9 +282,23 @@ export default function SettingsPanel() {
             id="snapSens"
             type="number"
             defaultValue={snapSensitivity}
-            max={60}
-            min={1}
+            max={25}
+            min={13}
             step={1}
+          />
+
+          {/* Render Heavy Ui */}
+          <Label
+            htmlFor="renderHeavy"
+            className="text-lg font-light"
+            title="Render more demanding UI? Only do this if PC can support it!"
+          >
+            Switch to Heavy UI?
+          </Label>
+          <Switch
+            id="renderHeavy"
+            onCheckedChange={toggleShowShowHeavyUi}
+            defaultValue={showHeavyUi.toString()}
           />
 
           {/* Modifiable paste brightness */}

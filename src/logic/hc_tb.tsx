@@ -18,7 +18,7 @@ type Props = {
   glyphItem: GlyphBlock;
   // nextItem?: GlyphBlock;
 };
-export default function TimelineBlockComponent({ glyphItem }: Props) {
+export default function HeavyTimelineBlock({ glyphItem }: Props) {
   const removeItem = useGlobalAppStore((state) => state.removeItem);
   const updateSelectedItem = useGlobalAppStore(
     (state) => state.updateSelectedItem
@@ -40,7 +40,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
   // function milisToPixel(milis: number): number {
   //   return (milis / timelinePixelFactor) * 1000;
   // }
-  // TODO: Fix this, for now a temp work around!
+
   const throttledUpdate = throttle((x: number) => {
     const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
 
@@ -114,7 +114,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               selectItem(glyphItem, true);
             }
           }}
-          className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-white text-black ${
+          className={`h-full border-primary relative flex items-center  cursor-auto border-red-500 rounded-md bg-slate-900 text-black ${
             glyphItem.isSelected ? "outline outline-red-500 outline-[3px]" : ""
           }`}
           style={{
@@ -127,6 +127,15 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             // }`,
           }}
         >
+          <div className="h-full w-full grid grid-flow-col items-end ">
+            {glyphItem.effectData.map((e, i) => (
+              <div
+                key={i}
+                className={`bg-red-50/90 h-full w-full rounded-t-full`}
+                style={{ height: `${(e / kMaxBrightness) * 100}%` }}
+              ></div>
+            ))}
+          </div>
           {/* Trim handler */}
           {glyphItem.isSelected && (
             <animated.div

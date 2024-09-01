@@ -1,6 +1,6 @@
 import ControlPanelComponent from "@/components/controls/control_panel";
 import GlyphPreviewComponent from "@/components/controls/glyph_preview";
-import EditorComponent from "@/components/timeline/editor";
+
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
@@ -31,21 +31,22 @@ import {
 import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
 import { showError } from "./lib/helpers";
+import { EditorComponent } from "./components/timeline/editor";
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return "";
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return "";
+  //   }
 
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener("beforeunload", beforeUnload);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -125,6 +126,7 @@ export default function App() {
       try {
         load(filesContent[0].content, { format: "mp3" });
         setIsInputLoaded(true);
+        updateDuration(duration * 1000); //init duration update
         dataStore.set("isAudioLoaded", true);
         if (plainFiles[0] && plainFiles[0].type === "audio/ogg") {
           showError(

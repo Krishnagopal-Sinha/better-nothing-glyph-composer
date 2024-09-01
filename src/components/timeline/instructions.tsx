@@ -2,7 +2,7 @@ export default function InstructionComponent() {
   return (
     // Instructions
     <div className="p-6 ">
-      <h2 className="text-2xl font-bold text-primary">Instructions</h2>
+      <h2 className="text-2xl font-bold text-primary font-[ndot] uppercase tracking-wide">Instructions</h2>
       <br />
       <pre className="text-muted-foreground text-wrap overflow-auto">
         1. Double press to add a glyph block, choose Glyph Zone numbers to add

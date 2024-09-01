@@ -7,6 +7,7 @@ import { generateEffectData } from "@/logic/export_logic";
 
 // Remove extra blocks on imported .ogg
 export function removeAudioBoundsViolators(effects: GlyphStore, audioDuration: number): GlyphStore {
+
   const finalData: GlyphStore = {};
 
 
@@ -70,6 +71,16 @@ export function snapToNearestBeat(
   } else {
     return Math.floor(timeInMillis / beatDuration) * beatDuration;
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let timeout: ReturnType<typeof setTimeout>;
+
+  return function(...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  } as T;
 }
 
 // sort

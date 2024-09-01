@@ -24,18 +24,36 @@ export function processEdits(csv: string): string | null {
 }
 
 export function restoreAppGlyphData(
-  base64Data: string
+  base64DataArr: string[]
 ): GlyphStore | undefined {
+  function decodeBase64(base64: string): Uint8Array {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    return bytes;
+  }
+  function cleanBase64String(base64String: string) {
+    return base64String.replace(/[^A-Za-z0-9+/=]/g, "");
+  }
+
   try {
     // to binary
-    const binaryString = atob(base64Data);
+    const binaryData = decodeBase64(cleanBase64String(base64DataArr[0]));
 
-    //  binary to uint8arr
-    const binaryArray = new Uint8Array(
-      Array.from(binaryString).map((char) => char.charCodeAt(0))
-    );
+    let decompressedData = pako.inflate(binaryData, { to: "string" });
 
-    const decompressedData = pako.inflate(binaryArray, { to: "string" });
+    // try 2nd regex result to hit
+    if (!decompressedData) {
+      console.log("Info: 1st import strategy failed, trying the 2nd one...");
+      const binaryData = decodeBase64(cleanBase64String(base64DataArr[1]));
+
+      decompressedData = pako.inflate(binaryData, { to: "string" });
+    }
 
     return actuallyRestoreGlyphData(decompressedData);
   } catch (error) {
@@ -247,13 +265,10 @@ export function generateCSV(
         // );
         // using precomputed values
         const brightnessValue = curr.effectData[iterCount];
-        // Bug temp fix, few old ogg making interval become undefined, hekk.
-        // TODO: Rework
-        if (typeof intervals[z] !== "undefined") {
-          if (typeof intervals[z][i] !== "undefined") {
-            intervals[z][i] = brightnessValue;
-          }
-        }
+
+        // Bug temp fix, few old ogg making interval become undefined, hekk cuz ending might just go over ending.
+        if (!intervals[z]) intervals[z] = [...emptyRow];
+        intervals[z][i] = brightnessValue;
       }
     }
   }
