@@ -91,7 +91,7 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 -[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture 
 
--[ ] Read glyph data from input ogg files
+-[X] Read glyph data from input ogg files
 
 -[ ] Solve existing github issues
 
@@ -103,6 +103,8 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
 
--[ ] UI Refresh :eyes:
+-[X] UI Refresh :eyes:
+
+-[X] Add audio beat map / waveform
 
 -[ ] Add visualizer or would that just slow the website down ?

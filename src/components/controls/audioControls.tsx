@@ -2,8 +2,8 @@ import dataStore from "@/lib/data_store";
 import { showError } from "@/lib/helpers";
 import useGlobalAppStore from "@/lib/timeline_state";
 import {
-  ZoomOut,
-  ZoomIn,
+  // ZoomOut,
+  // ZoomIn,
   ChevronsRightLeft,
   ChevronsLeft,
   Pause,
@@ -45,12 +45,12 @@ export default function AudioControlComponent({
   const updateDuration = useGlobalAppStore(
     (state) => state.updateAudioDuration
   );
-  const decreasePixelFactor = useGlobalAppStore(
-    (state) => state.decreasePixelFactor
-  );
-  const increasePixelFactor = useGlobalAppStore(
-    (state) => state.increasePixelFactor
-  );
+  // const decreasePixelFactor = useGlobalAppStore(
+  //   (state) => state.decreasePixelFactor
+  // );
+  // const increasePixelFactor = useGlobalAppStore(
+  //   (state) => state.increasePixelFactor
+  // );
   const timelinePixelFactor = useGlobalAppStore(
     (state) => state.appSettings.timelinePixelFactor
   );
@@ -250,7 +250,14 @@ export default function AudioControlComponent({
           transition: "top 0.3s ease",
         }}
       >
-        <button
+           <button
+          onClick={() => player.stop()}
+          title={"Stop"}
+          aria-label="Stop audio button"
+        >
+          <Square />
+        </button>
+        {/* <button
           onClick={() => {
             decreasePixelFactor();
             player.zoom(player.options.minPxPerSec - 50);
@@ -269,7 +276,7 @@ export default function AudioControlComponent({
           aria-label="Zoom out timeline"
         >
           <ZoomIn />
-        </button>
+        </button> */}
 
         {/* scroll to middle scroll middle */}
 
@@ -295,13 +302,7 @@ export default function AudioControlComponent({
           <ChevronsRight />
         </button>
 
-        <button
-          onClick={() => player.stop()}
-          title={"Stop"}
-          aria-label="Stop audio button"
-        >
-          <Square />
-        </button>
+     
         <button
           title={"Save audio"}
           aria-label="save audio button"
