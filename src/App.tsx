@@ -291,7 +291,7 @@ export default function App() {
             {/* Load audio n play controls  */}
             {!isInputLoaded && (
               <Button
-                className="w-full py-6 text-lg font-normal hidden sm:inline-flex"
+                className="w-full py-6  font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
                 onClick={(e) => {
                   e.preventDefault();
                   loadAudioFile();
