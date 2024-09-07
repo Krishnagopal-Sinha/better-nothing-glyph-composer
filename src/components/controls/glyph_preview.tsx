@@ -103,7 +103,7 @@ export default function GlyphPreviewComponent({
 
   return (
     // Phone bg
-    <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center ">
+    <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center outline outline-[#212121]  hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500">
       {/* actual glyphs lights */}
       {previewComponent}
       {/* Time component */}

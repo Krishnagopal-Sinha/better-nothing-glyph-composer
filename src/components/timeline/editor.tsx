@@ -71,6 +71,7 @@ Props) {
     dataStore.set("editorScrollX", e.currentTarget.scrollLeft);
   };
 
+
   return (
     // added to for scroll
     <div

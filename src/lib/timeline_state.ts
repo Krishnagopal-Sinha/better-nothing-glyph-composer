@@ -388,7 +388,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
       // UPDATE
 
-      //  Delta shiz, only send delta
+      //  Only send delta!!
       // Effect's not a bug. When holding down shift key, if user lets go before right click, it toggles multiselect off, thus the effect does not apply as other block (apart from the right clicked one) aren't selected :P
       updateSelectedItem: (deltaBlock: DeltaUpdateBlock) => {
         const items = get().items;

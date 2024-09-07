@@ -11,14 +11,13 @@ import { kEffectNames, kMaxBrightness } from "@/lib/consts";
 import { useState } from "react";
 import { DeltaUpdateBlock, GlyphBlock } from "@/lib/glyph_model";
 import { useDrag } from "@use-gesture/react";
-import dataStore from "@/lib/data_store";
 
 type Props = {
   // prevItem?: GlyphBlock;
   glyphItem: GlyphBlock;
   // nextItem?: GlyphBlock;
 };
-export default function HeavyTimelineBlock({ glyphItem }: Props) {
+export default function TimelineBlockComponent({ glyphItem }: Props) {
   const removeItem = useGlobalAppStore((state) => state.removeItem);
   const updateSelectedItem = useGlobalAppStore(
     (state) => state.updateSelectedItem
@@ -40,25 +39,18 @@ export default function HeavyTimelineBlock({ glyphItem }: Props) {
   // function milisToPixel(milis: number): number {
   //   return (milis / timelinePixelFactor) * 1000;
   // }
-
   const throttledUpdate = throttle((x: number) => {
-    const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
-
-    const updateValue = ((x + scrollValue) * 1000) / timelinePixelFactor;
-    const delta = updateValue - glyphItem.startTimeMilis;
-    // console.log("updateStartTime: ", updateValue, delta, updateValue - delta);
-    const rightTrend = delta > 0 ? true : false;
     const deltaBlock: DeltaUpdateBlock = {
-      startTimeMilis: rightTrend ? delta / 10 : delta,
+      startTimeMilis: (x * 1000) / timelinePixelFactor,
     };
 
     updateSelectedItem(deltaBlock);
-  }, 25);
+  }, 5);
 
   const dragHandler = useDrag(
-    ({ xy }) => {
+    ({ delta }) => {
       if (isTrimActive) return;
-      throttledUpdate(xy[0]);
+      throttledUpdate(delta[0]);
     },
     {
       axis: "x",
@@ -102,7 +94,7 @@ export default function HeavyTimelineBlock({ glyphItem }: Props) {
           )} s\nEffect: ${
             kEffectNames[glyphItem.effectId] ?? "Unkown / Imported"
           }\nStarting Brightness: ${(
-            (glyphItem.startingBrightness / kMaxBrightness) *
+            (glyphItem.effectData[0] / kMaxBrightness) *
             100
           ).toFixed(2)}%`}
           onClick={(e) => {
@@ -114,9 +106,11 @@ export default function HeavyTimelineBlock({ glyphItem }: Props) {
               selectItem(glyphItem, true);
             }
           }}
-          className={`h-full border-primary relative flex items-center  cursor-auto border-red-500 rounded-md bg-slate-900 text-black ${
+          className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-[rgb(57,57,57)] text-black
+             hover:shadow-[0px_0px_15px_1px_#ffffff] duration-200
+            ${
             glyphItem.isSelected ? "outline outline-red-500 outline-[3px]" : ""
-          }`}
+          } ${isTrimActive ? '':'overflow-clip'}`}
           style={{
             width: `${
               (glyphItem.durationMilis / 1000) * timelinePixelFactor
@@ -127,11 +121,14 @@ export default function HeavyTimelineBlock({ glyphItem }: Props) {
             // }`,
           }}
         >
+          {/* Internal glyph brighntess graphed info */}
           <div className="h-full w-full grid grid-flow-col items-end ">
             {glyphItem.effectData.map((e, i) => (
               <div
                 key={i}
-                className={`bg-red-50/90 h-full w-full rounded-t-full`}
+                className={`bg-white h-full w-full 
+                 rounded-t-[2px]
+                `}
                 style={{ height: `${(e / kMaxBrightness) * 100}%` }}
               ></div>
             ))}
@@ -147,7 +144,7 @@ export default function HeavyTimelineBlock({ glyphItem }: Props) {
                   : " p-1 pb-[8px]"
               }`}
               style={{ x: x2, touchAction: "none" }}
-              // Stop text sel for handle (makeshift) icon |||
+              // Stop text sel for handle (makeshift) icon |
             >
               |
             </animated.div>

@@ -23,11 +23,12 @@ import {
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import SettingsPanel from "./settings_panel";
 import MoreMenuButton from "./more_menu_button";
+import GlyphPreviewComponent from "./glyph_preview";
 
-export default function ControlPanelComponent({
+export default function MainTopPanel({
   isSaving,
   isAudioLoaded,
 }: {
@@ -58,14 +59,30 @@ export default function ControlPanelComponent({
 
   const deviceControlsToShow = generateDeviceControls();
   return (
-    <div className="flex sm:flex-row flex-col gap-4 h-max-[50dvh] rounded-lg shadow-lg p-6 flex-grow bg-[#111111] justify-between ">
-      {/* Info Title*/}
+    <div className="grid grid-flow-row sm:grid-flow-col  gap-4 max-h-[50dvh] rounded-lg shadow-lg p-2 flex-grow justify-between sm:items-start  items-center">
+      <div
+        className="flex gap-2 sm:gap-6 bg-[#111111] py-4 px-6 rounded-md outline outline-[#212121] 
+     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500"
+      >
+        {/* 1st col - Glyph preview */}
+        <GlyphPreviewComponent isAudioLoaded={isAudioLoaded} />
+
+        {/* 2nd col - Title n all */}
+        <TitleAndControlsPanel />
+      </div>
+
+      {/* 3rd col - Config panel */}
+      <SettingsPanel />
+    </div>
+  );
+
+  function TitleAndControlsPanel() {
+    return (
       <div className="flex flex-col justify-between">
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-primary">
             <AppNameComponent playing={showEasterEgg} />
             <span className="animate-pulse duration-700 text-red-600">
-              {" "}
               {isSaving ? "[Saving...]" : ""}
             </span>
           </h2>
@@ -105,11 +122,8 @@ export default function ControlPanelComponent({
           </div>
         )}
       </div>
-      {/* Config panel */}
-
-      <SettingsPanel />
-    </div>
-  );
+    );
+  }
 
   function generateDeviceControls() {
     switch (currentDevice) {
@@ -685,7 +699,7 @@ export function OpenInstructionButton() {
           Read Instructions
         </Button>
       </DialogTrigger>
-      <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit overflow-auto">
+      <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit">
         <InstructionComponent />
         <DialogFooter>
           <DialogClose asChild>
@@ -699,9 +713,24 @@ export function OpenInstructionButton() {
 
 export function AppNameComponent({ playing }: { playing: boolean }) {
   const kAppNameParts = kAppName.split(" ");
-
+  const spanRef = useRef<HTMLSpanElement>(null);
   return (
-    <span className={`${playing ? "neon" : ""} `}>
+    <span
+      className={`${
+        playing ? "neon" : ""
+      } font-[ndot] tracking-wider uppercase`}
+      ref={spanRef}
+      onMouseLeave={() => {
+        if (spanRef.current) {
+          spanRef.current.style.textShadow = "";
+        }
+      }}
+      onMouseEnter={() => {
+        if (spanRef.current) {
+          spanRef.current.style.textShadow = "#fff 4px 0 20px";
+        }
+      }}
+    >
       <span className={`${playing ? "flicker-vslow" : ""}`}>
         {kAppNameParts[0]}{" "}
       </span>

@@ -7,9 +7,11 @@ import { useGlobalAudioPlayer } from "react-use-audio-player";
 import useGlobalAppStore from "@/lib/timeline_state";
 import { showError } from "@/lib/helpers";
 import { kMaxBrightness } from "@/lib/consts";
+import { useRef } from "react";
 
 export default function SettingsPanel() {
   const { setRate, duration } = useGlobalAudioPlayer();
+  const spanRef = useRef<HTMLLegendElement>(null);
 
   // get settings
   const isKeyboardGestureEnabled = useGlobalAppStore(
@@ -120,10 +122,22 @@ export default function SettingsPanel() {
   return (
     <>
       {/* Config panel */}
-      <form className="space-y-2  ">
+      <form>
         {/* COntrol Grid  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 overflow-y-scroll h-[270px]">
-          <legend className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 max-h-[40dvh] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+          <legend className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
+            ref={spanRef}
+            onMouseLeave={() => {
+              if (spanRef.current) {
+                spanRef.current.style.textShadow = "";
+              }
+            }}
+            onMouseEnter={() => {
+              if (spanRef.current) {
+                spanRef.current.style.textShadow = "#fff 8px 0 20px";
+              }
+            }}
+          >
             SETTINGS
           </legend>
           {/* Configure Device */}

@@ -1,6 +1,4 @@
-import ControlPanelComponent from "@/components/controls/control_panel";
-import GlyphPreviewComponent from "@/components/controls/glyph_preview";
-
+import MainTopPanel from "@/components/controls/control_panel";
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useEffect, useRef, useState } from "react";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
@@ -32,21 +30,21 @@ import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
 import { showError } from "./lib/helpers";
 import { EditorComponent } from "./components/timeline/editor";
-
+import { useWavesurfer } from '@wavesurfer/react';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return "";
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return "";
+  //   }
 
-    window.addEventListener("beforeunload", beforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener("beforeunload", beforeUnload);
+  //   return () => {
+  //     window.removeEventListener("beforeunload", beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -107,11 +105,21 @@ export default function App() {
     pause,
     setRate,
     duration,
+    src,
     // isReady,
     seek,
     playing,
   } = useGlobalAudioPlayer();
 
+// here
+  const containerRef = useRef(null);
+  const { wavesurfer, isPlaying, currentTime } = useWavesurfer({
+    container: containerRef,
+    height: 100,
+    waveColor: 'rgb(200, 0, 200)',
+    progressColor: 'rgb(100, 0, 100)',
+  });
+// On Input File Chosen
   useEffect(() => {
     async function extractGlyphData(inputFile: File) {
       const compressedGlyphData = await ffmpegService.getGlyphData(inputFile);
@@ -124,14 +132,16 @@ export default function App() {
     }
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
+        // here load
+        wavesurfer?.load(filesContent[0].content);
         load(filesContent[0].content, { format: "mp3" });
         setIsInputLoaded(true);
         updateDuration(duration * 1000); //init duration update
         dataStore.set("isAudioLoaded", true);
         if (plainFiles[0] && plainFiles[0].type === "audio/ogg") {
           showError(
-            "Trying to extract Glyph Data",
-            "Working in background to get data",
+            "Trying to Recover Glyph Data",
+            "Working in background to get data...",
             2500
           );
           extractGlyphData(plainFiles[0]);
@@ -328,18 +338,15 @@ export default function App() {
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
       {isSaving && <SaveDialog isOpen={true} />}
 
-      {/* main div */}
-      <div
-      // className="grid grid-cols-1 grid-rows-[50dvh_50dvh]"
-      >
+      {/* main root div */}
+      <div>
         {/* Upper Section - Fixed */}
-
-        <div className="bg-[#222222] px-4 py-4 w-full overflow-auto">
+        <div className="px-4 py-4 w-full overflow-auto">
           {/* Mobile Only */}
           {!isInputLoaded ? (
             <Button
               variant="outline"
-              className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-max"
+              className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-full"
               onClick={(e) => {
                 e.preventDefault();
                 loadAudioFile();
@@ -351,17 +358,8 @@ export default function App() {
             <></>
           )}
           <div className="space-y-4">
-            {/* Phone and Config Screen */}
-            <div className="flex justify-between space-x-4">
-              {/* Glyph preview */}
-              <GlyphPreviewComponent isAudioLoaded={isInputLoaded} />
-
-              {/* Control Panel */}
-              <ControlPanelComponent
-                isSaving={isSaving}
-                isAudioLoaded={isInputLoaded}
-              />
-            </div>
+            {/* Main Top Half Component */}
+            <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
 
             {/* Load audio n play controls  */}
             <PlayControlsComponent />
@@ -369,7 +367,6 @@ export default function App() {
         </div>
 
         {/* Lower Section - Non-Scrollable */}
-
         {!isInputLoaded ? (
           <InstructionComponent />
         ) : (

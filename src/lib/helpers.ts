@@ -6,17 +6,19 @@ import { kTimeStepMilis } from "./consts";
 import { generateEffectData } from "@/logic/export_logic";
 
 // Remove extra blocks on imported .ogg
-export function removeAudioBoundsViolators(effects: GlyphStore, audioDuration: number): GlyphStore {
-
+export function removeAudioBoundsViolators(
+  effects: GlyphStore,
+  audioDuration: number
+): GlyphStore {
   const finalData: GlyphStore = {};
 
-
-  Object.keys(effects).forEach((key:string) => {
-
-    finalData[+key] = effects[+key].filter(block => {
+  Object.keys(effects).forEach((key: string) => {
+    finalData[+key] = effects[+key].filter((block) => {
       // Check if the effect's start time or end time exceeds the audio duration
-      return block.startTimeMilis < audioDuration &&
-      block.startTimeMilis + block.durationMilis > 0;
+      return (
+        block.startTimeMilis < audioDuration &&
+        block.startTimeMilis + block.durationMilis > 0
+      );
     });
   });
 
@@ -74,10 +76,13 @@ export function snapToNearestBeat(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): T {
   let timeout: ReturnType<typeof setTimeout>;
 
-  return function(...args: Parameters<T>) {
+  return function (...args: Parameters<T>) {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   } as T;
@@ -418,56 +423,69 @@ export function basicCanAddCheck(
 
   return true;
 }
-
-
-export function convertArrayToObjects(arr: number[][], lookAheadLimit: number = 3): GlyphStore {
+export function convertArrayToObjects(
+  arr: number[][],
+  lookAheadLimit: number = 3,
+  changeThreshold: number = 3096 
+): GlyphStore {
   const result: GlyphStore = {};
   const arrayLength = arr[0].length;
-  const timeInterval = 16.66;
 
   for (let col = 0; col < arrayLength; col++) {
-      result[col] = []; // Initialize empty array for each column
+    result[col] = [];
 
-      let row = 0;
-      while (row < arr.length) {
-          if (arr[row][col] > 0) {
-              const startTimeMilis = row * timeInterval;
-              let durationMilis = timeInterval;
-              const effectData = [arr[row][col]];
+    let row = 0;
+    while (row < arr.length) {
+      if (arr[row][col] > 0) {
+        const startTimeMilis = row * kTimeStepMilis;
+        let durationMilis = kTimeStepMilis;
+        const effectData = [arr[row][col]];
 
-              let lookAheadCount = 0;
-              for (let lookAhead = 1; lookAhead + row < arr.length; lookAhead++) {
-                  const currentValue = arr[row + lookAhead][col];
-                  if (currentValue > 0) {
-                      effectData.push(currentValue);
-                      durationMilis += timeInterval;
-                      lookAheadCount = 0;  // Reset look-ahead count when a non-zero value is found
-                  } else {
-                      lookAheadCount++;
-                      if (lookAheadCount >= lookAheadLimit) {
-                          break;
-                      }
-                  }
-              }
+        let lookAheadCount = 0;
+        let lookAhead = 1;
+        let endRow = row;
 
-              const data = {
-                  id: nanoid(),
-                  glyphId: col,
-                  startTimeMilis,
-                  durationMilis,
-                  startingBrightness: arr[row][col],
-                  isSelected: false,
-                  effectId: 101,
-                  effectData,
-              };
-
-              result[col].push(data);
-
-              // Move row pointer to end of the effect's duration
-              row += Math.floor(durationMilis / timeInterval) - 1;
+        // Perform the look-ahead to determine the duration of the effect
+        while (lookAhead + row < arr.length) {
+          const currentValue = arr[row + lookAhead][col];
+          const previousValue = arr[row + lookAhead - 1][col];
+          if (currentValue > 0) {
+            // check for abrupt change
+            if (Math.abs(currentValue - previousValue) >= changeThreshold) {
+              break; //make into seperate effect
+            }
+            effectData.push(currentValue);
+            durationMilis += kTimeStepMilis;
+            lookAheadCount = 0; 
+            endRow = row + lookAhead; // update endRow to the last non-zero value
+          } else {
+            lookAheadCount++;
+            if (lookAheadCount >= lookAheadLimit) {
+              break;
+            }
           }
-          row++;
+          lookAhead++;
+        }
+
+        const data = {
+          id: nanoid(),
+          glyphId: col,
+          startTimeMilis,
+          durationMilis,
+          startingBrightness: arr[row][col],
+          isSelected: false,
+          effectId: 101,
+          effectData,
+        };
+
+        result[col].push(data);
+
+
+        row = endRow + 1;
+      } else {
+        row++;
       }
+    }
   }
 
   return result;
