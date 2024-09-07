@@ -47,7 +47,11 @@ export type GlyphEditorState = {
   items: GlyphStore;
   clipboard: GlyphBlock[];
   isCutActive: boolean;
-  audioInformation: { durationInMilis: number; title: string };
+  audioInformation: {
+    durationInMilis: number;
+    title: string;
+    currentPositionInMilis: number;
+  };
   phoneModel: string;
   // Settings
   appSettings: AppSettings;
@@ -64,7 +68,6 @@ export type Action = {
   updateSelectedItemAbsolutely: (glyphBlockTemplate: DeltaUpdateBlock) => void;
   toggleSelection: (itemToSelect: GlyphBlock, toSelect?: boolean) => void;
   reset: () => void;
-  updateAudioDuration: (durationInMilis: number) => void;
   copyItems: () => void;
   cutItems: () => void;
   pasteItems: () => void;
@@ -81,6 +84,8 @@ export type Action = {
   // Settings
   toggleKeyboardGesture: (value?: boolean) => void;
   toggleMultiSelect: (toSelect?: boolean) => void;
+  updateAudioDuration: (durationInMilis: number) => void;
+  updateAudioPosition: (currentPositionInMilis: number) => void;
   toggleZoneVisibility: () => void;
   increasePixelFactor: () => void;
   decreasePixelFactor: () => void;
@@ -108,7 +113,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
       clipboard: [],
       isCutActive: false,
-      audioInformation: { durationInMilis: 0, title: "" },
+      audioInformation: {
+        durationInMilis: 0,
+        title: "",
+        currentPositionInMilis: 0,
+      },
       // App Settings State  ============================================
       appSettings: {
         isZoneVisible: false,
@@ -272,7 +281,14 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           audioInformation: { ...state.audioInformation, durationInMilis },
         })),
-
+      // Update Position
+      updateAudioPosition: (currentPositionInMilis: number) =>
+        set((state) => ({
+          audioInformation: {
+            ...state.audioInformation,
+            currentPositionInMilis,
+          },
+        })),
       // Import feat  ===================================================
       importJsonData: (json: string) => {
         const data = JSON.parse(json);
@@ -424,7 +440,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                   "startTimeAccumulator"
                 )!;
                 const accuLimit = snapSensitivity;
-// No need for duration accumulator check as only one event fired at last user movement # efficiency
+                // No need for duration accumulator check as only one event fired at last user movement # efficiency
                 if (deltaBlock.durationMilis) {
                   // Determine the snapping direction based on the deltaBlock's trend
                   if (alsoSnapDuration) {

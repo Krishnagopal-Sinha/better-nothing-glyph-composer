@@ -106,9 +106,9 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               selectItem(glyphItem, true);
             }
           }}
-          className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-white text-black ${
-            glyphItem.isSelected ? "outline outline-red-500 outline-[3px]" : ""
-          } hover:shadow-[0px_0px_15px_1px_#ffffff] duration-200`}
+          className={`h-full border-primary relative flex items-center cursor-auto rounded-md bg-white text-black ${
+            glyphItem.isSelected ? "outline outline-red-600 outline-[3px]" : ""
+          } hover:shadow-[0px_0px_10px_1px_#ffffff] duration-200`}
           style={{
             width: `${
               (glyphItem.durationMilis / 1000) * timelinePixelFactor
@@ -124,9 +124,9 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             <animated.div
               {...trimHandler()}
               onMouseDown={() => setIsTrimActive(true)}
-              className={`text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
+              className={`text-white bg-[red] absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
-                  ? "h-screen w-[3px] p-0 absolute  bg-red-600 z-10 right-0"
+                  ? "h-screen w-[2px] p-0 absolute  bg-[red] z-10 right-0"
                   : " p-1 pb-[8px]"
               }`}
               style={{ x: x2, touchAction: "none" }}
