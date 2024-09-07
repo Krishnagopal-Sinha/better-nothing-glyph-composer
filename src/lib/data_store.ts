@@ -15,11 +15,13 @@ class DataStore {
     multiSelect: false,
     overwriteBrightnessWithNewBlock: false,
     newBlockDurationMilis: 500,
+    playbackSpeed:1,
     // tracking it for no reason
     isAudioLoaded: false,
     // Max is 4095 but 4096 was working fine too in app.
     newBlockBrightness: kMaxBrightness,
     currentAudioPositionInMilis: 0,
+    currentAudioDurationInMilis: 0,
     // acceptable values 0.5 and 2.0
     audioSpeed: 1,
     // Loop feat. position :: undefined | number

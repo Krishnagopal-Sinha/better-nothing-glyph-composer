@@ -1,6 +1,5 @@
 import useGlobalAppStore from "@/lib/timeline_state";
 import TimelineBlockComponent from "./timelineBlocks";
-import TimeBarComponent from "./timebar";
 import PlayingIndicator from "./playingIndicator";
 import dataStore from "@/lib/data_store";
 import { GlyphBlock } from "@/lib/glyph_model";
@@ -14,10 +13,11 @@ type Props = {
     [key: number]: GlyphBlock[];
   };
   scrollRef: React.Ref<HTMLDivElement>;
+  children:React.ReactNode;
 };
 
 export function EditorComponent({
-  timelineData,
+  timelineData,children,
   scrollRef,
 }: // currentAudioPosition,
 Props) {
@@ -80,8 +80,8 @@ Props) {
       onScroll={handleScroll}
     >
       <div className="flex flex-col flex-grow min-w-max relative">
-        {/* time bar */}
-        <TimeBarComponent />
+        {/* AudioControls */}
+        {children}
 
         {/* playing indicator */}
         <PlayingIndicator editorRows={numberOfRowsToGenerate} />

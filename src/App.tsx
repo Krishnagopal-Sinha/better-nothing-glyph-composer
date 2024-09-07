@@ -1,7 +1,6 @@
 import MainTopPanel from "@/components/controls/control_panel";
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useEffect, useRef, useState } from "react";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { useFilePicker } from "use-file-picker";
 import { FileTypeValidator } from "use-file-picker/validators";
 import ffmpegService from "./logic/ffmpeg_service";
@@ -14,44 +13,30 @@ import { Button } from "./components/ui/button";
 import InstructionComponent from "./components/timeline/instructions";
 import SaveDialog from "./components/controls/save_dialog";
 import { Toaster } from "./components/ui/sonner";
-import {
-  ChevronsLeft,
-  ChevronsRight,
-  ChevronsRightLeft,
-  Pause,
-  Play,
-  Save,
-  Square,
-  X,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
 import dataStore from "./lib/data_store";
 import FullPageAppLoaderPage from "./components/ui/fullScreenLoader";
 import { showError } from "./lib/helpers";
 import { EditorComponent } from "./components/timeline/editor";
-import { useWavesurfer } from '@wavesurfer/react';
+import AudioControlComponent from "./components/controls/audioControls";
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  // useEffect(() => {
-  //   function beforeUnload(e: BeforeUnloadEvent) {
-  //     e.preventDefault();
-  //     return "";
-  //   }
+  useEffect(() => {
+    function beforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      return "";
+    }
 
-  //   window.addEventListener("beforeunload", beforeUnload);
-  //   return () => {
-  //     window.removeEventListener("beforeunload", beforeUnload);
-  //   };
-  // }, []);
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
+  }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
   const resetData = useGlobalAppStore((state) => state.reset);
-  const updateDuration = useGlobalAppStore(
-    (state) => state.updateAudioDuration
-  );
+
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
@@ -67,15 +52,6 @@ export default function App() {
   const copyItems = useGlobalAppStore((state) => state.copyItems);
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
-  const increasePixelFactor = useGlobalAppStore(
-    (state) => state.increasePixelFactor
-  );
-  const decreasePixelFactor = useGlobalAppStore(
-    (state) => state.decreasePixelFactor
-  );
-  const timelinePixelFactor = useGlobalAppStore(
-    (state) => state.appSettings.timelinePixelFactor
-  );
   const {
     undo,
     redo,
@@ -96,30 +72,7 @@ export default function App() {
       validators: [new FileTypeValidator(["mp3", "ogg"])],
     });
 
-  // Audio Player
-  const {
-    load,
-    stop,
-    togglePlayPause,
-    play,
-    pause,
-    setRate,
-    duration,
-    src,
-    // isReady,
-    seek,
-    playing,
-  } = useGlobalAudioPlayer();
-
-// here
-  const containerRef = useRef(null);
-  const { wavesurfer, isPlaying, currentTime } = useWavesurfer({
-    container: containerRef,
-    height: 100,
-    waveColor: 'rgb(200, 0, 200)',
-    progressColor: 'rgb(100, 0, 100)',
-  });
-// On Input File Chosen
+  // On Input File Chosen
   useEffect(() => {
     async function extractGlyphData(inputFile: File) {
       const compressedGlyphData = await ffmpegService.getGlyphData(inputFile);
@@ -132,12 +85,7 @@ export default function App() {
     }
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
-        // here load
-        wavesurfer?.load(filesContent[0].content);
-        load(filesContent[0].content, { format: "mp3" });
         setIsInputLoaded(true);
-        updateDuration(duration * 1000); //init duration update
-        dataStore.set("isAudioLoaded", true);
         if (plainFiles[0] && plainFiles[0].type === "audio/ogg") {
           showError(
             "Trying to Recover Glyph Data",
@@ -146,8 +94,6 @@ export default function App() {
           );
           extractGlyphData(plainFiles[0]);
         }
-        // set seek rate
-        setRate(dataStore.get("audioSpeed") ?? 1);
         // clear undo and stuff
         clearUndoRedo();
         return;
@@ -160,6 +106,7 @@ export default function App() {
         `File error.\nError while loading input audio file, possible file format mismatch.`
       );
     }
+    // edge case error handling
     if (isInputLoaded) {
       setIsInputLoaded(false);
       dataStore.set("isAudioLoaded", false);
@@ -170,10 +117,6 @@ export default function App() {
   if (errors.length) {
     console.error(`Failed to pick file: ${errors}`);
   }
-
-  useEffect(() => {
-    updateDuration(duration * 1000);
-  }, [duration, updateDuration]);
 
   // FFMPEG
   const [ffmpegLoaded, setFfmpegLoaded] = useState<boolean>(false);
@@ -192,17 +135,6 @@ export default function App() {
   useEffect(() => {
     // Keyboard Controls
 
-    // Play Pause
-    function onSpaceKeyPress(e: KeyboardEvent) {
-      if (e.code === "Space") {
-        if (playing) {
-          pause();
-        } else {
-          play();
-        }
-        e.preventDefault();
-      }
-    }
     // Delete
     function onDeleteOrBackspaceKeyDown(e: KeyboardEvent) {
       if (
@@ -285,7 +217,6 @@ export default function App() {
     }
     if (isInputLoaded && isKeyboardGestureEnabled) {
       // play pause stuff
-      window.addEventListener("keypress", onSpaceKeyPress);
       window.addEventListener("keydown", onDeleteOrBackspaceKeyDown);
       window.addEventListener("keydown", onShiftKeyDown);
       window.addEventListener("keyup", onShiftKeyUp);
@@ -298,7 +229,6 @@ export default function App() {
     }
 
     return () => {
-      window.removeEventListener("keypress", onSpaceKeyPress);
       window.removeEventListener("keydown", onDeleteOrBackspaceKeyDown);
       window.removeEventListener("keydown", onShiftKeyDown);
       window.removeEventListener("keyup", onShiftKeyUp);
@@ -312,9 +242,6 @@ export default function App() {
   }, [
     isKeyboardGestureEnabled,
     isInputLoaded,
-    pause,
-    play,
-    playing,
     removeSelectedItem,
     toggleMultiSelect,
     selectAllItems,
@@ -362,7 +289,17 @@ export default function App() {
             <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
 
             {/* Load audio n play controls  */}
-            <PlayControlsComponent />
+            {!isInputLoaded && (
+              <Button
+                className="w-full py-6 text-lg font-normal hidden sm:inline-flex"
+                onClick={(e) => {
+                  e.preventDefault();
+                  loadAudioFile();
+                }}
+              >
+                Load Audio
+              </Button>
+            )}
           </div>
         </div>
 
@@ -374,7 +311,15 @@ export default function App() {
             scrollRef={editorRef}
             timelineData={timelineData}
             // currentAudioPosition={currentPosition}
-          />
+          >
+            <AudioControlComponent
+              onCloseButtonClicked={onCloseButtonClick}
+              isSaving={isSaving}
+              onSaveButtonClicked={onSaveButtonClick}
+              editorRef={editorRef}
+              audioUrl={filesContent[0].content}
+            />
+          </EditorComponent>
         )}
       </div>
     </main>
@@ -392,8 +337,7 @@ export default function App() {
     stop();
   }
 
-  function closeAudio(e: React.MouseEvent) {
-    e.preventDefault();
+  function onCloseButtonClick() {
     // Reset All Possible States - cleanup
     stopAudio();
     clear();
@@ -404,133 +348,26 @@ export default function App() {
     resetData();
   }
 
-  function goToStart(): void {
-    editorRef.current?.scrollTo({ left: 0, behavior: "smooth" });
-    // seek audio
-    seek(0);
-  }
-  function goToEnd(): void {
-    editorRef.current?.scrollTo({
-      left: duration * timelinePixelFactor,
-      behavior: "smooth",
-    });
-
-    seek(duration - 2);
-  }
-  function goToMiddle(): void {
-    editorRef.current?.scrollTo({
-      left: (duration / 2) * timelinePixelFactor - window.innerWidth / 2,
-      behavior: "smooth",
-    });
-    seek(duration / 2);
-  }
-
-  function PlayControlsComponent(): React.ReactNode {
-    return (
-      <div className="mt-6">
-        {/* Play Controls */}
-
-        {isInputLoaded ? (
-          <div
-            className={`flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 ${
-              playing ? "animate-pulse" : ""
-            }`}
-          >
-            <button
-              onClick={decreasePixelFactor}
-              title={"Zoom out timeline"}
-              aria-label="Zoom out timeline"
-            >
-              <ZoomOut />
-            </button>
-            <button
-              onClick={increasePixelFactor}
-              title={"Zoom out timeline"}
-              aria-label="Zoom out timeline"
-            >
-              <ZoomIn />
-            </button>
-
-            {/* scroll to middle scroll middle */}
-
-            <button onClick={goToMiddle} title="Jump to middle">
-              <ChevronsRightLeft />
-            </button>
-
-            {/* scroll to start scroll start */}
-
-            <button onClick={goToStart} title="Jump to start">
-              <ChevronsLeft />
-            </button>
-            <button
-              onClick={togglePlayPause}
-              title={"Play / Pause"}
-              aria-label="Toggle play or pause button"
-            >
-              {playing ? <Pause /> : <Play />}
-            </button>
-            {/* scroll to end scroll end */}
-
-            <button onClick={goToEnd} title="Jump to end">
-              <ChevronsRight />
-            </button>
-
-            <button
-              onClick={stopAudio}
-              title={"Stop"}
-              aria-label="Stop audio button"
-            >
-              <Square />
-            </button>
-            <button
-              title={"Save audio"}
-              aria-label="save audio button"
-              className={`${
-                isSaving ? "cursor-not-allowed" : "cursor-pointer"
-              }`}
-              onClick={async (e) => {
-                e.preventDefault();
-                const inputFile = plainFiles[0];
-                const processedEditData = processEdits(
-                  generateCSV(timelineData, duration * 1000)
-                );
-                if (inputFile && processedEditData && !isSaving) {
-                  setIsSaving(true);
-                  console.log("Save started...");
-                  await ffmpegService
-                    .saveOutput(plainFiles[0], processedEditData, currentDevice)
-                    .then(() => {
-                      setIsSaving(false);
-                    });
-                } else {
-                  console.error(
-                    "Save file error: No input file detected or another save process is ongoing"
-                  );
-                }
-              }}
-            >
-              <Save />
-            </button>
-            <button
-              onClick={closeAudio}
-              title={"Close audio"}
-              aria-label="close audio button"
-            >
-              <X />
-            </button>
-          </div>
-        ) : (
-          <Button
-            className="w-full py-6 text-lg font-normal hidden sm:inline-flex"
-            onClick={(e) => {
-              e.preventDefault();
-              loadAudioFile();
-            }}
-          >
-            Load Audio
-          </Button>
-        )}
-      </div>
+  async function onSaveButtonClick() {
+    const inputFile = plainFiles[0];
+    const processedEditData = processEdits(
+      generateCSV(
+        timelineData,
+        dataStore.get("currentAudioDurationInMilis") as number
+      )
     );
+    if (inputFile && processedEditData && !isSaving) {
+      setIsSaving(true);
+      console.log("Save started...");
+      await ffmpegService
+        .saveOutput(plainFiles[0], processedEditData, currentDevice)
+        .then(() => {
+          setIsSaving(false);
+        });
+    } else {
+      console.error(
+        "Save file error: No input file detected or another save process is ongoing"
+      );
+    }
   }
 }

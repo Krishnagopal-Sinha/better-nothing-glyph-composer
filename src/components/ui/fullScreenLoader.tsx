@@ -11,7 +11,9 @@ export default function FullPageAppLoaderPage() {
           <div className="h-8 w-8  bg-white rounded-full animate-bounce"></div>
         </div>
         <p className="text-2xl pt-6 font-medium  animate-pulse">Loading...</p>
-        <h1 className="text-3xl font-bold font-[ndot] tracking-wider">{kAppName}</h1>
+        <h1 className="text-3xl font-bold font-[ndot] tracking-wider">
+          {kAppName}
+        </h1>
       </div>
     </div>
   );

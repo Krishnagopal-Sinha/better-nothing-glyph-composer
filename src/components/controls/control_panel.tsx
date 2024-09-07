@@ -21,12 +21,12 @@ import {
   Scissors,
 } from "lucide-react";
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
 import { useRef, useState } from "react";
 import SettingsPanel from "./settings_panel";
 import MoreMenuButton from "./more_menu_button";
 import GlyphPreviewComponent from "./glyph_preview";
+import dataStore from "@/lib/data_store";
 
 export default function MainTopPanel({
   isSaving,
@@ -49,7 +49,11 @@ export default function MainTopPanel({
     (state) => state
   );
 
-  const { getPosition } = useGlobalAudioPlayer();
+  function getPosition(): number {
+    const positionInMilis: number =
+      dataStore.get("currentAudioPositionInMilis") ?? 0;
+    return positionInMilis;
+  }
   const [selectAll, setSelectAll] = useState<boolean>(true);
   // easter egg
   const [showEasterEgg, setShowEasterEgg] = useState<boolean>(false);
@@ -133,7 +137,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
               }}
             >
@@ -142,7 +146,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
               }}
             >
@@ -151,7 +155,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
               }}
             >
@@ -160,7 +164,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(3, startTimeMilis);
               }}
             >
@@ -169,7 +173,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(4, startTimeMilis);
               }}
             >
@@ -184,7 +188,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
               }}
             >
@@ -193,7 +197,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
               }}
             >
@@ -203,7 +207,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(2, 5, startTimeMilis);
               }}
             >
@@ -213,7 +217,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(4, startTimeMilis);
               }}
             >
@@ -223,7 +227,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(5, startTimeMilis);
               }}
             >
@@ -232,7 +236,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
               }}
             >
@@ -241,7 +245,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(3, startTimeMilis);
               }}
             >
@@ -251,7 +255,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(7, 14, startTimeMilis);
               }}
             >
@@ -261,7 +265,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(7, 8, startTimeMilis);
               }}
             >
@@ -271,7 +275,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(9, 11, startTimeMilis);
               }}
             >
@@ -281,7 +285,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(12, 14, startTimeMilis);
               }}
             >
@@ -291,7 +295,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(6, startTimeMilis);
               }}
             >
@@ -306,7 +310,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
               }}
             >
@@ -315,7 +319,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
               }}
             >
@@ -324,7 +328,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
               }}
             >
@@ -334,7 +338,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(3, 7, startTimeMilis);
               }}
             >
@@ -344,7 +348,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(8, 14, startTimeMilis);
               }}
             >
@@ -354,7 +358,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(15, 18, startTimeMilis);
               }}
             >
@@ -364,7 +368,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(19, startTimeMilis);
               }}
             >
@@ -374,7 +378,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(20, startTimeMilis);
               }}
             >
@@ -384,7 +388,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(21, startTimeMilis);
               }}
             >
@@ -394,7 +398,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(22, startTimeMilis);
               }}
             >
@@ -404,7 +408,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(23, startTimeMilis);
               }}
             >
@@ -414,7 +418,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(25, 27, startTimeMilis);
               }}
             >
@@ -424,7 +428,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(28, 30, startTimeMilis);
               }}
             >
@@ -434,7 +438,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(31, 32, startTimeMilis);
               }}
             >
@@ -444,7 +448,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(24, startTimeMilis);
               }}
             >
@@ -459,7 +463,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 23, startTimeMilis);
               }}
             >
@@ -468,7 +472,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 7, startTimeMilis);
               }}
             >
@@ -477,7 +481,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(8, 15, startTimeMilis);
               }}
             >
@@ -486,7 +490,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(16, 23, startTimeMilis);
               }}
             >
@@ -496,7 +500,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(24, startTimeMilis);
               }}
             >
@@ -505,7 +509,7 @@ export default function MainTopPanel({
             <Button
               variant="ghost"
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 addItem(25, startTimeMilis);
               }}
             >
@@ -605,7 +609,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Add all the Glyphs of NP(1) "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 4, startTimeMilis);
               }}
             >
@@ -619,7 +623,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 14, startTimeMilis);
               }}
             >
@@ -633,7 +637,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Add all the Glyphs of NP(2) "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 32, startTimeMilis);
               }}
             >
@@ -645,7 +649,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Fill the Top Right Glyph Zone of NP(2) "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(3, 18, startTimeMilis);
               }}
             >
@@ -657,7 +661,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Fill the Battery Glyph Zone of NP(2) "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(25, 32, startTimeMilis);
               }}
             >
@@ -671,7 +675,7 @@ export default function MainTopPanel({
               variant="ghost"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
               onClick={() => {
-                const startTimeMilis = getPosition() * 1000;
+                const startTimeMilis = getPosition();
                 fillEntireZone(0, 25, startTimeMilis);
               }}
             >

@@ -23,7 +23,7 @@ import { DeltaUpdateBlock, GlyphGenerationModel } from "@/lib/glyph_model";
 import { showError } from "@/lib/helpers";
 import useGlobalAppStore from "@/lib/timeline_state";
 import { useState } from "react";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
+import dataStore from "@/lib/data_store";
 
 export default function SettingDialogContent({
   dialogContentIdx,
@@ -31,7 +31,6 @@ export default function SettingDialogContent({
   dialogContentIdx: number;
 }) {
   const timelineData = useGlobalAppStore((state) => state.items);
-  const { getPosition } = useGlobalAudioPlayer();
 
   const audioInfo = useGlobalAppStore((state) => state.audioInformation);
   const updateSelectedItemAbsolutely = useGlobalAppStore(
@@ -50,9 +49,17 @@ export default function SettingDialogContent({
 
   // adv Generation - Glyph  states
   const [generationStartTimeMilis, setGenerationStartTimeMilis] =
-    useState<number>(+(getPosition() * 1000).toFixed(2));
-  const [generationEndTimeMilis, setGenerationEndTimeMilis] =
-    useState<number>(+(getPosition() * 1000 + 5000).toFixed(2));
+    useState<number>(
+      +(
+        ((dataStore.get("currentAudioPositionInMilis") as number) ?? 0) 
+      ).toFixed(2)
+    );
+  const [generationEndTimeMilis, setGenerationEndTimeMilis] = useState<number>(
+    +(
+      ((dataStore.get("currentAudioPositionInMilis") as number) ?? 0)  +
+      5000
+    ).toFixed(2)
+  );
   const [generationBlockDurationMilis, setGenerationBlockDurationMilis] =
     useState<number>(500);
   const [generationBlockBrightness, setGenerationBlockBrightness] =
