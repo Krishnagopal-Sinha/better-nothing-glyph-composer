@@ -266,7 +266,7 @@ export function generateCSV(
 
         // Bug temp fix, few old ogg making interval become undefined, hekk cuz ending might just go over ending.
         if (!intervals[z]) intervals[z] = [...emptyRow];
-        intervals[z][i] = brightnessValue;
+        intervals[z][i] = brightnessValue ?? 0;
       }
     }
   }
