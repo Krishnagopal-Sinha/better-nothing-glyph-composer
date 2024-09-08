@@ -18,7 +18,8 @@ import {
   CirclePlus,
   UndoDot,
   RedoDot,
-  Scissors
+  Scissors,
+  TextCursorInput
 } from 'lucide-react';
 import useGlobalAppStore, { useTemporalStore } from '@/lib/timeline_state';
 import { kAppName, kAppVersion } from '@/lib/consts';
@@ -39,6 +40,7 @@ export default function MainTopPanel({
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const selectInCurrentPosition = useGlobalAppStore((state) => state.selectInCurrentPosition);
   const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
   const fillEntireZone = useGlobalAppStore((state) => state.fillEntireZone);
@@ -554,6 +556,17 @@ export default function MainTopPanel({
             aria-label="select or unselect all button"
           >
             <SquareDashedMousePointer />
+          </Button>
+          {/* Select in current position */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              selectInCurrentPosition();
+            }}
+            title={'Select / Unselect in audio position'}
+            aria-label="select items in current audio position"
+          >
+            <TextCursorInput />
           </Button>
           {/* Undo */}
           <Button

@@ -40,6 +40,7 @@ export default function App() {
   const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const toggleMultiSelect = useGlobalAppStore((state) => state.toggleMultiSelect);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const selectInCurrentPosition = useGlobalAppStore((state) => state.selectInCurrentPosition);
   const importJsonData = useGlobalAppStore((state) => state.importJsonData);
   const copyItems = useGlobalAppStore((state) => state.copyItems);
   const cutItems = useGlobalAppStore((state) => state.cutItems);
@@ -144,9 +145,16 @@ export default function App() {
     }
     // Select all - intercept regular ctrl + a
     function onCtrlAKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA') {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyA' && !e.altKey) {
         // console.log("intercepting select all!");
         selectAllItems();
+        e.preventDefault();
+      }
+    }
+    // Select in current audio position
+    function onCtrlAltAKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.code === 'KeyA') {
+        selectInCurrentPosition();
         e.preventDefault();
       }
     }
@@ -201,6 +209,7 @@ export default function App() {
       window.addEventListener('keydown', onShiftKeyDown);
       window.addEventListener('keyup', onShiftKeyUp);
       window.addEventListener('keydown', onCtrlAKeyDown);
+      window.addEventListener('keydown', onCtrlAltAKeyDown);
       window.addEventListener('keydown', onCtrlCKeyDown);
       window.addEventListener('keydown', onCtrlXKeyDown);
       window.addEventListener('keydown', onCtrlVKeyDown);
@@ -213,6 +222,7 @@ export default function App() {
       window.removeEventListener('keydown', onShiftKeyDown);
       window.removeEventListener('keyup', onShiftKeyUp);
       window.removeEventListener('keydown', onCtrlAKeyDown);
+      window.removeEventListener('keydown', onCtrlAltAKeyDown);
       window.removeEventListener('keydown', onCtrlCKeyDown);
       window.removeEventListener('keydown', onCtrlXKeyDown);
       window.removeEventListener('keydown', onCtrlVKeyDown);
@@ -225,6 +235,7 @@ export default function App() {
     removeSelectedItem,
     toggleMultiSelect,
     selectAllItems,
+    selectInCurrentPosition,
     copyItems,
     pasteItems,
     undo,

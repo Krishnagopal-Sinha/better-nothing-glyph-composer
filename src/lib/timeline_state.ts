@@ -63,6 +63,7 @@ export type Action = {
   pasteItems: () => void;
   removeSelectedItem: () => void;
   selectAll: (toSelect?: boolean) => void;
+  selectInCurrentPosition: () => void;
   changePhoneModel: (phoneType: string) => void;
   fillEntireZone: (startGlyphId: number, endGlyphId: number, startTimeMilis: number) => void;
   generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => void;
@@ -779,6 +780,25 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         for (let i = 0; i < Object.keys(selectedItems).length; i++) {
           for (let j = 0; j < selectedItems[i].length; j++) {
             selectedItems[i][j].isSelected = toSelect;
+          }
+        }
+
+        set({ items: selectedItems });
+      },
+
+      selectInCurrentPosition: () => {
+        const items = get().items;
+        const selectedItems = { ...items };
+        const currentAudioPositionInMilis = dataStore.get("currentAudioPositionInMilis") ?? 0;
+
+        for (let i = 0;  i < Object.keys(selectedItems).length; i++) {
+          for (let j = 0; j < selectedItems[i].length; j++) {
+            const startPosition = selectedItems[i][j].startTimeMilis;
+            const endPosition = selectedItems[i][j].startTimeMilis + selectedItems[i][j].durationMilis;
+
+            if(currentAudioPositionInMilis >= startPosition && currentAudioPositionInMilis <= endPosition) {
+                selectedItems[i][j].isSelected = true;
+            }
           }
         }
 
