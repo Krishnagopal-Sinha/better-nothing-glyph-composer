@@ -1,29 +1,23 @@
-import useGlobalAppStore from "@/lib/timeline_state";
-import { useEffect, useRef, useState } from "react";
-import NP1_5_Preview from "./previewDevices/NP1_Preview";
-import NP2_Preview from "./previewDevices/NP2_Preview";
-import NP2a_Preview from "./previewDevices/NP2a_Preview";
-import NP1_15_Preview from "./previewDevices/NP1_15_Preview";
-import { getPrettyTime } from "@/lib/helpers";
-import { kTimeStepMilis } from "@/lib/consts";
-import dataStore from "@/lib/data_store";
-export default function GlyphPreviewComponent({
-  isAudioLoaded,
-}: {
-  isAudioLoaded: boolean;
-}) {
+import useGlobalAppStore from '@/lib/timeline_state';
+import { useEffect, useRef, useState } from 'react';
+import NP1_5_Preview from './previewDevices/NP1_Preview';
+import NP2_Preview from './previewDevices/NP2_Preview';
+import NP2a_Preview from './previewDevices/NP2a_Preview';
+import NP1_15_Preview from './previewDevices/NP1_15_Preview';
+import { getPrettyTime } from '@/lib/helpers';
+import { kTimeStepMilis } from '@/lib/consts';
+import dataStore from '@/lib/data_store';
+export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded: boolean }) {
   const timelineData = useGlobalAppStore((state) => state.items);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
-  const showAudioTimeStamp = useGlobalAppStore(
-    (state) => state.appSettings.showAudioTimeStamp
-  );
+  const showAudioTimeStamp = useGlobalAppStore((state) => state.appSettings.showAudioTimeStamp);
 
   // Polling interval and position state
   const [currentPosition, setCurrentPosition] = useState<number>(0);
   const pollingRef = useRef<number | null>(null);
 
   const getAudioPosition: () => number = () => {
-    return (dataStore.get("currentAudioPositionInMilis") ?? 0) as number;
+    return (dataStore.get('currentAudioPositionInMilis') ?? 0) as number;
   };
 
   //   check for position changes
@@ -36,10 +30,7 @@ export default function GlyphPreviewComponent({
         }
       };
       // poll for checks every <16ms
-      pollingRef.current = window.setInterval(
-        pollAudioPosition,
-        kTimeStepMilis - 2
-      );
+      pollingRef.current = window.setInterval(pollAudioPosition, kTimeStepMilis - 2);
 
       return () => {
         if (pollingRef.current) {
@@ -58,16 +49,10 @@ export default function GlyphPreviewComponent({
         const startTimeMilis = curr.startTimeMilis;
         const endTimeMilis = startTimeMilis + curr.durationMilis;
 
-        if (
-          currentPosition >= startTimeMilis &&
-          currentPosition <= endTimeMilis
-        ) {
-          const iterCount = Math.floor(
-            (currentPosition - startTimeMilis) / kTimeStepMilis
-          );
+        if (currentPosition >= startTimeMilis && currentPosition <= endTimeMilis) {
+          const iterCount = Math.floor((currentPosition - startTimeMilis) / kTimeStepMilis);
           const currentEffectBrightness = curr.effectData[iterCount];
-          const adjustedBrightness =
-            Math.sqrt(currentEffectBrightness) / Math.sqrt(4095);
+          const adjustedBrightness = Math.sqrt(currentEffectBrightness) / Math.sqrt(4095);
 
           zoneColors[curr.glyphId] = `rgb(255 255 255 / ${adjustedBrightness})`;
         }
@@ -86,23 +71,21 @@ export default function GlyphPreviewComponent({
 
   let previewComponent: React.ReactNode;
   switch (currentDevice) {
-    case "NP1":
+    case 'NP1':
       previewComponent = <NP1_5_Preview zoneColors={zoneColors} />;
       break;
-    case "NP1_15":
+    case 'NP1_15':
       previewComponent = <NP1_15_Preview zoneColors={zoneColors} />;
       break;
-    case "NP2":
+    case 'NP2':
       previewComponent = <NP2_Preview zoneColors={zoneColors} />;
       break;
-    case "NP2a":
+    case 'NP2a':
       previewComponent = <NP2a_Preview zoneColors={zoneColors} />;
       break;
 
     default:
-      previewComponent = (
-        <div className="select-none p-2">Feels Redundant. Scrap this?</div>
-      );
+      previewComponent = <div className="select-none p-2">Feels Redundant. Scrap this?</div>;
   }
 
   return (
@@ -114,8 +97,7 @@ export default function GlyphPreviewComponent({
         <div className="absolute text-sm text-center text-gray-700">
           {`${getPrettyTime(
             currentPosition / 1000,
-            ((dataStore.get("currentAudioDurationInMilis") as number) ?? 1) /
-              1000
+            ((dataStore.get('currentAudioDurationInMilis') as number) ?? 1) / 1000
           )}`}
         </div>
       )}
