@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import InstructionComponent from "../timeline/instructions";
+  DialogTrigger
+} from '@/components/ui/dialog';
+import InstructionComponent from '../timeline/instructions';
 
 import {
   Copy,
@@ -18,19 +18,19 @@ import {
   CirclePlus,
   UndoDot,
   RedoDot,
-  Scissors,
-} from "lucide-react";
-import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
-import { kAppName, kAppVersion } from "@/lib/consts";
-import { useRef, useState } from "react";
-import SettingsPanel from "./settings_panel";
-import MoreMenuButton from "./more_menu_button";
-import GlyphPreviewComponent from "./glyph_preview";
-import dataStore from "@/lib/data_store";
+  Scissors
+} from 'lucide-react';
+import useGlobalAppStore, { useTemporalStore } from '@/lib/timeline_state';
+import { kAppName, kAppVersion } from '@/lib/consts';
+import { useRef, useState } from 'react';
+import SettingsPanel from './settings_panel';
+import MoreMenuButton from './more_menu_button';
+import GlyphPreviewComponent from './glyph_preview';
+import dataStore from '@/lib/data_store';
 
 export default function MainTopPanel({
   isSaving,
-  isAudioLoaded,
+  isAudioLoaded
 }: {
   isSaving: boolean;
   isAudioLoaded: boolean;
@@ -39,19 +39,14 @@ export default function MainTopPanel({
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
-  const removeSelectedItem = useGlobalAppStore(
-    (state) => state.removeSelectedItem
-  );
+  const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
   const fillEntireZone = useGlobalAppStore((state) => state.fillEntireZone);
   const addItem = useGlobalAppStore((state) => state.addItem);
-  const { undo, redo, futureStates, pastStates } = useTemporalStore(
-    (state) => state
-  );
+  const { undo, redo, futureStates, pastStates } = useTemporalStore((state) => state);
 
   function getPosition(): number {
-    const positionInMilis: number =
-      dataStore.get("currentAudioPositionInMilis") ?? 0;
+    const positionInMilis: number = dataStore.get('currentAudioPositionInMilis') ?? 0;
     return positionInMilis;
   }
   const [selectAll, setSelectAll] = useState<boolean>(true);
@@ -87,7 +82,7 @@ export default function MainTopPanel({
           <h2 className="text-2xl font-bold text-primary">
             <AppNameComponent playing={showEasterEgg} />
             <span className="animate-pulse duration-700 text-red-600">
-              {isSaving ? "[Saving...]" : ""}
+              {isSaving ? '[Saving...]' : ''}
             </span>
           </h2>
 
@@ -104,7 +99,7 @@ export default function MainTopPanel({
               className="cursor- select-none"
               title="Easter egg?"
             >
-              {" "}
+              {' '}
               (v{kAppVersion})
             </span>
           </p>
@@ -131,7 +126,7 @@ export default function MainTopPanel({
 
   function generateDeviceControls() {
     switch (currentDevice) {
-      case "NP1":
+      case 'NP1':
         return (
           <>
             <Button
@@ -182,7 +177,7 @@ export default function MainTopPanel({
           </>
         );
 
-      case "NP1_15":
+      case 'NP1_15':
         return (
           <div className="grid grid-flow-rows grid-cols-6 lg:flex">
             <Button
@@ -304,7 +299,7 @@ export default function MainTopPanel({
           </div>
         );
 
-      case "NP2":
+      case 'NP2':
         return (
           <div className="grid grid-flow-rows grid-cols-8 lg:flex">
             <Button
@@ -457,7 +452,7 @@ export default function MainTopPanel({
           </div>
         );
 
-      case "NP2a":
+      case 'NP2a':
         return (
           <>
             <Button
@@ -528,37 +523,22 @@ export default function MainTopPanel({
       <>
         <div className="border rounded-lg border-white grid grid-flow-col">
           {/* copy button */}
-          <Button
-            variant="ghost"
-            onClick={copyItems}
-            title={"Copy"}
-            aria-label="copy button"
-          >
+          <Button variant="ghost" onClick={copyItems} title={'Copy'} aria-label="copy button">
             <Copy />
           </Button>
           {/* Cut button */}
-          <Button
-            variant="ghost"
-            onClick={cutItems}
-            title={"Cut"}
-            aria-label="cut button"
-          >
+          <Button variant="ghost" onClick={cutItems} title={'Cut'} aria-label="cut button">
             <Scissors />
           </Button>
           {/* Paste button */}
-          <Button
-            variant="ghost"
-            onClick={pasteItems}
-            title={"Paste"}
-            aria-label="paste button"
-          >
+          <Button variant="ghost" onClick={pasteItems} title={'Paste'} aria-label="paste button">
             <Clipboard />
           </Button>
           {/* Delete button */}
           <Button
             variant="ghost"
             onClick={removeSelectedItem}
-            title={"Delete Selected"}
+            title={'Delete Selected'}
             aria-label="delete button"
           >
             <Trash />
@@ -570,7 +550,7 @@ export default function MainTopPanel({
               selectAllItems(selectAll);
               setSelectAll((v) => !v);
             }}
-            title={"Select / Unselect All"}
+            title={'Select / Unselect All'}
             aria-label="select or unselect all button"
           >
             <SquareDashedMousePointer />
@@ -604,7 +584,7 @@ export default function MainTopPanel({
           </Button>
           {/* Add All Glyphs Button */}
           {/* ========== PHONE 1  ============= */}
-          {currentDevice === "NP1" && (
+          {currentDevice === 'NP1' && (
             <Button
               variant="ghost"
               title="Add all the Glyphs of NP(1) "
@@ -618,7 +598,7 @@ export default function MainTopPanel({
           )}
           {/* ========== PHONE 1 | 15 Zone ============= */}
 
-          {currentDevice === "NP1_15" && (
+          {currentDevice === 'NP1_15' && (
             <Button
               variant="ghost"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
@@ -632,7 +612,7 @@ export default function MainTopPanel({
           )}
 
           {/* Phone 2 | 33 Zone Mode | Add all glyphs */}
-          {currentDevice === "NP2" && (
+          {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
               title="Add all the Glyphs of NP(2) "
@@ -644,7 +624,7 @@ export default function MainTopPanel({
               <SquarePlus />
             </Button>
           )}
-          {currentDevice === "NP2" && (
+          {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
               title="Fill the Top Right Glyph Zone of NP(2) "
@@ -656,7 +636,7 @@ export default function MainTopPanel({
               <DiamondPlus />
             </Button>
           )}
-          {currentDevice === "NP2" && (
+          {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
               title="Fill the Battery Glyph Zone of NP(2) "
@@ -670,7 +650,7 @@ export default function MainTopPanel({
           )}
 
           {/* Phone 2a Add all glyphs */}
-          {currentDevice === "NP2a" && (
+          {currentDevice === 'NP2a' && (
             <Button
               variant="ghost"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
@@ -695,11 +675,7 @@ export function OpenInstructionButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          className="left-0 max-w-[120px] "
-          variant="link"
-          title="Open instructions"
-        >
+        <Button className="left-0 max-w-[120px] " variant="link" title="Open instructions">
           Read Instructions
         </Button>
       </DialogTrigger>
@@ -716,37 +692,28 @@ export function OpenInstructionButton() {
 }
 
 export function AppNameComponent({ playing }: { playing: boolean }) {
-  const kAppNameParts = kAppName.split(" ");
+  const kAppNameParts = kAppName.split(' ');
   const spanRef = useRef<HTMLSpanElement>(null);
   return (
     <span
-      className={`${
-        playing ? "neon" : ""
-      } font-[ndot] tracking-wider uppercase`}
+      className={`${playing ? 'neon' : ''} font-[ndot] tracking-wider uppercase`}
       ref={spanRef}
       onMouseLeave={() => {
         if (spanRef.current) {
-          spanRef.current.style.textShadow = "";
+          spanRef.current.style.textShadow = '';
         }
       }}
       onMouseEnter={() => {
         if (spanRef.current) {
-          spanRef.current.style.textShadow = "#fff 4px 0 20px";
+          spanRef.current.style.textShadow = '#fff 4px 0 20px';
         }
       }}
     >
-      <span className={`${playing ? "flicker-vslow" : ""}`}>
-        {kAppNameParts[0]}{" "}
-      </span>
-      {kAppNameParts[1]}{" "}
-      <span className={`${playing ? "flicker-slow" : ""}`}>
-        {" "}
-        {kAppNameParts[2]}{" "}
-      </span>
-      {kAppNameParts[3]}{" "}
-      <span className={`${playing ? "flicker-fast" : ""}`}>
-        {kAppNameParts[4]}
-      </span>
+      <span className={`${playing ? 'flicker-vslow' : ''}`}>{kAppNameParts[0]} </span>
+      {kAppNameParts[1]}{' '}
+      <span className={`${playing ? 'flicker-slow' : ''}`}> {kAppNameParts[2]} </span>
+      {kAppNameParts[3]}{' '}
+      <span className={`${playing ? 'flicker-fast' : ''}`}>{kAppNameParts[4]}</span>
     </span>
   );
 }

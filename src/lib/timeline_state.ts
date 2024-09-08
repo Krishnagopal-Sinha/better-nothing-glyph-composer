@@ -1,19 +1,9 @@
-import { create, useStore } from "zustand";
-import dataStore from "./data_store";
-import { nanoid } from "nanoid";
-import {
-  kAllowedModels,
-  kMaxBrightness,
-  kPhoneZones,
-  kTimeStepMilis,
-} from "./consts";
-import { temporal, TemporalState } from "zundo";
-import {
-  GlyphBlock,
-  DeltaUpdateBlock,
-  GlyphStore,
-  GlyphGenerationModel,
-} from "./glyph_model";
+import { create, useStore } from 'zustand';
+import dataStore from './data_store';
+import { nanoid } from 'nanoid';
+import { kAllowedModels, kMaxBrightness, kPhoneZones, kTimeStepMilis } from './consts';
+import { temporal, TemporalState } from 'zundo';
+import { GlyphBlock, DeltaUpdateBlock, GlyphStore, GlyphGenerationModel } from './glyph_model';
 import {
   basicCanAddCheck,
   calculateBeatDurationInMilis,
@@ -24,9 +14,9 @@ import {
   showError,
   snapToNearestBeat,
   sortObjectByStartTimeMilis,
-  validateJsonStructure,
-} from "./helpers";
-import { generateEffectData } from "@/logic/export_logic";
+  validateJsonStructure
+} from './helpers';
+import { generateEffectData } from '@/logic/export_logic';
 
 type AppSettings = {
   isZoneVisible: boolean;
@@ -57,7 +47,7 @@ export type GlyphEditorState = {
   appSettings: AppSettings;
 };
 // Partial state to track only glyph items
-export type PartializedStoreState = Pick<GlyphEditorState, "items">;
+export type PartializedStoreState = Pick<GlyphEditorState, 'items'>;
 
 export type Action = {
   importJsonData: (json: string) => void;
@@ -74,11 +64,7 @@ export type Action = {
   removeSelectedItem: () => void;
   selectAll: (toSelect?: boolean) => void;
   changePhoneModel: (phoneType: string) => void;
-  fillEntireZone: (
-    startGlyphId: number,
-    endGlyphId: number,
-    startTimeMilis: number
-  ) => void;
+  fillEntireZone: (startGlyphId: number, endGlyphId: number, startTimeMilis: number) => void;
   generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => void;
 
   // Settings
@@ -103,20 +89,20 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
   temporal(
     (set, get) => ({
       // States
-      phoneModel: "NP1",
+      phoneModel: 'NP1',
       items: {
         0: [],
         1: [],
         2: [],
         3: [],
-        4: [],
+        4: []
       },
       clipboard: [],
       isCutActive: false,
       audioInformation: {
         durationInMilis: 0,
-        title: "",
-        currentPositionInMilis: 0,
+        title: '',
+        currentPositionInMilis: 0
       },
       // App Settings State  ============================================
       appSettings: {
@@ -131,7 +117,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         snapToBpmActive: false,
         alsoSnapDuration: false,
         snapSensitivity: 15,
-        showHeavyUi: false,
+        showHeavyUi: false
       },
 
       // Setting update functions
@@ -139,24 +125,24 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            isZoneVisible: !state.appSettings.isZoneVisible,
-          },
+            isZoneVisible: !state.appSettings.isZoneVisible
+          }
         })),
 
       toggleShowAudioTimeStamp: () =>
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            showAudioTimeStamp: !state.appSettings.showAudioTimeStamp,
-          },
+            showAudioTimeStamp: !state.appSettings.showAudioTimeStamp
+          }
         })),
 
       toggleShowShowHeavyUi: () =>
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            showHeavyUi: !state.appSettings.showHeavyUi,
-          },
+            showHeavyUi: !state.appSettings.showHeavyUi
+          }
         })),
 
       setIsSettingsDialogOpen: (value: boolean) => {
@@ -165,8 +151,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           appSettings: {
             ...get().appSettings,
             isSettingsDialogOpen: value,
-            isKeyboardGestureEnabled: !value,
-          },
+            isKeyboardGestureEnabled: !value
+          }
         });
       },
 
@@ -174,8 +160,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set({
           appSettings: {
             ...get().appSettings,
-            settingDialogContentIndex: value,
-          },
+            settingDialogContentIndex: value
+          }
         });
       },
 
@@ -184,16 +170,15 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           set((state) => ({
             appSettings: {
               ...state.appSettings,
-              isKeyboardGestureEnabled: value,
-            },
+              isKeyboardGestureEnabled: value
+            }
           }));
         } else {
           set((state) => ({
             appSettings: {
               ...state.appSettings,
-              isKeyboardGestureEnabled:
-                !state.appSettings.isKeyboardGestureEnabled,
-            },
+              isKeyboardGestureEnabled: !state.appSettings.isKeyboardGestureEnabled
+            }
           }));
         }
       },
@@ -202,45 +187,44 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            isMultiSelectActive:
-              toSelect ?? !state.appSettings.isMultiSelectActive,
-          },
+            isMultiSelectActive: toSelect ?? !state.appSettings.isMultiSelectActive
+          }
         })),
 
       toggleSnapToBpm: () =>
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            snapToBpmActive: !state.appSettings.snapToBpmActive,
-          },
+            snapToBpmActive: !state.appSettings.snapToBpmActive
+          }
         })),
 
       toggleAlsoSnapBlockDuration: () =>
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            alsoSnapDuration: !state.appSettings.alsoSnapDuration,
-          },
+            alsoSnapDuration: !state.appSettings.alsoSnapDuration
+          }
         })),
 
       setBpmForSnap: (value: number) => {
         if (value < 1 || value > 700) {
-          showError("Invalid Value - BPM", "BPM must be between 1 and 700.");
+          showError('Invalid Value - BPM', 'BPM must be between 1 and 700.');
           return;
         }
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            bpmValue: value,
-          },
+            bpmValue: value
+          }
         }));
       },
 
       setSnapSensitivity: (value: number) => {
         if (value < 13 || value > 25) {
           showError(
-            "Invalid Value - Snap Sensitivity",
-            "BPM range is between 13 and 25. Invserve Sensitivity value not updated.",
+            'Invalid Value - Snap Sensitivity',
+            'BPM range is between 13 and 25. Invserve Sensitivity value not updated.',
             1500
           );
           return;
@@ -248,8 +232,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           appSettings: {
             ...state.appSettings,
-            snapSensitivity: value,
-          },
+            snapSensitivity: value
+          }
         }));
       },
 
@@ -260,7 +244,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
         const newSettings: AppSettings = {
           ...get().appSettings,
-          timelinePixelFactor: newValue,
+          timelinePixelFactor: newValue
         };
         set({ appSettings: newSettings });
       },
@@ -271,7 +255,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         // console.log(`Inc++: ${oldValue} => ${newValue}`);
         const newSettings: AppSettings = {
           ...get().appSettings,
-          timelinePixelFactor: newValue,
+          timelinePixelFactor: newValue
         };
         set({ appSettings: newSettings });
       },
@@ -279,15 +263,15 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       // Update Duration
       updateAudioDuration: (durationInMilis: number) =>
         set((state) => ({
-          audioInformation: { ...state.audioInformation, durationInMilis },
+          audioInformation: { ...state.audioInformation, durationInMilis }
         })),
       // Update Position
       updateAudioPosition: (currentPositionInMilis: number) =>
         set((state) => ({
           audioInformation: {
             ...state.audioInformation,
-            currentPositionInMilis,
-          },
+            currentPositionInMilis
+          }
         })),
       // Import feat  ===================================================
       importJsonData: (json: string) => {
@@ -298,13 +282,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           const zonesInImportedData = Object.keys(data).length;
           if (Object.keys(get().items).length !== zonesInImportedData) {
             showError(
-              "Import Error - Phone Model Mismatch",
+              'Import Error - Phone Model Mismatch',
               `Are you sure correct Phone model is selected? ${
                 kPhoneZones[zonesInImportedData]
-                  ? `Hint: Try with ${kPhoneZones[
-                      zonesInImportedData
-                    ].toUpperCase()}`
-                  : ""
+                  ? `Hint: Try with ${kPhoneZones[zonesInImportedData].toUpperCase()}`
+                  : ''
               }`,
               2800
             );
@@ -329,8 +311,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           scheme(sortedData);
         } else {
           showError(
-            "Import Error - Glyph data",
-            "Format error in Glyph data detected, skipping import.",
+            'Import Error - Glyph data',
+            'Format error in Glyph data detected, skipping import.',
             2100
           );
         }
@@ -347,11 +329,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           set((state) => ({
             items: {
               ...state.items,
-              [item.glyphId]: insertInSortedOrder(
-                state.items[item.glyphId],
-                newItem
-              ),
-            },
+              [item.glyphId]: insertInSortedOrder(state.items[item.glyphId], newItem)
+            }
           }));
         };
 
@@ -370,15 +349,9 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           // console.warn("Cannot add item: overlapping detected!");
           const offsetItem = {
             ...item,
-            startTimeMilis: item.startTimeMilis - 200,
+            startTimeMilis: item.startTimeMilis - 200
           };
-          if (
-            canAddItem2(
-              offsetItem,
-              items[item.glyphId],
-              audioInformation.durationInMilis
-            )
-          ) {
+          if (canAddItem2(offsetItem, items[item.glyphId], audioInformation.durationInMilis)) {
             actualAdd(offsetItem);
             get().toggleSelection(offsetItem);
           }
@@ -386,10 +359,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       addItem: (glyphId: number, startTimeMilis: number) => {
-        const newItem: GlyphBlock = generateNewGlyphBlock(
-          glyphId,
-          startTimeMilis
-        );
+        const newItem: GlyphBlock = generateNewGlyphBlock(glyphId, startTimeMilis);
         get().addItemDirectly(newItem);
       },
 
@@ -398,8 +368,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         set((state) => ({
           items: {
             ...state.items,
-            [glyphId]: state.items[glyphId].filter((e) => e.id !== id),
-          },
+            [glyphId]: state.items[glyphId].filter((e) => e.id !== id)
+          }
         })),
 
       // UPDATE
@@ -408,10 +378,9 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       // Effect's not a bug. When holding down shift key, if user lets go before right click, it toggles multiselect off, thus the effect does not apply as other block (apart from the right clicked one) aren't selected :P
       updateSelectedItem: (deltaBlock: DeltaUpdateBlock) => {
         const items = get().items;
-        const { snapToBpmActive, alsoSnapDuration, bpmValue, snapSensitivity } =
-          get().appSettings;
+        const { snapToBpmActive, alsoSnapDuration, bpmValue, snapSensitivity } = get().appSettings;
         const updatedItems = {
-          ...items,
+          ...items
         };
         const durationInMilis = get().audioInformation.durationInMilis;
 
@@ -422,45 +391,34 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             if (curr.isSelected) {
               curr = {
                 ...curr,
-                startTimeMilis:
-                  curr.startTimeMilis + (deltaBlock.startTimeMilis ?? 0),
-                durationMilis:
-                  curr.durationMilis + (deltaBlock.durationMilis ?? 0),
+                startTimeMilis: curr.startTimeMilis + (deltaBlock.startTimeMilis ?? 0),
+                durationMilis: curr.durationMilis + (deltaBlock.durationMilis ?? 0),
                 effectId: deltaBlock.effectId ?? curr.effectId ?? 0,
                 startingBrightness:
-                  deltaBlock.startingBrightness ??
-                  curr.startingBrightness ??
-                  kMaxBrightness,
+                  deltaBlock.startingBrightness ?? curr.startingBrightness ?? kMaxBrightness
               };
 
               //Was too fast, had to put up accumulators
               if (snapToBpmActive) {
                 const beatDuration = calculateBeatDurationInMilis(bpmValue);
-                const startTimeAccu: number = dataStore.get(
-                  "startTimeAccumulator"
-                )!;
+                const startTimeAccu: number = dataStore.get('startTimeAccumulator')!;
                 const accuLimit = snapSensitivity;
                 // No need for duration accumulator check as only one event fired at last user movement # efficiency
                 if (deltaBlock.durationMilis) {
                   // Determine the snapping direction based on the deltaBlock's trend
                   if (alsoSnapDuration) {
-                    const direction =
-                      deltaBlock.durationMilis > 0 ? "right" : "left";
+                    const direction = deltaBlock.durationMilis > 0 ? 'right' : 'left';
                     curr.durationMilis = snapToNearestBeat(
                       curr.durationMilis,
                       beatDuration,
                       direction
                     );
-                    dataStore.set("durationAccumulator", 0);
-                    if (
-                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
-                    ) {
+                    dataStore.set('durationAccumulator', 0);
+                    if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
                       updatedItems[i][j] = curr;
                     }
                   } else {
-                    if (
-                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
-                    ) {
+                    if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
                       updatedItems[i][j] = curr;
                     }
                   }
@@ -469,19 +427,16 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 if (deltaBlock.startTimeMilis) {
                   // Determine the snapping direction based on the deltaBlock's trend
 
-                  dataStore.set("startTimeAccumulator", startTimeAccu + 1);
+                  dataStore.set('startTimeAccumulator', startTimeAccu + 1);
                   if (startTimeAccu >= accuLimit) {
-                    const direction =
-                      deltaBlock.startTimeMilis > 0 ? "right" : "left";
+                    const direction = deltaBlock.startTimeMilis > 0 ? 'right' : 'left';
                     curr.startTimeMilis = snapToNearestBeat(
                       curr.startTimeMilis,
                       beatDuration,
                       direction
                     );
-                    dataStore.set("startTimeAccumulator", 0);
-                    if (
-                      canAddItem2(curr, updatedItems[i], durationInMilis, j)
-                    ) {
+                    dataStore.set('startTimeAccumulator', 0);
+                    if (canAddItem2(curr, updatedItems[i], durationInMilis, j)) {
                       updatedItems[i][j] = curr;
                     }
                   }
@@ -503,16 +458,10 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               ) {
                 // console.log("should not hit");
                 const updatedEffectData: number[] = [];
-                const endTimeIdx = Math.floor(
-                  curr.durationMilis / kTimeStepMilis
-                );
+                const endTimeIdx = Math.floor(curr.durationMilis / kTimeStepMilis);
                 // Fill with all effect id with 0
                 // wrk add -1 as default to ensure evrything being overwritten
-                for (
-                  let i = 0;
-                  i < Math.floor(curr.durationMilis / kTimeStepMilis);
-                  i++
-                ) {
+                for (let i = 0; i < Math.floor(curr.durationMilis / kTimeStepMilis); i++) {
                   updatedEffectData.push(0);
                 }
 
@@ -541,7 +490,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       updateSelectedItemAbsolutely: (glyphUpdateTemplate: DeltaUpdateBlock) => {
         const items = get().items;
         const updatedItems = {
-          ...items,
+          ...items
         };
         const durationInMilis = get().audioInformation.durationInMilis;
 
@@ -552,19 +501,16 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             if (curr.isSelected) {
               curr = {
                 ...curr,
-                startTimeMilis:
-                  glyphUpdateTemplate.startTimeMilis ??
-                  curr.startTimeMilis ??
-                  0,
+                startTimeMilis: glyphUpdateTemplate.startTimeMilis ?? curr.startTimeMilis ?? 0,
                 durationMilis:
                   glyphUpdateTemplate.durationMilis ??
                   curr.durationMilis ??
-                  dataStore.get("newBlockDurationMilis"),
+                  dataStore.get('newBlockDurationMilis'),
                 effectId: glyphUpdateTemplate.effectId ?? curr.effectId ?? 0,
                 startingBrightness:
                   glyphUpdateTemplate.startingBrightness ??
                   curr.startingBrightness ??
-                  dataStore.get("newBlockBrightness"),
+                  dataStore.get('newBlockBrightness')
               };
               // Attach Effect Data if effect id has changed; but also gotta update on duration and other factor change, better to call everytime apart from changes in start time!
               if (
@@ -573,16 +519,10 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 glyphUpdateTemplate.startingBrightness
               ) {
                 const updatedEffectData: number[] = [];
-                const endTimeIdx = Math.floor(
-                  curr.durationMilis / kTimeStepMilis
-                );
+                const endTimeIdx = Math.floor(curr.durationMilis / kTimeStepMilis);
 
                 // Fill with all effect id with 0
-                for (
-                  let i = 0;
-                  i < Math.floor(curr.durationMilis / kTimeStepMilis);
-                  i++
-                ) {
+                for (let i = 0; i < Math.floor(curr.durationMilis / kTimeStepMilis); i++) {
                   updatedEffectData.push(0);
                 }
 
@@ -610,11 +550,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
 
       // Add - Fill all
-      fillEntireZone: (
-        startGlyphId: number,
-        endGlyphId: number,
-        startTimeMilis: number
-      ) => {
+      fillEntireZone: (startGlyphId: number, endGlyphId: number, startTimeMilis: number) => {
         const { items, audioInformation } = get();
         const updatedItems = { ...items };
         // Dont call add item func, cuz undo would track each add, rather fill entire thing at once, easy for undo and redo
@@ -623,9 +559,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
         for (let i = startGlyphId; i <= endGlyphId; i++) {
           const newItem: GlyphBlock = generateNewGlyphBlock(i, startTimeMilis);
-          if (
-            canAddItem2(newItem, items[i], audioInformation.durationInMilis)
-          ) {
+          if (canAddItem2(newItem, items[i], audioInformation.durationInMilis)) {
             updatedItems[i] = insertInSortedOrder(updatedItems[i], newItem);
           }
         }
@@ -662,13 +596,13 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             NP1: 5,
             NP1_15: 15,
             NP2: 33,
-            NP2a: 26,
+            NP2a: 26
           }[get().phoneModel] ?? 5;
 
         // Remember: calling zundo's clear method from here didn't work, so it is being called when device dropdown changes, from that ui
         set({
           items: Array.from({ length: numberOfItemRows }, () => []),
-          clipboard: [],
+          clipboard: []
         });
       },
 
@@ -689,11 +623,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         if (newCopyBuffer.length > 500) {
           showError(
             `Copied Items Count - ${newCopyBuffer.length}`,
-            "This is allowed but may slow down the app, for real!",
+            'This is allowed but may slow down the app, for real!',
             1500
           );
         } else {
-          showError("Items Copied", "Selected items have been copied.");
+          showError('Items Copied', 'Selected items have been copied.');
         }
       },
 
@@ -713,13 +647,13 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         get().removeSelectedItem();
         set({ clipboard: newCopyBuffer, isCutActive: true });
 
-        showError("Items Cut", "Selected items have been cut.");
+        showError('Items Cut', 'Selected items have been cut.');
       },
 
       pasteItems: () => {
         const clipboardItems = get().clipboard;
         const currentAudioPositionInMilis: number =
-          dataStore.get("currentAudioPositionInMilis") ?? 0;
+          dataStore.get('currentAudioPositionInMilis') ?? 0;
 
         // get glyph item with lowest start time
         let lowest = 999999999;
@@ -738,9 +672,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           // first block's start time would be current audio position
           // feat. brightness - also ensure brightness is there
           const newBrightness: number =
-            dataStore.get("overwriteBrightnessWithNewBlock") ?? false
-              ? dataStore.get("newBlockBrightness") ??
-                clipboardItems[i].startingBrightness
+            (dataStore.get('overwriteBrightnessWithNewBlock') ?? false)
+              ? (dataStore.get('newBlockBrightness') ?? clipboardItems[i].startingBrightness)
               : clipboardItems[i].startingBrightness;
 
           // actual paste logic
@@ -749,7 +682,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               ...clipboardItems[i],
               id: nanoid(),
               startingBrightness: newBrightness,
-              startTimeMilis: currentAudioPositionInMilis,
+              startTimeMilis: currentAudioPositionInMilis
             };
             get().addItemDirectly(curr);
           } else {
@@ -758,8 +691,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               id: nanoid(),
               startingBrightness: newBrightness,
               startTimeMilis:
-                currentAudioPositionInMilis +
-                (clipboardItems[i].startTimeMilis - deltaAnchor),
+                currentAudioPositionInMilis + (clipboardItems[i].startTimeMilis - deltaAnchor)
             };
             get().addItemDirectly(curr);
           }
@@ -784,7 +716,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         function addItemFinal(itemToAdd: GlyphBlock) {
           const updatedItems = {
             ...items,
-            [newItem.glyphId]: [...items[newItem.glyphId], itemToAdd],
+            [newItem.glyphId]: [...items[newItem.glyphId], itemToAdd]
           };
 
           // console.log(
@@ -796,28 +728,16 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           get().toggleSelection(itemToAdd);
         }
 
-        if (
-          canAddItem2(
-            newItem,
-            items[newItem.glyphId],
-            audioInformation.durationInMilis
-          )
-        ) {
+        if (canAddItem2(newItem, items[newItem.glyphId], audioInformation.durationInMilis)) {
           addItemFinal(newItem);
         } else {
           //retry with some offset!
 
           const newItem2: GlyphBlock = {
             ...newItem,
-            startTimeMilis: newItem.startTimeMilis - 200,
+            startTimeMilis: newItem.startTimeMilis - 200
           };
-          if (
-            canAddItem2(
-              newItem2,
-              items[newItem.glyphId],
-              audioInformation.durationInMilis
-            )
-          ) {
+          if (canAddItem2(newItem2, items[newItem.glyphId], audioInformation.durationInMilis)) {
             addItemFinal(newItem2);
           } else {
             // console.warn(
@@ -835,7 +755,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         function actualRemove(id2: string, glyphId2: number): void {
           updatedItems = {
             ...updatedItems,
-            [glyphId2]: updatedItems[glyphId2].filter((e) => e.id !== id2),
+            [glyphId2]: updatedItems[glyphId2].filter((e) => e.id !== id2)
           };
         }
 
@@ -869,7 +789,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         // extra check, for safety.
         const validPhoneType = kAllowedModels.find((e) => e === phoneType);
         if (!validPhoneType) {
-          console.error("Error Phone Model - Wrong option detected!");
+          console.error('Error Phone Model - Wrong option detected!');
           return;
         }
         set({ phoneModel: phoneType });
@@ -886,8 +806,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         const updatedItems = { ...items };
 
         const interval =
-          glyphGenerateData.generationDurationMilis +
-          glyphGenerateData.generationGapMilis; //in ms
+          glyphGenerateData.generationDurationMilis + glyphGenerateData.generationGapMilis; //in ms
 
         // i.e. fill all zones
         if (glyphGenerateData.generationGlyphZone === 101) {
@@ -902,16 +821,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
                 j,
                 i,
                 glyphGenerateData.generationDurationMilis,
-                (glyphGenerateData.generationBlockBrightnessPercentage / 100) *
-                  kMaxBrightness,
+                (glyphGenerateData.generationBlockBrightnessPercentage / 100) * kMaxBrightness,
                 glyphGenerateData.generationBlockEffectId
               );
-              if (
-                canAddItem2(newItem, updatedItems[j], audioInfo.durationInMilis)
-              ) {
-                updatedItems[j] = [
-                  ...insertInSortedOrder(updatedItems[j], newItem),
-                ];
+              if (canAddItem2(newItem, updatedItems[j], audioInfo.durationInMilis)) {
+                updatedItems[j] = [...insertInSortedOrder(updatedItems[j], newItem)];
               }
             }
           }
@@ -925,8 +839,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               glyphGenerateData.generationGlyphZone,
               i,
               glyphGenerateData.generationDurationMilis,
-              (glyphGenerateData.generationBlockBrightnessPercentage / 100) *
-                kMaxBrightness,
+              (glyphGenerateData.generationBlockBrightnessPercentage / 100) * kMaxBrightness,
               glyphGenerateData.generationBlockEffectId
             );
             if (
@@ -937,23 +850,20 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
               )
             ) {
               updatedItems[glyphGenerateData.generationGlyphZone] = [
-                ...insertInSortedOrder(
-                  updatedItems[glyphGenerateData.generationGlyphZone],
-                  newItem
-                ),
+                ...insertInSortedOrder(updatedItems[glyphGenerateData.generationGlyphZone], newItem)
               ];
             }
           }
         }
         set({ items: updatedItems });
-      },
+      }
     }),
     // only track items, rest are needless and config states may actually cause issues - eg. audio duration n all
     {
       partialize: (state) => {
         const { items } = state;
         return { items };
-      },
+      }
     }
   )
 );

@@ -1,11 +1,7 @@
-import useGlobalAppStore from "@/lib/timeline_state";
-import { useMemo } from "react";
+import useGlobalAppStore from '@/lib/timeline_state';
+import { useMemo } from 'react';
 
-export default function PlayingIndicator({
-  editorRows,
-}: {
-  editorRows: number;
-}) {
+export default function PlayingIndicator({ editorRows }: { editorRows: number }) {
   // #efficiency
   const rowLabels = useMemo(() => {
     const labels = [];
@@ -15,9 +11,7 @@ export default function PlayingIndicator({
     return labels;
   }, [editorRows]);
 
-  const isZoneVisible = useGlobalAppStore(
-    (state) => state.appSettings.isZoneVisible
-  );
+  const isZoneVisible = useGlobalAppStore((state) => state.appSettings.isZoneVisible);
 
   return (
     // Playing indicator
@@ -31,9 +25,7 @@ export default function PlayingIndicator({
       }
     >
       {isZoneVisible && (
-        <div className={`pt-[210px] ml-3 h-full grid select-none text-slate-600`}>
-          {rowLabels}
-        </div>
+        <div className={`pt-[210px] ml-3 h-full grid select-none text-slate-600`}>{rowLabels}</div>
       )}
     </div>
   );

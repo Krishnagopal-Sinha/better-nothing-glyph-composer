@@ -4,20 +4,18 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle
+} from '@/components/ui/dialog';
 
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Button } from "../ui/button";
-import ffmpegService from "@/logic/ffmpeg_service";
+import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
+import ffmpegService from '@/logic/ffmpeg_service';
 
 export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
   const [val, setVal] = useState(isOpen);
 
-  const [saveProgress, setSaveProgress] = useState(
-    ffmpegService.getSaveProgress()
-  );
+  const [saveProgress, setSaveProgress] = useState(ffmpegService.getSaveProgress());
 
   useEffect(() => {
     // throttle down the save percentage updates!
@@ -39,12 +37,12 @@ export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
         <DialogHeader>
           <DialogTitle>Saving ({saveProgress}% done)</DialogTitle>
           <DialogDescription>
-            Don't leave this site! You can close this popup, file will be still
-            be processed and saved in the background :D
+            Don't leave this site! You can close this popup, file will be still be processed and
+            saved in the background :D
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center justify-center mt-12">
-          <Loader2 className="mr-2 h-8 w-8 animate-spin" />{" "}
+          <Loader2 className="mr-2 h-8 w-8 animate-spin" />{' '}
           <div className="text-xl">Saving file</div>
         </div>
         <DialogFooter>

@@ -1,4 +1,4 @@
-import { KDefaultPreviewGlyphFillColor } from "@/lib/consts";
+import { KDefaultPreviewGlyphFillColor } from '@/lib/consts';
 
 export default function NP2a_Preview({ zoneColors }: { zoneColors: string[] }) {
   return (
@@ -14,114 +14,33 @@ export default function NP2a_Preview({ zoneColors }: { zoneColors: string[] }) {
       enableBackground="new 0 0 800 800"
     >
       <defs>
-        <linearGradient
-          id="progressGradient"
-          x1="0%"
-          y1="100%"
-          x2="100%"
-          y2="0%"
-        >
-          <stop
-            offset="4.166%"
-            stopColor={zoneColors[0] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="8.332%"
-            stopColor={zoneColors[1] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="12.498%"
-            stopColor={zoneColors[2] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="16.664%"
-            stopColor={zoneColors[3] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="20.830%"
-            stopColor={zoneColors[4] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="24.996%"
-            stopColor={zoneColors[5] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="29.162%"
-            stopColor={zoneColors[6] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="33.32%"
-            stopColor={zoneColors[7] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="37.494%"
-            stopColor={zoneColors[8] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="41.660%"
-            stopColor={zoneColors[9] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="45.826%"
-            stopColor={zoneColors[10] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="50%"
-            stopColor={zoneColors[11] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="54.168%"
-            stopColor={zoneColors[12] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="58.334%"
-            stopColor={zoneColors[13] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="62.490%"
-            stopColor={zoneColors[14] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="66.656%"
-            stopColor={zoneColors[15] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="70.822%"
-            stopColor={zoneColors[16] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="74.988%"
-            stopColor={zoneColors[17] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="79.154%"
-            stopColor={zoneColors[18] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="83.320%"
-            stopColor={zoneColors[19] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="87.486%"
-            stopColor={zoneColors[20] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="91.652%"
-            stopColor={zoneColors[21] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="94.818%"
-            stopColor={zoneColors[22] ?? KDefaultPreviewGlyphFillColor}
-          />
-          <stop
-            offset="97%"
-            stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor}
-          />
+        <linearGradient id="progressGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="4.166%" stopColor={zoneColors[0] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="8.332%" stopColor={zoneColors[1] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="12.498%" stopColor={zoneColors[2] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="16.664%" stopColor={zoneColors[3] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="20.830%" stopColor={zoneColors[4] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="24.996%" stopColor={zoneColors[5] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="29.162%" stopColor={zoneColors[6] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="33.32%" stopColor={zoneColors[7] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="37.494%" stopColor={zoneColors[8] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="41.660%" stopColor={zoneColors[9] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="45.826%" stopColor={zoneColors[10] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="50%" stopColor={zoneColors[11] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="54.168%" stopColor={zoneColors[12] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="58.334%" stopColor={zoneColors[13] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="62.490%" stopColor={zoneColors[14] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="66.656%" stopColor={zoneColors[15] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="70.822%" stopColor={zoneColors[16] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="74.988%" stopColor={zoneColors[17] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="79.154%" stopColor={zoneColors[18] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="83.320%" stopColor={zoneColors[19] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="87.486%" stopColor={zoneColors[20] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="91.652%" stopColor={zoneColors[21] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="94.818%" stopColor={zoneColors[22] ?? KDefaultPreviewGlyphFillColor} />
+          <stop offset="97%" stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor} />
           {/* add 97 and 100 cuz 100 alone did not look right */}
-          <stop
-            offset="100%"
-            stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor}
-          />
+          <stop offset="100%" stopColor={zoneColors[23] ?? KDefaultPreviewGlyphFillColor} />
         </linearGradient>
       </defs>
 

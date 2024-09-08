@@ -1,6 +1,5 @@
-import dataStore from "@/lib/data_store";
-import { showError } from "@/lib/helpers";
-import useGlobalAppStore from "@/lib/timeline_state";
+import dataStore from '@/lib/data_store';
+import useGlobalAppStore from '@/lib/timeline_state';
 import {
   // ZoomOut,
   // ZoomIn,
@@ -11,12 +10,13 @@ import {
   ChevronsRight,
   Square,
   Save,
-  X,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import WaveSurfer from "wavesurfer.js";
-import Hover from "wavesurfer.js/dist/plugins/hover.esm.js";
-import TimelinePlugin from "wavesurfer.js/dist/plugins/timeline.esm.js";
+  X
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import WaveSurfer from 'wavesurfer.js';
+import Hover from 'wavesurfer.js/dist/plugins/hover.esm.js';
+import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 type Props = {
   audioUrl: string;
   isSaving: boolean;
@@ -30,7 +30,7 @@ export default function AudioControlComponent({
   editorRef,
   onSaveButtonClicked,
   isSaving,
-  onCloseButtonClicked,
+  onCloseButtonClicked
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -42,112 +42,77 @@ export default function AudioControlComponent({
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
   );
-  const updateDuration = useGlobalAppStore(
-    (state) => state.updateAudioDuration
-  );
+  const updateDuration = useGlobalAppStore((state) => state.updateAudioDuration);
   // const decreasePixelFactor = useGlobalAppStore(
   //   (state) => state.decreasePixelFactor
   // );
   // const increasePixelFactor = useGlobalAppStore(
   //   (state) => state.increasePixelFactor
   // );
-  const timelinePixelFactor = useGlobalAppStore(
-    (state) => state.appSettings.timelinePixelFactor
-  );
-
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+  const regionsRef = useRef(RegionsPlugin.create());
   useEffect(() => {
     if (containerRef.current) {
       waveSurferRef.current = WaveSurfer.create({
         container: containerRef.current,
-        waveColor: "#ddd",
-        progressColor: "red",
-        cursorColor: "transparent",
+        waveColor: '#ddd',
+        progressColor: 'red',
+        cursorColor: 'transparent',
         barWidth: 2,
         dragToSeek: true,
         url: audioUrl,
         barHeight: 1,
         plugins: [
           Hover.create({
-            lineColor: "red",
+            lineColor: 'red',
             lineWidth: 1,
-            labelBackground: "rgb(21,21,21)",
-            labelColor: "#fff",
-            labelSize: "12px",
+            labelBackground: 'rgb(21,21,21)',
+            labelColor: '#fff',
+            labelSize: '12px'
           }),
           TimelinePlugin.create({
             timeInterval: 0.2,
             primaryLabelInterval: 5,
             secondaryLabelInterval: 1,
             style: {
-              fontSize: "12px",
-              color: "#fff",
-            },
+              fontSize: '12px',
+              color: '#fff'
+            }
           }),
-        ],
+          regionsRef.current
+        ]
       });
       //   Update play status
-      waveSurferRef.current.on("pause", () => {
+      waveSurferRef.current.on('pause', () => {
         setIsPlayin(false);
       });
-      waveSurferRef.current.on("play", () => {
+      waveSurferRef.current.on('play', () => {
         setIsPlayin(true);
       });
       //   Update duration
-      waveSurferRef.current.on("ready", () => {
-        dataStore.set("isAudioLoaded", true);
+      waveSurferRef.current.on('ready', () => {
+        dataStore.set('isAudioLoaded', true);
         const audioDurationInSecs = waveSurferRef.current!.getDuration();
         setWidthToForce(audioDurationInSecs * timelinePixelFactor);
-        dataStore.set(
-          "currentAudioDurationInMilis",
-          audioDurationInSecs * 1000
-        );
+        dataStore.set('currentAudioDurationInMilis', audioDurationInSecs * 1000);
         updateDuration(audioDurationInSecs * 1000);
         setLoaded(true);
       });
       // Runs every instance of playing audio
-      waveSurferRef.current.on("timeupdate", () => {
-        const currentTimeInMilis =
-          waveSurferRef.current!.getCurrentTime() * 1000;
+      waveSurferRef.current.on('timeupdate', () => {
+        const currentTimeInMilis = waveSurferRef.current!.getCurrentTime() * 1000;
 
-        dataStore.set("currentAudioPositionInMilis", currentTimeInMilis);
-        const audioDurationInMilis =
-          (waveSurferRef.current?.getDuration() ?? 0) * 1000;
+        dataStore.set('currentAudioPositionInMilis', currentTimeInMilis);
         // update playing indicator position for bottom editor
-        const playingIndicator = document.querySelector("#playing_indicator");
+        const playingIndicator = document.querySelector('#playing_indicator');
         playingIndicator?.setAttribute(
-          "style",
+          'style',
           `margin-left: ${(currentTimeInMilis / 1000) * timelinePixelFactor}px`
         );
 
-        const storePlaybackRate = dataStore.get("playbackSpeed") as number;
+        const storePlaybackRate = dataStore.get('playbackSpeed') as number;
         if (storePlaybackRate !== waveSurferRef.current?.getPlaybackRate()) {
           waveSurferRef.current?.setPlaybackRate(storePlaybackRate, true);
-        }
-        // Loop feature
-        const loopAPositionInMilis: number | undefined = dataStore.get(
-          "loopAPositionInMilis"
-        );
-        const loopBPositionInMilis: number | undefined = dataStore.get(
-          "loopBPositionInMilis"
-        );
-
-        if (loopAPositionInMilis && loopBPositionInMilis) {
-          // conver to milis
-          if (currentTimeInMilis >= loopBPositionInMilis) {
-            // takes in 0..1
-            waveSurferRef.current?.seekTo(
-              loopAPositionInMilis / audioDurationInMilis
-            );
-          } else if (currentTimeInMilis < loopAPositionInMilis) {
-            // takes in 0..1
-            waveSurferRef.current?.seekTo(
-              loopAPositionInMilis / audioDurationInMilis
-            );
-            showError(
-              "Loop Active",
-              "Since loop is set, taking you to loop. Remove loop if this is unwanted."
-            );
-          }
         }
 
         //   scroll bottom editor - user cant scroll tho meanwhile, so dont lol
@@ -158,8 +123,68 @@ export default function AudioControlComponent({
         // });
       });
 
+      // Loop feature via Regions
+      const defaultLoopRegionColor = `rgba(255,255,255,0.4)`;
+      const regionActiveColor = `rgba(255,255,255,0.6)`;
+      waveSurferRef.current.on('dblclick', (relativeX: number) => {
+        const clikedOnPositionInSeconds = relativeX * (waveSurferRef.current?.getDuration() ?? 0);
+        regionsRef.current.addRegion({
+          start: clikedOnPositionInSeconds,
+          end: clikedOnPositionInSeconds + 2,
+          content: `Loop ${regionsRef.current.getRegions().length + 1} `,
+          color: defaultLoopRegionColor,
+          resize: true,
+          drag: true
+        });
+      });
+      {
+        // @ts-expect-error type not defined but it's a thing chill.
+        let activeRegion = null;
+        const loop = true;
+        regionsRef.current.on('region-in', (region) => {
+          activeRegion = region;
+        });
+        regionsRef.current.on('region-out', (region) => {
+          // @ts-expect-error worry not, works
+          if (activeRegion === region) {
+            if (loop) {
+              region.play();
+            } else {
+              activeRegion = null;
+            }
+          }
+        });
+        // Play loop region on click, set to active color
+        regionsRef.current.on('region-clicked', (region, e) => {
+          e.stopPropagation(); // prevent triggering a click on the waveform
+          activeRegion = region;
+          region.play();
+          // @ts-expect-error works
+          region.setOptions({
+            color: regionActiveColor
+          });
+        });
+        // Remove region on double click
+        regionsRef.current.on('region-double-clicked', (region, e) => {
+          e.stopPropagation(); // prevent triggering a click on the waveform
+          try {
+            // to ignore warning issued by strict mode TODO: Handle it for realz
+            region.remove();
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch (e) {
+            // console.log("Info: Loop Removed");
+          }
+          activeRegion = null;
+        });
+        // Reset the active region when the user clicks anywhere in the waveform
+        waveSurferRef.current.on('interaction', () => {
+          activeRegion = null;
+        });
+      }
+
       return () => {
         waveSurferRef.current?.destroy();
+        waveSurferRef.current?.unAll();
         setLoaded(false);
       };
     }
@@ -169,16 +194,16 @@ export default function AudioControlComponent({
   useEffect(() => {
     // Play Pause
     function onSpaceKeyPress(e: KeyboardEvent) {
-      if (e.code === "Space") {
+      if (e.code === 'Space') {
         e.preventDefault();
         waveSurferRef.current?.playPause();
       }
     }
     if (isKeyboardGestureEnabled) {
-      window.addEventListener("keypress", onSpaceKeyPress);
+      window.addEventListener('keypress', onSpaceKeyPress);
     }
 
-    return () => window.removeEventListener("keypress", onSpaceKeyPress);
+    return () => window.removeEventListener('keypress', onSpaceKeyPress);
   }, [isKeyboardGestureEnabled]);
 
   //   scroll play controls on scroll
@@ -187,10 +212,10 @@ export default function AudioControlComponent({
       setScrollY(window.scrollY);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -213,12 +238,12 @@ export default function AudioControlComponent({
       <div
         ref={containerRef}
         className="mt-[50px] bg-black"
-        style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ""}` }}
+        style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ''}` }}
         onClick={() => {
           const currentTime = waveSurferRef.current?.getCurrentTime() ?? 0;
           editorRef.current?.scrollTo({
             left: currentTime * timelinePixelFactor - window.innerWidth / 2,
-            behavior: "smooth",
+            behavior: 'smooth'
           });
         }}
       />
@@ -237,24 +262,17 @@ export default function AudioControlComponent({
       <div
         ref={playControlsBarRef}
         className={` w-[96dvw] flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 bg-[#111111] z-[15] ${
-          playin ? "animate-pulse" : ""
+          playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
-          position: "fixed",
-          top:
-            scrollY > window.innerHeight / 2
-              ? `50px`
-              : `calc(50% - ${scrollY}px)`,
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          transition: "top 0.3s ease",
+          position: 'fixed',
+          top: scrollY > window.innerHeight / 2 ? `50px` : `calc(50% - ${scrollY}px)`,
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          transition: 'top 0.3s ease'
         }}
       >
-           <button
-          onClick={() => player.stop()}
-          title={"Stop"}
-          aria-label="Stop audio button"
-        >
+        <button onClick={() => player.stop()} title={'Stop'} aria-label="Stop audio button">
           <Square />
         </button>
         {/* <button
@@ -291,7 +309,7 @@ export default function AudioControlComponent({
         </button>
         <button
           onClick={handlePlayPause}
-          title={"Play / Pause"}
+          title={'Play / Pause'}
           aria-label="Toggle play or pause button"
         >
           {playin ? <Pause /> : <Play />}
@@ -302,11 +320,10 @@ export default function AudioControlComponent({
           <ChevronsRight />
         </button>
 
-     
         <button
-          title={"Save audio"}
+          title={'Save audio'}
           aria-label="save audio button"
-          className={isSaving ? "cursor-not-allowed" : ""}
+          className={isSaving ? 'cursor-not-allowed' : ''}
           onClick={onSaveButtonClicked}
         >
           <Save />
@@ -316,7 +333,7 @@ export default function AudioControlComponent({
             onCloseButtonClicked();
             player.destroy();
           }}
-          title={"Close audio"}
+          title={'Close audio'}
           aria-label="close audio button"
         >
           <X />
@@ -326,7 +343,7 @@ export default function AudioControlComponent({
     );
 
     function goToStart(): void {
-      editorRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+      editorRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
       // seek audio
       player?.seekTo(0);
     }
@@ -334,7 +351,7 @@ export default function AudioControlComponent({
       const duration = player?.getDuration() ?? 0;
       editorRef.current?.scrollTo({
         left: duration * timelinePixelFactor,
-        behavior: "smooth",
+        behavior: 'smooth'
       });
 
       player?.seekTo(0.96); // few sec offset
@@ -344,7 +361,7 @@ export default function AudioControlComponent({
 
       editorRef.current?.scrollTo({
         left: (duration / 2) * timelinePixelFactor - window.innerWidth / 2,
-        behavior: "smooth",
+        behavior: 'smooth'
       });
       player?.seekTo(0.5);
     }

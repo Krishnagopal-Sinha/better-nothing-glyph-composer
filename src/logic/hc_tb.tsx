@@ -1,16 +1,16 @@
-import useGlobalAppStore from "@/lib/timeline_state";
+import useGlobalAppStore from '@/lib/timeline_state';
 
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import { useSpring, animated } from "@react-spring/web";
-import { kEffectNames, kMaxBrightness } from "@/lib/consts";
-import { useState } from "react";
-import { DeltaUpdateBlock, GlyphBlock } from "@/lib/glyph_model";
-import { useDrag } from "@use-gesture/react";
+  ContextMenuTrigger
+} from '@/components/ui/context-menu';
+import { useSpring, animated } from '@react-spring/web';
+import { kEffectNames, kMaxBrightness } from '@/lib/consts';
+import { useState } from 'react';
+import { DeltaUpdateBlock, GlyphBlock } from '@/lib/glyph_model';
+import { useDrag } from '@use-gesture/react';
 
 type Props = {
   // prevItem?: GlyphBlock;
@@ -19,18 +19,14 @@ type Props = {
 };
 export default function TimelineBlockComponent({ glyphItem }: Props) {
   const removeItem = useGlobalAppStore((state) => state.removeItem);
-  const updateSelectedItem = useGlobalAppStore(
-    (state) => state.updateSelectedItem
-  );
+  const updateSelectedItem = useGlobalAppStore((state) => state.updateSelectedItem);
   const selectItem = useGlobalAppStore((state) => state.toggleSelection);
-  const timelinePixelFactor = useGlobalAppStore(
-    (state) => state.appSettings.timelinePixelFactor
-  );
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
   const [isTrimActive, setIsTrimActive] = useState<boolean>(false);
 
   const onEffectSelect = (effectId: number) => {
     const deltaBlock: DeltaUpdateBlock = {
-      effectId: effectId,
+      effectId: effectId
     };
     updateSelectedItem(deltaBlock);
   };
@@ -41,7 +37,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
   // }
   const throttledUpdate = throttle((x: number) => {
     const deltaBlock: DeltaUpdateBlock = {
-      startTimeMilis: (x * 1000) / timelinePixelFactor,
+      startTimeMilis: (x * 1000) / timelinePixelFactor
     };
 
     updateSelectedItem(deltaBlock);
@@ -53,7 +49,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
       throttledUpdate(delta[0]);
     },
     {
-      axis: "x",
+      axis: 'x'
     }
   );
 
@@ -66,7 +62,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         const delta = (mx / timelinePixelFactor) * 1000;
 
         const deltaBlock: DeltaUpdateBlock = {
-          durationMilis: delta + 20,
+          durationMilis: delta + 20
           //20 is offset for trim bar width
         };
         setIsTrimActive(false);
@@ -75,7 +71,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         updateSelectedItem(deltaBlock);
       }
     },
-    { axis: "x" }
+    { axis: 'x' }
   );
 
   return (
@@ -89,14 +85,11 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           {...dragHandler()}
           title={`Click to select / unselect, right click to delete\nStart Time: ${(
             glyphItem.startTimeMilis / 1000
-          ).toFixed(2)} s\nDuration: ${(glyphItem.durationMilis / 1000).toFixed(
+          ).toFixed(2)} s\nDuration: ${(glyphItem.durationMilis / 1000).toFixed(2)} s\nEffect: ${
+            kEffectNames[glyphItem.effectId] ?? 'Unkown / Imported'
+          }\nStarting Brightness: ${((glyphItem.effectData[0] / kMaxBrightness) * 100).toFixed(
             2
-          )} s\nEffect: ${
-            kEffectNames[glyphItem.effectId] ?? "Unkown / Imported"
-          }\nStarting Brightness: ${(
-            (glyphItem.effectData[0] / kMaxBrightness) *
-            100
-          ).toFixed(2)}%`}
+          )}%`}
           onClick={(e) => {
             e.preventDefault();
             // Toggle Selection
@@ -109,13 +102,11 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-[rgb(57,57,57)] text-black
              hover:shadow-[0px_0px_15px_1px_#ffffff] duration-200
             ${
-            glyphItem.isSelected ? "outline outline-red-500 outline-[3px]" : ""
-          } ${isTrimActive ? '':'overflow-clip'}`}
+              glyphItem.isSelected ? 'outline outline-red-500 outline-[3px]' : ''
+            } ${isTrimActive ? '' : 'overflow-clip'}`}
           style={{
-            width: `${
-              (glyphItem.durationMilis / 1000) * timelinePixelFactor
-            }px`,
-            touchAction: "none",
+            width: `${(glyphItem.durationMilis / 1000) * timelinePixelFactor}px`,
+            touchAction: 'none'
             // outline: `${
             //   glyphItem.isSelected ? "dashed 3px red" : "solid 2px white"
             // }`,
@@ -140,10 +131,10 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               onMouseDown={() => setIsTrimActive(true)}
               className={`text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
-                  ? "h-screen w-[3px] p-0 absolute  bg-red-600 z-10 right-0"
-                  : " p-1 pb-[8px]"
+                  ? 'h-screen w-[3px] p-0 absolute  bg-red-600 z-10 right-0'
+                  : ' p-1 pb-[8px]'
               }`}
-              style={{ x: x2, touchAction: "none" }}
+              style={{ x: x2, touchAction: 'none' }}
               // Stop text sel for handle (makeshift) icon |
             >
               |
@@ -186,12 +177,15 @@ function throttle(func: (...args: any[]) => void, limit: number) {
       }, limit);
     } else {
       clearTimeout(lastFunc);
-      lastFunc = setTimeout(() => {
-        if (Date.now() - lastRan! >= limit) {
-          func(...args);
-          lastRan = Date.now();
-        }
-      }, limit - (Date.now() - lastRan));
+      lastFunc = setTimeout(
+        () => {
+          if (Date.now() - lastRan! >= limit) {
+            func(...args);
+            lastRan = Date.now();
+          }
+        },
+        limit - (Date.now() - lastRan)
+      );
     }
   };
 }

@@ -1,10 +1,10 @@
-import useGlobalAppStore from "@/lib/timeline_state";
-import TimelineBlockComponent from "./timelineBlocks";
-import PlayingIndicator from "./playingIndicator";
-import dataStore from "@/lib/data_store";
-import { GlyphBlock } from "@/lib/glyph_model";
-import BPMSnapGridLinesComponent from "./bpmGridLines";
-import HeavyTimelineBlock from "@/logic/hc_tb";
+import useGlobalAppStore from '@/lib/timeline_state';
+import TimelineBlockComponent from './timelineBlocks';
+import PlayingIndicator from './playingIndicator';
+import dataStore from '@/lib/data_store';
+import { GlyphBlock } from '@/lib/glyph_model';
+import BPMSnapGridLinesComponent from './bpmGridLines';
+import HeavyTimelineBlock from '@/logic/hc_tb';
 
 type Props = {
   // currentAudioPosition: number;
@@ -13,29 +13,22 @@ type Props = {
     [key: number]: GlyphBlock[];
   };
   scrollRef: React.Ref<HTMLDivElement>;
-  children:React.ReactNode;
+  children: React.ReactNode;
 };
 
 export function EditorComponent({
-  timelineData,children,
-  scrollRef,
+  timelineData,
+  children,
+  scrollRef
 }: // currentAudioPosition,
 Props) {
   const addItem = useGlobalAppStore((state) => state.addItem);
   const bpmValue = useGlobalAppStore((state) => state.appSettings.bpmValue);
-  const snapToBpmActive = useGlobalAppStore(
-    (state) => state.appSettings.snapToBpmActive
-  );
-  const durationInMilis = useGlobalAppStore(
-    (state) => state.audioInformation.durationInMilis
-  );
+  const snapToBpmActive = useGlobalAppStore((state) => state.appSettings.snapToBpmActive);
+  const durationInMilis = useGlobalAppStore((state) => state.audioInformation.durationInMilis);
   const itemsSchema = useGlobalAppStore((state) => state.items);
-  const timelinePixelFactor = useGlobalAppStore(
-    (state) => state.appSettings.timelinePixelFactor
-  );
-  const showHeavyUi = useGlobalAppStore(
-    (state) => state.appSettings.showHeavyUi
-  );
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+  const showHeavyUi = useGlobalAppStore((state) => state.appSettings.showHeavyUi);
 
   const timelineRows: React.ReactNode[] = [];
 
@@ -50,7 +43,7 @@ Props) {
         style={{ height: `${rowHeight}px` }}
         onDoubleClick={(e) => {
           e.preventDefault();
-          const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
+          const scrollValue: number = dataStore.get('editorScrollX') ?? 0;
           // console.log("double clicked?");
           addItem(
             i,
@@ -68,17 +61,12 @@ Props) {
   }
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    dataStore.set("editorScrollX", e.currentTarget.scrollLeft);
+    dataStore.set('editorScrollX', e.currentTarget.scrollLeft);
   };
-
 
   return (
     // added to for scroll
-    <div
-      className="min-h-[50dvh] overflow-auto"
-      ref={scrollRef}
-      onScroll={handleScroll}
-    >
+    <div className="min-h-[50dvh] overflow-auto" ref={scrollRef} onScroll={handleScroll}>
       <div className="flex flex-col flex-grow min-w-max relative">
         {/* AudioControls */}
         {children}
@@ -103,7 +91,7 @@ Props) {
 const TimelineBlocks = ({
   rowTimelineData,
   timelinePixelFactor,
-  showHeavyUi,
+  showHeavyUi
 }: {
   rowTimelineData: GlyphBlock[];
   timelinePixelFactor: number;
@@ -116,9 +104,7 @@ const TimelineBlocks = ({
         key={rowTimelineData[i].id}
         className="h-full w-[50px] absolute inset-0 py-[4px]"
         style={{
-          marginLeft: `${
-            (rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor
-          }px`,
+          marginLeft: `${(rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`
         }}
       >
         {!showHeavyUi ? (
