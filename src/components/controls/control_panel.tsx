@@ -9,18 +9,18 @@ import {
 import InstructionComponent from '../timeline/instructions';
 
 import {
-    Copy,
-    Clipboard,
-    Trash,
-    SquareDashedMousePointer,
-    SquarePlus,
-    DiamondPlus,
-    CirclePlus,
-    UndoDot,
-    RedoDot,
-    Scissors,
-    TextCursorInput,
-} from 'lucide-react'
+  Copy,
+  Clipboard,
+  Trash,
+  SquareDashedMousePointer,
+  SquarePlus,
+  DiamondPlus,
+  CirclePlus,
+  UndoDot,
+  RedoDot,
+  Scissors,
+  TextCursorInput
+} from 'lucide-react';
 import useGlobalAppStore, { useTemporalStore } from '@/lib/timeline_state';
 import { kAppName, kAppVersion } from '@/lib/consts';
 import { useRef, useState } from 'react';
@@ -40,11 +40,8 @@ export default function MainTopPanel({
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
-  const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const selectInCurrentPosition = useGlobalAppStore((state) => state.selectInCurrentPosition);
-  const removeSelectedItem = useGlobalAppStore(
-    (state) => state.removeSelectedItem
-  );
+  const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
   const fillEntireZone = useGlobalAppStore((state) => state.fillEntireZone);
   const addItem = useGlobalAppStore((state) => state.addItem);
