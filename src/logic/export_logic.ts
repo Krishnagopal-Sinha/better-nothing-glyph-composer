@@ -5,12 +5,24 @@ import pako from 'pako';
 
 export function processEdits(csv: string): string | null {
   try {
-    // const utf8Encoded = new TextEncoder().encode(csv);
+    // const utf8Encoded = new TextEncoder().encode(csv); //No need as Pako does this outta the box
 
     const compressedData = pako.deflate(csv, { level: 9 });
 
-    // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below!
-    const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData)));
+    // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below | can't directly do a simple, const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData))); as thanks to spread operator for big uInt8Arr it'll throw below error!
+    // Bug Fix: Convert Uint8Array to string in chunks to avoid "maximum call stack size exceeded" error
+    const uint8Array = new Uint8Array(compressedData);
+    let binaryString = '';
+    const chunkSize = 0x8000; // Process in chunks of 32KB
+
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      binaryString += String.fromCharCode.apply(
+        null,
+        Array.from(uint8Array.subarray(i, i + chunkSize))
+      );
+    }
+
+    const base64Data = btoa(binaryString);
 
     // console.warn(`data:${csv}\nbase64Encoded:\n${base64Data}`);
 

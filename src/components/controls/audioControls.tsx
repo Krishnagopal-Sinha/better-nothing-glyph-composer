@@ -206,7 +206,7 @@ export default function AudioControlComponent({
     return () => window.removeEventListener('keypress', onSpaceKeyPress);
   }, [isKeyboardGestureEnabled]);
 
-  //   scroll play controls on scroll
+    // scroll play controls on scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -237,8 +237,8 @@ export default function AudioControlComponent({
       )}
       <div
         ref={containerRef}
-        className="mt-[50px] bg-black"
-        style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ''}` }}
+        className="mt-[40px] bg-black"
+        style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ''}`,height:'calc(10%)' }}
         onClick={() => {
           const currentTime = waveSurferRef.current?.getCurrentTime() ?? 0;
           editorRef.current?.scrollTo({
@@ -261,14 +261,19 @@ export default function AudioControlComponent({
       //   <div className="relative">
       <div
         ref={playControlsBarRef}
-        className={` w-[96dvw] flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 bg-[#111111] z-[15] ${
+        className={`min-w-[96vw] max-w-[1920px] flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 bg-[#111111] z-[15] ${
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
           position: 'fixed',
-          top: scrollY > window.innerHeight / 2 ? `50px` : `calc(50% - ${scrollY}px)`,
+          top:
+            window.screen.width >= 1920
+              ? ''
+              : scrollY > window.innerHeight / 2
+              ? `45px`
+              : `calc(45% - ${scrollY}px)`,
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'
         }}
       >
