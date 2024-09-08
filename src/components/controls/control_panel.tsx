@@ -9,17 +9,18 @@ import {
 import InstructionComponent from "../timeline/instructions";
 
 import {
-  Copy,
-  Clipboard,
-  Trash,
-  SquareDashedMousePointer,
-  SquarePlus,
-  DiamondPlus,
-  CirclePlus,
-  UndoDot,
-  RedoDot,
-  Scissors,
-} from "lucide-react";
+    Copy,
+    Clipboard,
+    Trash,
+    SquareDashedMousePointer,
+    SquarePlus,
+    DiamondPlus,
+    CirclePlus,
+    UndoDot,
+    RedoDot,
+    Scissors,
+    TextCursorInput,
+} from 'lucide-react'
 import useGlobalAppStore, { useTemporalStore } from "@/lib/timeline_state";
 import { useGlobalAudioPlayer } from "react-use-audio-player";
 import { kAppName, kAppVersion } from "@/lib/consts";
@@ -38,6 +39,7 @@ export default function ControlPanelComponent({
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
+  const selectInCurrentPosition = useGlobalAppStore((state) => state.selectInCurrentPosition);
   const removeSelectedItem = useGlobalAppStore(
     (state) => state.removeSelectedItem
   );
@@ -557,6 +559,17 @@ export default function ControlPanelComponent({
             aria-label="select or unselect all button"
           >
             <SquareDashedMousePointer />
+          </Button>
+          {/* Select in current position */}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              selectInCurrentPosition();
+            }}
+            title={"Select / Unselect in audio position"}
+            aria-label="select items in current audio position"
+          >
+            <TextCursorInput />
           </Button>
           {/* Undo */}
           <Button
