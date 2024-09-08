@@ -9,11 +9,18 @@ export default function NP2a_Preview({ zoneColors }: { zoneColors: string[] }) {
       x="0px"
       y="0px"
       width="100%"
+      className="h-[300px] w-[150px]"
       viewBox="210 -40 400 900"
-      enable-background="new 0 0 800 800"
+      enableBackground="new 0 0 800 800"
     >
       <defs>
-        <linearGradient id="progressGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+        <linearGradient
+          id="progressGradient"
+          x1="0%"
+          y1="100%"
+          x2="100%"
+          y2="0%"
+        >
           <stop
             offset="4.166%"
             stopColor={zoneColors[0] ?? KDefaultPreviewGlyphFillColor}

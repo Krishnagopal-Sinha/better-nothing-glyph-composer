@@ -1,10 +1,10 @@
 import useGlobalAppStore from "@/lib/timeline_state";
 import TimelineBlockComponent from "./timelineBlocks";
-import TimeBarComponent from "./timebar";
 import PlayingIndicator from "./playingIndicator";
 import dataStore from "@/lib/data_store";
 import { GlyphBlock } from "@/lib/glyph_model";
 import BPMSnapGridLinesComponent from "./bpmGridLines";
+import HeavyTimelineBlock from "@/logic/hc_tb";
 
 type Props = {
   // currentAudioPosition: number;
@@ -13,10 +13,11 @@ type Props = {
     [key: number]: GlyphBlock[];
   };
   scrollRef: React.Ref<HTMLDivElement>;
+  children:React.ReactNode;
 };
 
-export default function EditorComponent({
-  timelineData,
+export function EditorComponent({
+  timelineData,children,
   scrollRef,
 }: // currentAudioPosition,
 Props) {
@@ -32,41 +33,15 @@ Props) {
   const timelinePixelFactor = useGlobalAppStore(
     (state) => state.appSettings.timelinePixelFactor
   );
-  const timelineRows = [];
+  const showHeavyUi = useGlobalAppStore(
+    (state) => state.appSettings.showHeavyUi
+  );
 
-  function generateAllTimelineBlocksForARow(
-    rownumber: number
-  ): React.JSX.Element[] {
-    const row: React.JSX.Element[] = [];
-
-    timelineData[rownumber].map((e: GlyphBlock) => {
-      // console.warn("render frame req @ editor");
-      row.push(
-        <div
-          key={e.id}
-          className="h-full w-[50px] absolute inset-0 py-[4px]"
-          style={{
-            marginLeft: `${(e.startTimeMilis / 1000) * timelinePixelFactor}px`,
-          }}
-        >
-          <TimelineBlockComponent
-            glyphItem={e}
-            // duration={duration}
-          />
-          {/* Debug Stuff */}
-          {/* {e.startTime} */}
-          {/* {e.duration} */}
-        </div>
-      );
-    });
-
-    return row;
-  }
+  const timelineRows: React.ReactNode[] = [];
 
   const numberOfRowsToGenerate = Object.keys(itemsSchema).length;
   const rowHeight = numberOfRowsToGenerate > 12 ? 40 : 75;
   for (let i = 0; i < numberOfRowsToGenerate; i++) {
-    const rowData = generateAllTimelineBlocksForARow(i);
     timelineRows.push(
       <div
         key={i}
@@ -76,13 +51,18 @@ Props) {
         onDoubleClick={(e) => {
           e.preventDefault();
           const scrollValue: number = dataStore.get("editorScrollX") ?? 0;
+          // console.log("double clicked?");
           addItem(
             i,
             ((e.clientX + scrollValue) / timelinePixelFactor) * 1000 //convert to milis; offset needed cuz pointer has width too
           );
         }}
       >
-        {rowData}
+        <TimelineBlocks
+          showHeavyUi={showHeavyUi}
+          rowTimelineData={timelineData[i]}
+          timelinePixelFactor={timelinePixelFactor}
+        />
       </div>
     );
   }
@@ -90,6 +70,7 @@ Props) {
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     dataStore.set("editorScrollX", e.currentTarget.scrollLeft);
   };
+
 
   return (
     // added to for scroll
@@ -99,8 +80,8 @@ Props) {
       onScroll={handleScroll}
     >
       <div className="flex flex-col flex-grow min-w-max relative">
-        {/* time bar */}
-        <TimeBarComponent />
+        {/* AudioControls */}
+        {children}
 
         {/* playing indicator */}
         <PlayingIndicator editorRows={numberOfRowsToGenerate} />
@@ -118,3 +99,42 @@ Props) {
     </div>
   );
 }
+
+const TimelineBlocks = ({
+  rowTimelineData,
+  timelinePixelFactor,
+  showHeavyUi,
+}: {
+  rowTimelineData: GlyphBlock[];
+  timelinePixelFactor: number;
+  showHeavyUi: boolean;
+}) => {
+  const row: React.JSX.Element[] = [];
+  for (let i = 0; i < rowTimelineData.length; i++) {
+    row.push(
+      <div
+        key={rowTimelineData[i].id}
+        className="h-full w-[50px] absolute inset-0 py-[4px]"
+        style={{
+          marginLeft: `${
+            (rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor
+          }px`,
+        }}
+      >
+        {!showHeavyUi ? (
+          <TimelineBlockComponent
+            glyphItem={rowTimelineData[i]}
+            // duration={duration}
+          />
+        ) : (
+          <HeavyTimelineBlock glyphItem={rowTimelineData[i]} />
+        )}
+        {/* Debug Stuff */}
+        {/* {e.startTime} */}
+        {/* {e.duration} */}
+      </div>
+    );
+  }
+
+  return <>{row}</>;
+};

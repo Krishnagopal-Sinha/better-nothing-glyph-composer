@@ -14,7 +14,7 @@ import { useEffect } from "react";
 import { Dialog, DialogTrigger } from "../ui/dialog";
 import SettingDialogContent from "./more_dialog_content";
 import { generateCSV } from "@/logic/export_logic";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
+import dataStore from "@/lib/data_store";
 
 // type Props = {
 //   isAdvOpen: boolean;
@@ -37,8 +37,6 @@ export default function MoreMenuButton() {
   const setDialogContentIndex = useGlobalAppStore(
     (state) => state.setSettingsDialogContentIndex
   );
-
-  const { duration } = useGlobalAudioPlayer();
 
   const importJsonData = useGlobalAppStore((state) => state.importJsonData);
   const { openFilePicker, filesContent, errors } = useFilePicker({
@@ -74,7 +72,10 @@ export default function MoreMenuButton() {
   };
 
   const onExportGlyphCsvClick = () => {
-    const csvToExport = generateCSV(timelineData, duration * 1000);
+    const csvToExport = generateCSV(
+      timelineData,
+      dataStore.get("currentAudioDurationInMilis") as number
+    );
     fileDownload(csvToExport, `${phoneModel}_glyph_data_${getDateTime()}.csv`);
   };
   // Dialog was not getting opened as on MenuItem click, menu unmounts, so nothing else is there to show, this is the only way to escape that.
@@ -110,7 +111,7 @@ export default function MoreMenuButton() {
                   Import Glyph Data
                 </MenubarItem>
                 <MenubarItem onClick={onExportGlyphClick}>
-                  Export Glyph Data (.json) | BNGC
+                  Export Project (.json) | BNGC
                 </MenubarItem>
 
                 <MenubarItem onClick={onExportGlyphCsvClick}>

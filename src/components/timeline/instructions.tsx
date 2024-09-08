@@ -1,10 +1,10 @@
 export default function InstructionComponent() {
   return (
     // Instructions
-    <div className="p-6 ">
-      <h2 className="text-2xl font-bold text-primary">Instructions</h2>
+    <div className="p-6">
+      <h2 className="text-2xl font-bold text-primary font-[ndot] uppercase tracking-wide">Instructions</h2>
       <br />
-      <pre className="text-muted-foreground text-wrap overflow-auto">
+      <pre className="text-muted-foreground text-wrap overflow-auto max-h-[40dvh] sm:max-h-[60dvh] ">
         1. Double press to add a glyph block, choose Glyph Zone numbers to add
         to that zone, a zone can target multiple glyphs (depending on device).
         Chose the add all button to add all glyphs to that instance.

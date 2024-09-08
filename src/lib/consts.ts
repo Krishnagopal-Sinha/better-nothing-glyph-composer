@@ -7,7 +7,13 @@ export const kPhoneModelNames: { [key: string]: string } = {
   NP1: "Phone (1)",
   NP1_15: "Phone (1) | 15 Zone",
   NP2: "Phone (2)",
-  NP2a: "Phone (2a)",
+  NP2a: "Phone (2a) / (2a) Plus",
+};
+export const kPhoneZones: { [key: number]: string } = {
+  5: "Phone (1)",
+  15: "Phone (1) | 15 Zone",
+  33: "Phone (2)",
+  26: "Phone (2a) / (2a) Plus",
 };
 export const kEffectNames: { [key: number]: string } = {
   0: "Constant Brightness",
@@ -22,13 +28,14 @@ export const kEffectNames: { [key: number]: string } = {
   9: "Max Strobe!",
   10: "Pulse End",
   11: "Metronome - 1s",
+  // 101: "Unknown / Imported",
 };
 
 // Version Info
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
 export const kMinorVersion = 1;
-export const kPatchVersion = 4;
+export const kPatchVersion = '5Dev';
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 

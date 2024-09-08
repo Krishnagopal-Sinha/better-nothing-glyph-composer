@@ -1,5 +1,63 @@
 import { toast } from "sonner";
 import { GlyphBlock, GlyphStore } from "./glyph_model";
+import { nanoid } from "nanoid";
+import dataStore from "./data_store";
+import { kTimeStepMilis } from "./consts";
+import { generateEffectData } from "@/logic/export_logic";
+
+// Remove extra blocks on imported .ogg
+export function removeAudioBoundsViolators(
+  effects: GlyphStore,
+  audioDuration: number
+): GlyphStore {
+  const finalData: GlyphStore = {};
+
+  Object.keys(effects).forEach((key: string) => {
+    finalData[+key] = effects[+key].filter((block) => {
+      // Check if the effect's start time or end time exceeds the audio duration
+      return (
+        block.startTimeMilis < audioDuration &&
+        block.startTimeMilis + block.durationMilis > 0
+      );
+    });
+  });
+
+  return finalData;
+}
+
+export function generateNewGlyphBlock(
+  glyphId: number,
+  startTimeMilis: number,
+  durationMilis?: number,
+  startingBrightness?: number,
+  effectId?: number
+): GlyphBlock {
+  const blockEffectId = effectId ?? 0;
+  const blockDuration =
+    durationMilis ?? dataStore.get("newBlockDurationMilis") ?? 500; //safety
+  const blockStartingBrightness =
+    startingBrightness ?? dataStore.get("newBlockBrightness") ?? 4095;
+  const effectData: number[] = [];
+
+  // generate effect data
+  const endIndex = Math.floor(blockDuration / kTimeStepMilis);
+  for (let i = 0; i < endIndex; i++) {
+    effectData.push(
+      generateEffectData(blockEffectId, blockStartingBrightness, i, endIndex)
+    );
+  }
+  // console.log(effectData);
+  return {
+    id: nanoid(),
+    glyphId,
+    startTimeMilis,
+    durationMilis: blockDuration,
+    startingBrightness: blockStartingBrightness,
+    isSelected: false,
+    effectId: blockEffectId,
+    effectData: effectData,
+  };
+}
 
 // Snap To BPM feat.
 export function calculateBeatDurationInMilis(bpm: number): number {
@@ -15,6 +73,19 @@ export function snapToNearestBeat(
   } else {
     return Math.floor(timeInMillis / beatDuration) * beatDuration;
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): T {
+  let timeout: ReturnType<typeof setTimeout>;
+
+  return function (...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  } as T;
 }
 
 // sort
@@ -351,4 +422,71 @@ export function basicCanAddCheck(
   }
 
   return true;
+}
+export function convertArrayToObjects(
+  arr: number[][],
+  lookAheadLimit: number = 3,
+  changeThreshold: number = 3096 
+): GlyphStore {
+  const result: GlyphStore = {};
+  const arrayLength = arr[0].length;
+
+  for (let col = 0; col < arrayLength; col++) {
+    result[col] = [];
+
+    let row = 0;
+    while (row < arr.length) {
+      if (arr[row][col] > 0) {
+        const startTimeMilis = row * kTimeStepMilis;
+        let durationMilis = kTimeStepMilis;
+        const effectData = [arr[row][col]];
+
+        let lookAheadCount = 0;
+        let lookAhead = 1;
+        let endRow = row;
+
+        // Perform the look-ahead to determine the duration of the effect
+        while (lookAhead + row < arr.length) {
+          const currentValue = arr[row + lookAhead][col];
+          const previousValue = arr[row + lookAhead - 1][col];
+          if (currentValue > 0) {
+            // check for abrupt change
+            if (Math.abs(currentValue - previousValue) >= changeThreshold) {
+              break; //make into seperate effect
+            }
+            effectData.push(currentValue);
+            durationMilis += kTimeStepMilis;
+            lookAheadCount = 0; 
+            endRow = row + lookAhead; // update endRow to the last non-zero value
+          } else {
+            lookAheadCount++;
+            if (lookAheadCount >= lookAheadLimit) {
+              break;
+            }
+          }
+          lookAhead++;
+        }
+
+        const data = {
+          id: nanoid(),
+          glyphId: col,
+          startTimeMilis,
+          durationMilis,
+          startingBrightness: arr[row][col],
+          isSelected: false,
+          effectId: 101,
+          effectData,
+        };
+
+        result[col].push(data);
+
+
+        row = endRow + 1;
+      } else {
+        row++;
+      }
+    }
+  }
+
+  return result;
 }
