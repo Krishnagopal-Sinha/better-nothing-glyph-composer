@@ -563,7 +563,7 @@ export default function MainTopPanel({
             onClick={() => {
               selectInCurrentPosition();
             }}
-            title={'Select / Unselect in audio position'}
+            title={'Select / Unselect All only at Current Audio Position'}
             aria-label="select items in current audio position"
           >
             <TextCursorInput />

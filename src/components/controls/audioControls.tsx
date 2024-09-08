@@ -237,7 +237,7 @@ export default function AudioControlComponent({
       )}
       <div
         ref={containerRef}
-        className="mt-[40px] bg-black"
+        className="mt-[50px] bg-black"
         style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ''}`,height:'calc(10%)' }}
         onClick={() => {
           const currentTime = waveSurferRef.current?.getCurrentTime() ?? 0;
@@ -261,7 +261,7 @@ export default function AudioControlComponent({
       //   <div className="relative">
       <div
         ref={playControlsBarRef}
-        className={`min-w-[96vw] max-w-[1920px] flex justify-evenly items-center border mt-[-8px] rounded-lg border-white p-4 bg-[#111111] z-[15] ${
+        className={`min-w-[96vw] max-w-[1920px] flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] ${
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
@@ -270,7 +270,7 @@ export default function AudioControlComponent({
             window.screen.width >= 1920
               ? ''
               : scrollY > window.innerHeight / 2
-              ? `45px`
+              ? `40px`
               : `calc(45% - ${scrollY}px)`,
           left: '50%',
           transform: 'translateX(-50%)',
