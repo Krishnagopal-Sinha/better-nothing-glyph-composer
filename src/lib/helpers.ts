@@ -151,9 +151,10 @@ export function getDateTime(): string {
   const now = new Date(Date.now());
 
   const formattedDate =
-    `${now.getFullYear()}-${(now.getMonth() + 1)
+    `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now
+      .getDate()
       .toString()
-      .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}@` +
+      .padStart(2, '0')}@` +
     `${now.getHours().toString().padStart(2, '0')}:${now
       .getMinutes()
       .toString()
@@ -172,15 +173,12 @@ function throttle(func: (...args: any[]) => void, limit: number) {
       lastRan = Date.now();
     } else {
       clearTimeout(lastFunc);
-      lastFunc = setTimeout(
-        () => {
-          if (Date.now() - lastRan! >= limit) {
-            func(...args);
-            lastRan = Date.now();
-          }
-        },
-        limit - (Date.now() - lastRan)
-      );
+      lastFunc = setTimeout(() => {
+        if (Date.now() - lastRan! >= limit) {
+          func(...args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
     }
   };
 }
@@ -440,4 +438,34 @@ export function convertArrayToObjects(
   }
 
   return result;
+}
+
+export function validateCSV(csvString: string): boolean {
+  const rows = csvString.split('\n');
+
+  const errors: string[] = [];
+
+  rows.forEach((row, rowIndex) => {
+    const columns = row.split(',');
+
+    columns.forEach((col, colIndex) => {
+      const trimmedValue = col.trim();
+
+      if (trimmedValue === '' && colIndex < columns.length - 1) {
+        errors.push(`Missing value at row ${rowIndex + 1}, column ${colIndex + 1}`);
+        console.error(
+          `Error - While Processing Audio`,
+          `Some error occured during processing (malformed output processed), export .json project file as safety and retry exporting. Err:`,
+          errors
+        );
+        showError(
+          `Error - While Processing Audio`,
+          `Some error occured during processing (malformed output processed), export .json project file as safety and retry exporting. `,
+          2100
+        );
+        return false;
+      }
+    });
+  });
+  return true;
 }

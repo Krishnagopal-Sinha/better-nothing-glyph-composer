@@ -106,7 +106,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       },
       // App Settings State  ============================================
       appSettings: {
-        isZoneVisible: false,
+        isZoneVisible: true,
         isKeyboardGestureEnabled: true,
         isMultiSelectActive: false,
         timelinePixelFactor: 160,

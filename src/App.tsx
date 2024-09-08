@@ -11,23 +11,23 @@ import SaveDialog from './components/controls/save_dialog';
 import { Toaster } from './components/ui/sonner';
 import dataStore from './lib/data_store';
 import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
-import { showError } from './lib/helpers';
+import { showError, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return '';
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return '';
+  //   }
 
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener('beforeunload', beforeUnload);
+  //   return () => {
+  //     window.removeEventListener('beforeunload', beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -78,7 +78,11 @@ export default function App() {
       try {
         setIsInputLoaded(true);
         if (plainFiles[0] && plainFiles[0].type === 'audio/ogg') {
-          showError('Trying to Recover Glyph Data', 'Working in background to get data...', 2500);
+          showError(
+            'Trying to Recover Glyph Data',
+            '.ogg file detected | Working in background to get data...',
+            2500
+          );
           extractGlyphData(plainFiles[0]);
         }
         // clear undo and stuff
@@ -233,7 +237,7 @@ export default function App() {
   if (!ffmpegLoaded) {
     return <FullPageAppLoaderPage />;
   }
-
+  // UI
   return (
     <main>
       {/* Toast setup */}
@@ -241,15 +245,31 @@ export default function App() {
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
       {isSaving && <SaveDialog isOpen={true} />}
 
-      {/* main root div */}
-      <div>
-        {/* Upper Section - Fixed */}
-        <div className="px-4 py-4 w-full overflow-auto">
-          {/* Mobile Only */}
-          {!isInputLoaded ? (
+      {/* Upper Section - Fixed */}
+      {/* Mobile Only - load audio */}
+      <div className="px-4 py-4 w-full overflow-auto">
+        {!isInputLoaded ? (
+          <Button
+            variant="outline"
+            className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-full"
+            onClick={(e) => {
+              e.preventDefault();
+              loadAudioFile();
+            }}
+          >
+            Load Audio
+          </Button>
+        ) : (
+          <></>
+        )}
+        <div className={`space-y-4 `}>
+          {/* Main Top Half Component */}
+          <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
+
+          {/* Load audio n play controls  */}
+          {!isInputLoaded && (
             <Button
-              variant="outline"
-              className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-full"
+              className="w-full py-6  font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
               onClick={(e) => {
                 e.preventDefault();
                 loadAudioFile();
@@ -257,47 +277,29 @@ export default function App() {
             >
               Load Audio
             </Button>
-          ) : (
-            <></>
           )}
-          <div className="space-y-4">
-            {/* Main Top Half Component */}
-            <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
-
-            {/* Load audio n play controls  */}
-            {!isInputLoaded && (
-              <Button
-                className="w-full py-6  font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
-                onClick={(e) => {
-                  e.preventDefault();
-                  loadAudioFile();
-                }}
-              >
-                Load Audio
-              </Button>
-            )}
-          </div>
         </div>
-
-        {/* Lower Section - Non-Scrollable */}
-        {!isInputLoaded ? (
-          <InstructionComponent />
-        ) : (
-          <EditorComponent
-            scrollRef={editorRef}
-            timelineData={timelineData}
-            // currentAudioPosition={currentPosition}
-          >
-            <AudioControlComponent
-              onCloseButtonClicked={onCloseButtonClick}
-              isSaving={isSaving}
-              onSaveButtonClicked={onSaveButtonClick}
-              editorRef={editorRef}
-              audioUrl={filesContent[0].content}
-            />
-          </EditorComponent>
-        )}
       </div>
+
+      {/* Lower Section */}
+
+      {!isInputLoaded ? (
+        <InstructionComponent />
+      ) : (
+        <EditorComponent
+          editorRef={editorRef}
+          timelineData={timelineData}
+          // currentAudioPosition={currentPosition}
+        >
+          <AudioControlComponent
+            onCloseButtonClicked={onCloseButtonClick}
+            isSaving={isSaving}
+            onSaveButtonClicked={onSaveButtonClick}
+            editorRef={editorRef}
+            audioUrl={filesContent[0].content}
+          />
+        </EditorComponent>
+      )}
     </main>
   );
 
@@ -329,14 +331,16 @@ export default function App() {
     const processedEditData = processEdits(
       generateCSV(timelineData, dataStore.get('currentAudioDurationInMilis') as number)
     );
-    if (inputFile && processedEditData && !isSaving) {
+    if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {
       setIsSaving(true);
       console.log('Save started...');
       await ffmpegService.saveOutput(plainFiles[0], processedEditData, currentDevice).then(() => {
         setIsSaving(false);
       });
     } else {
-      console.error('Save file error: No input file detected or another save process is ongoing');
+      console.warn(
+        'Save file error: No input file detected or another save process is ongoing / some error occured.'
+      );
     }
   }
 }

@@ -95,8 +95,8 @@ export default function SettingsPanel() {
     <>
       {/* Config panel */}
       <form>
-        {/* COntrol Grid  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-0 max-h-[41dvh] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+        {/* COntrol Grid - match height to left panel  */}
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-0 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
           <legend
             className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
             ref={spanRef}
@@ -210,7 +210,7 @@ export default function SettingsPanel() {
           <Label
             htmlFor="toggleZones"
             className="text-lg font-light"
-            title="Toggle Glyph Zones ID on Audio Play Indicator?"
+            title="Toggle Glyph Zones ID ? Scroll on bottom editor to trigger if it's not visible..."
           >
             Show Glyph Zones
           </Label>
