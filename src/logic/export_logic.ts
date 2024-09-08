@@ -1,7 +1,7 @@
-import { kMaxBrightness, kTimeStepMilis } from "@/lib/consts";
-import { GlyphBlock, GlyphStore } from "@/lib/glyph_model";
-import { convertArrayToObjects } from "@/lib/helpers";
-import pako from "pako";
+import { kMaxBrightness, kTimeStepMilis } from '@/lib/consts';
+import { GlyphBlock, GlyphStore } from '@/lib/glyph_model';
+import { convertArrayToObjects } from '@/lib/helpers';
+import pako from 'pako';
 
 export function processEdits(csv: string): string | null {
   try {
@@ -10,9 +10,7 @@ export function processEdits(csv: string): string | null {
     const compressedData = pako.deflate(csv, { level: 9 });
 
     // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below!
-    const base64Data = btoa(
-      String.fromCharCode(...new Uint8Array(compressedData))
-    );
+    const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData)));
 
     // console.warn(`data:${csv}\nbase64Encoded:\n${base64Data}`);
 
@@ -23,9 +21,7 @@ export function processEdits(csv: string): string | null {
   }
 }
 
-export function restoreAppGlyphData(
-  base64DataArr: string[]
-): GlyphStore | undefined {
+export function restoreAppGlyphData(base64DataArr: string[]): GlyphStore | undefined {
   function decodeBase64(base64: string): Uint8Array {
     const binaryString = window.atob(base64);
     const len = binaryString.length;
@@ -38,21 +34,21 @@ export function restoreAppGlyphData(
     return bytes;
   }
   function cleanBase64String(base64String: string) {
-    return base64String.replace(/[^A-Za-z0-9+/=]/g, "");
+    return base64String.replace(/[^A-Za-z0-9+/=]/g, '');
   }
 
   try {
     // to binary
     const binaryData = decodeBase64(cleanBase64String(base64DataArr[0]));
 
-    let decompressedData = pako.inflate(binaryData, { to: "string" });
+    let decompressedData = pako.inflate(binaryData, { to: 'string' });
 
     // try 2nd regex result to hit
     if (!decompressedData) {
-      console.log("Info: 1st import strategy failed, trying the 2nd one...");
+      console.log('Info: 1st import strategy failed, trying the 2nd one...');
       const binaryData = decodeBase64(cleanBase64String(base64DataArr[1]));
 
-      decompressedData = pako.inflate(binaryData, { to: "string" });
+      decompressedData = pako.inflate(binaryData, { to: 'string' });
     }
 
     return actuallyRestoreGlyphData(decompressedData);
@@ -68,14 +64,14 @@ export function actuallyRestoreGlyphData(csvString: string): GlyphStore {
   function csvStringToNumberArray(csvString: string): number[][] {
     return csvString
       .trim()
-      .split("\n")
+      .split('\n')
       .map((row) =>
         row
-          .split(",")
-          .filter((cell) => cell.trim() !== "") // Remove empty cells resulting from trailing commas
+          .split(',')
+          .filter((cell) => cell.trim() !== '') // Remove empty cells resulting from trailing commas
           .map((cell) => {
             const trimmedCell = cell.trim();
-            return trimmedCell !== "" ? parseInt(trimmedCell, 10) : 0;
+            return trimmedCell !== '' ? parseInt(trimmedCell, 10) : 0;
           })
       );
   }
@@ -128,9 +124,7 @@ export function generateEffectData(
       } else {
         // fade out
         const decreaseFactor = brightness / halfIterLimit;
-        return smoothCalculation(
-          brightness - decreaseFactor * (iterCount - halfIterLimit)
-        );
+        return smoothCalculation(brightness - decreaseFactor * (iterCount - halfIterLimit));
       }
     }
     case 5: {
@@ -142,9 +136,7 @@ export function generateEffectData(
     case 6: {
       // CHAOSSSS!
       const randomness = Math.random();
-      const spikeFactor = Math.sin(
-        (Math.PI * randomness * iterCount) / iterLimit
-      );
+      const spikeFactor = Math.sin((Math.PI * randomness * iterCount) / iterLimit);
       const intensity = brightness * spikeFactor;
 
       //Random decision maker attempt
@@ -163,18 +155,14 @@ export function generateEffectData(
       if (iterCount < pulseDuration) {
         return smoothCalculation(brightness * (iterCount / pulseDuration));
       } else if (iterCount < 2 * pulseDuration) {
-        return smoothCalculation(
-          brightness * (1 - (iterCount - pulseDuration) / pulseDuration)
-        );
+        return smoothCalculation(brightness * (1 - (iterCount - pulseDuration) / pulseDuration));
       } else if (iterCount < 3 * pulseDuration) {
         return smoothCalculation(
           brightness * 0.5 * ((iterCount - 2 * pulseDuration) / pulseDuration)
         );
       } else if (iterCount < 4 * pulseDuration) {
         return smoothCalculation(
-          brightness *
-            0.5 *
-            (1 - (iterCount - 3 * pulseDuration) / pulseDuration)
+          brightness * 0.5 * (1 - (iterCount - 3 * pulseDuration) / pulseDuration)
         );
       } else {
         return 0;
@@ -250,9 +238,7 @@ export function generateCSV(
     for (let j = 0; j < data[i].length; j++) {
       const curr = data[i][j];
       const startTimeIdx = Math.floor(curr.startTimeMilis / kTimeStepMilis);
-      const endTimeIdx = Math.floor(
-        (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
-      );
+      const endTimeIdx = Math.floor((curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis);
       // const iterLimit = endTimeIdx - startTimeIdx;
       for (let z = startTimeIdx; z < endTimeIdx; z++) {
         const iterCount = z - startTimeIdx;
@@ -275,7 +261,7 @@ export function generateCSV(
 
   // Create CSV string
   // Having a comma at the end versus not having it, dont seem to make a difference?
-  const csvContent = intervals.join(",\r\n") + ","; //extra comma for last line end
+  const csvContent = intervals.join(',\r\n') + ','; //extra comma for last line end
 
   return csvContent;
 }

@@ -4,7 +4,9 @@
 
 @font-face {
   font-family: 'ndot';
-  src: local('ndot'), url(./fonts/ndot.otf) format('opentype');
+  src:
+    local('ndot'),
+    url(./fonts/ndot.otf) format('opentype');
 }
 
 .neon {
@@ -15,36 +17,46 @@
     0 0 50px rgb(203, 255, 255);
 }
 
-.flicker-slow{
+.flicker-slow {
   animation: flicker 3s linear infinite;
 }
 
-.flicker-vslow{
+.flicker-vslow {
   animation: flicker 5s linear infinite;
 }
 
-.flicker-fast{
+.flicker-fast {
   animation: flicker 1s linear infinite;
 }
 
 @keyframes flicker {
-	0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
-    opacity: .99;
-		
-	}
-	20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
-		opacity: 0.4;
-	}
+  0%,
+  19.999%,
+  22%,
+  62.999%,
+  64%,
+  64.999%,
+  70%,
+  100% {
+    opacity: 0.99;
+  }
+  20%,
+  21.999%,
+  63%,
+  63.999%,
+  65%,
+  69.999% {
+    opacity: 0.4;
+  }
 }
 
-#root{
+#root {
   max-width: 1920px;
   box-shadow: 1px -2px 97px 7px rgba(89, 89, 89, 0.67);
   -webkit-box-shadow: 1px -2px 97px 7px rgba(31, 31, 31, 0.67);
   -moz-box-shadow: 1px -2px 97px 7px rgba(40, 40, 40, 0.67);
   margin: 0 auto;
 }
-
 
 @layer base {
   :root {
@@ -74,7 +86,6 @@
     --chart-5: 340 75% 55%;
 
     --radius: 0.5rem;
-
   }
 
   .dark {
@@ -104,8 +115,6 @@
     --chart-5: 340 75% 55%;
   }
 }
-
-
 
 @layer base {
   * {
