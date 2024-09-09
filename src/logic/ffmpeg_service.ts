@@ -70,7 +70,7 @@ class FFmpegService {
     const composer = phoneInfo.composer;
 
     const album = phoneInfo.album;
-    const custom1 = phoneInfo.custom1;
+    const custom1 = dataStore.get('exportCustom1');
     const custom2 = phoneInfo.custom2;
 
     const outputFileName = `glyph_tone_${getDateTime()}.ogg`;

@@ -124,3 +124,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.checkbox-round {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  vertical-align: middle;
+  border: 1px solid #ddd;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.checkbox-round:checked {
+  background-color: red;
+}

@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useFilePicker } from 'use-file-picker';
 import { FileTypeValidator } from 'use-file-picker/validators';
 import ffmpegService from './logic/ffmpeg_service';
-import { generateCSV, processEdits, restoreAppGlyphData } from './logic/export_logic';
+import {
+  generateCSV,
+  encodeStuffTheWayNothingLikesIt,
+  restoreAppGlyphData
+} from './logic/export_logic';
 import { Button } from './components/ui/button';
 import InstructionComponent from './components/timeline/instructions';
 import SaveDialog from './components/controls/save_dialog';
@@ -339,7 +343,7 @@ export default function App() {
 
   async function onSaveButtonClick() {
     const inputFile = plainFiles[0];
-    const processedEditData = processEdits(
+    const processedEditData = encodeStuffTheWayNothingLikesIt(
       generateCSV(timelineData, dataStore.get('currentAudioDurationInMilis') as number)
     );
     if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {

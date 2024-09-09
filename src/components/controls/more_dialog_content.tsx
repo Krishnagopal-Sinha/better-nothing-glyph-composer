@@ -24,6 +24,7 @@ import { showError } from '@/lib/helpers';
 import useGlobalAppStore from '@/lib/timeline_state';
 import { useState } from 'react';
 import dataStore from '@/lib/data_store';
+import WaterMarkerComponent from './watermark';
 
 export default function SettingDialogContent({ dialogContentIdx }: { dialogContentIdx: number }) {
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -199,6 +200,32 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
             </Button>
             <Button onClick={onGenerateClick}>Generate</Button>
           </DialogFooter>
+        </DialogContent>
+      );
+
+    // case 2
+    // Embed watermark
+    case 2:
+      return (
+        <DialogContent className="sm:max-w-[700px] dontClose">
+          <DialogHeader>
+            <DialogTitle>
+              Embed <span className="font-[ndot]">YOUR</span> Custom Watermark
+            </DialogTitle>
+            <DialogDescription>
+              You put in the efforts, you should get to sign it a&nbsp;
+              <span className="font-[ndot]">100%</span> <br />
+              [This can be seen in official composer's audio preview screen at the bottom]
+            </DialogDescription>
+          </DialogHeader>
+          <WaterMarkerComponent
+            cancelButton={
+              <Button variant="destructive" onClick={() => setIsSettingsDialogOpen(false)}>
+                Cancel
+              </Button>
+            }
+            applyAction={() => setIsSettingsDialogOpen(false)}
+          />
         </DialogContent>
       );
 

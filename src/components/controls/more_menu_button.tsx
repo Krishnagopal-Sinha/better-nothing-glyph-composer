@@ -93,6 +93,15 @@ export default function MoreMenuButton() {
                   Generate Glyphs (Advanced)
                 </MenubarItem>
 
+                <MenubarItem
+                  onClick={() => {
+                    setIsSettingsDialogOpen(true);
+                    setDialogContentIndex(2);
+                  }}
+                >
+                  Embed Custom Watermark&nbsp;<span className="font-[ndot]">;)</span>
+                </MenubarItem>
+
                 <MenubarItem onClick={onImportGlyphClick}>Import Glyph Data</MenubarItem>
                 <MenubarItem onClick={onExportGlyphClick}>
                   Export Project (.json) | BNGC

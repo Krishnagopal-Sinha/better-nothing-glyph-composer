@@ -3,11 +3,11 @@ import { GlyphBlock, GlyphStore } from '@/lib/glyph_model';
 import { convertArrayToObjects } from '@/lib/helpers';
 import pako from 'pako';
 
-export function processEdits(csv: string): string | null {
+export function encodeStuffTheWayNothingLikesIt(input: string): string | null {
   try {
     // const utf8Encoded = new TextEncoder().encode(csv); //No need as Pako does this outta the box
 
-    const compressedData = pako.deflate(csv, { level: 9 });
+    const compressedData = pako.deflate(input, { level: 9 });
 
     // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below | can't directly do a simple, const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData))); as thanks to spread operator for big uInt8Arr it'll throw below error!
     // Bug Fix: Convert Uint8Array to string in chunks to avoid "maximum call stack size exceeded" error
