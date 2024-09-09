@@ -65,7 +65,10 @@ Props) {
           />
         )}
 
-        <div className="max-h-[30dvh] [@media(min-width:1920px)]:min-h-max overflow-auto">
+        <div
+          id="select-container"
+          className="max-h-[30dvh] [@media(min-width:1920px)]:min-h-max overflow-auto"
+        >
           {TimelineRows()}
         </div>
       </div>
@@ -74,7 +77,6 @@ Props) {
 
   function TimelineRows() {
     const timelineRows: React.ReactNode[] = [];
-
 
     for (let i = 0; i < numberOfRowsToGenerate; i++) {
       timelineRows.push(

@@ -18,6 +18,7 @@ import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
 import { showError, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
+import Selecto from 'react-selecto';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
@@ -49,6 +50,8 @@ export default function App() {
   const copyItems = useGlobalAppStore((state) => state.copyItems);
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
+  const selectItems = useGlobalAppStore((state) => state.selectItems);
+
   const {
     undo,
     redo,
@@ -306,6 +309,20 @@ export default function App() {
           timelineData={timelineData}
           // currentAudioPosition={currentPosition}
         >
+          <Selecto
+            container={document.getElementById('select-container')}
+            selectableTargets={['.target-block']}
+            selectFromInside={false}
+            selectByClick={true}
+            continueSelect={false}
+            continueSelectWithoutDeselect={true}
+            toggleContinueSelect={'shift'}
+            toggleContinueSelectWithoutDeselect={[['ctrl'], ['meta']]}
+            hitRate={0}
+            onSelectEnd={(e) => {
+              selectItems(e.selected.map((element) => element.getAttribute('data-id')) as string[]);
+            }}
+          />
           <AudioControlComponent
             onCloseButtonClicked={onCloseButtonClick}
             isSaving={isSaving}

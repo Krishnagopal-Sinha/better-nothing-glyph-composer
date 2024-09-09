@@ -90,16 +90,17 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           }\nStarting Brightness: ${((glyphItem.effectData[0] / kMaxBrightness) * 100).toFixed(
             2
           )}%`}
-          onClick={(e) => {
-            e.preventDefault();
-            // Toggle Selection
-            if (glyphItem.isSelected) {
-              selectItem(glyphItem, false);
-            } else {
-              selectItem(glyphItem, true);
-            }
-          }}
-          className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-[rgb(57,57,57)] text-black
+          // onClick={(e) => {
+          //   e.preventDefault();
+          //   // Toggle Selection
+          //   if (glyphItem.isSelected) {
+          //     selectItem(glyphItem, false);
+          //   } else {
+          //     selectItem(glyphItem, true);
+          //   }
+          // }}
+          data-id={glyphItem.id}
+          className={`target-block h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-[rgb(57,57,57)] text-black
              hover:shadow-[0px_0px_15px_1px_#ffffff] duration-200
             ${
               glyphItem.isSelected ? 'outline outline-red-500 outline-[3px]' : ''

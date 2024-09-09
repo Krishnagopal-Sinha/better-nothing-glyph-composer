@@ -67,6 +67,7 @@ export type Action = {
   changePhoneModel: (phoneType: string) => void;
   fillEntireZone: (startGlyphId: number, endGlyphId: number, startTimeMilis: number) => void;
   generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => void;
+  selectItems: (itemsToSelect: string[]) => void;
 
   // Settings
   toggleKeyboardGesture: (value?: boolean) => void;
@@ -789,15 +790,20 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       selectInCurrentPosition: () => {
         const items = get().items;
         const selectedItems = { ...items };
-        const currentAudioPositionInMilis:number = dataStore.get("currentAudioPositionInMilis") ?? 0;
+        const currentAudioPositionInMilis: number =
+          dataStore.get('currentAudioPositionInMilis') ?? 0;
 
-        for (let i = 0;  i < Object.keys(selectedItems).length; i++) {
+        for (let i = 0; i < Object.keys(selectedItems).length; i++) {
           for (let j = 0; j < selectedItems[i].length; j++) {
             const startPosition = selectedItems[i][j].startTimeMilis;
-            const endPosition = selectedItems[i][j].startTimeMilis + selectedItems[i][j].durationMilis;
+            const endPosition =
+              selectedItems[i][j].startTimeMilis + selectedItems[i][j].durationMilis;
 
-            if(currentAudioPositionInMilis >= startPosition && currentAudioPositionInMilis <= endPosition) {
-                selectedItems[i][j].isSelected = true;
+            if (
+              currentAudioPositionInMilis >= startPosition &&
+              currentAudioPositionInMilis <= endPosition
+            ) {
+              selectedItems[i][j].isSelected = true;
             }
           }
         }
@@ -875,6 +881,21 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             }
           }
         }
+        set({ items: updatedItems });
+      },
+      // optimized multi selection with only ids
+      selectItems: (itemsToSelect: string[]) => {
+        const { items } = get();
+        const updatedItems = { ...items };
+        Object.values(updatedItems).forEach((itemList) => {
+          itemList.forEach((item) => {
+            if (itemsToSelect.includes(item.id)) {
+              item.isSelected = true;
+            } else {
+              item.isSelected = false;
+            }
+          });
+        });
         set({ items: updatedItems });
       }
     }),
