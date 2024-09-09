@@ -13,13 +13,15 @@ type Props = {
     [key: number]: GlyphBlock[];
   };
   editorRef: React.Ref<HTMLDivElement>;
+  selectoRef: React.Ref<HTMLDivElement>;
   children: React.ReactNode;
 };
 
 export function EditorComponent({
   timelineData,
   children,
-  editorRef
+  editorRef,
+  selectoRef
 }: // currentAudioPosition,
 Props) {
   const addItem = useGlobalAppStore((state) => state.addItem);
@@ -34,6 +36,7 @@ Props) {
 
   // label feat.
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    selectoRef.current.checkScroll();
     const scrollX = e.currentTarget.scrollLeft;
     dataStore.set('editorScrollX', scrollX);
     if (!isZoneVisible) return;

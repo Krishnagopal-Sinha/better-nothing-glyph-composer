@@ -44,6 +44,7 @@ export default function App() {
   );
   const removeSelectedItem = useGlobalAppStore((state) => state.removeSelectedItem);
   const toggleMultiSelect = useGlobalAppStore((state) => state.toggleMultiSelect);
+  const isMultiSelectActive = useGlobalAppStore((state) => state.appSettings.isMultiSelectActive);
   const selectAllItems = useGlobalAppStore((state) => state.selectAll);
   const selectInCurrentPosition = useGlobalAppStore((state) => state.selectInCurrentPosition);
   const importJsonData = useGlobalAppStore((state) => state.importJsonData);
@@ -61,6 +62,7 @@ export default function App() {
   } = useTemporalStore((state) => state);
   // Scroll ref for scrolling editor
   const editorRef = useRef<HTMLDivElement>(null);
+  const selectoRef = useRef(null);
   // Input file
   const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
   const { openFilePicker, filesContent, errors, plainFiles, clear } = useFilePicker({
@@ -140,13 +142,13 @@ export default function App() {
     }
     // Toggle multi select to on when shift is pressed down
     function onShiftKeyDown(e: KeyboardEvent) {
-      if (e.shiftKey) {
+      if (e.shiftKey && !isMultiSelectActive) {
         toggleMultiSelect(true);
       }
     }
     // Toggle multi select to off when shift is pressed down
     function onShiftKeyUp(e: KeyboardEvent) {
-      if (e.key === 'Shift') {
+      if (e.key === 'Shift' && isMultiSelectActive) {
         toggleMultiSelect(false);
       }
     }
@@ -241,6 +243,7 @@ export default function App() {
     isInputLoaded,
     removeSelectedItem,
     toggleMultiSelect,
+    isMultiSelectActive,
     selectAllItems,
     selectInCurrentPosition,
     copyItems,
@@ -307,9 +310,11 @@ export default function App() {
         <EditorComponent
           editorRef={editorRef}
           timelineData={timelineData}
+          selectoRef={selectoRef}
           // currentAudioPosition={currentPosition}
         >
           <Selecto
+            ref={selectoRef}
             container={document.getElementById('select-container')}
             selectableTargets={['.target-block']}
             selectFromInside={false}
@@ -321,6 +326,14 @@ export default function App() {
             hitRate={0}
             onSelectEnd={(e) => {
               selectItems(e.selected.map((element) => element.getAttribute('data-id')) as string[]);
+            }}
+            onScroll={(e) => {
+              editorRef.current.scrollBy(e.direction[0] * 10, e.direction[1] * 10);
+            }}
+            scrollOptions={{
+              container: editorRef.current,
+              throttleTime: 30,
+              threshold: 0
             }}
           />
           <AudioControlComponent
