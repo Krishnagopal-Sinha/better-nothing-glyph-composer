@@ -18,7 +18,7 @@ import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
 import { showError, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
-import Selecto from 'react-selecto';
+
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
@@ -51,7 +51,6 @@ export default function App() {
   const copyItems = useGlobalAppStore((state) => state.copyItems);
   const cutItems = useGlobalAppStore((state) => state.cutItems);
   const pasteItems = useGlobalAppStore((state) => state.pasteItems);
-  const selectItems = useGlobalAppStore((state) => state.selectItems);
 
   const {
     undo,
@@ -62,7 +61,6 @@ export default function App() {
   } = useTemporalStore((state) => state);
   // Scroll ref for scrolling editor
   const editorRef = useRef<HTMLDivElement>(null);
-  const selectoRef = useRef(null);
   // Input file
   const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
   const { openFilePicker, filesContent, errors, plainFiles, clear } = useFilePicker({
@@ -310,32 +308,8 @@ export default function App() {
         <EditorComponent
           editorRef={editorRef}
           timelineData={timelineData}
-          selectoRef={selectoRef}
           // currentAudioPosition={currentPosition}
         >
-          <Selecto
-            ref={selectoRef}
-            container={document.getElementById('select-container')}
-            selectableTargets={['.target-block']}
-            selectFromInside={false}
-            selectByClick={true}
-            continueSelect={false}
-            continueSelectWithoutDeselect={true}
-            toggleContinueSelect={'shift'}
-            toggleContinueSelectWithoutDeselect={[['ctrl'], ['meta']]}
-            hitRate={0}
-            onSelectEnd={(e) => {
-              selectItems(e.selected.map((element) => element.getAttribute('data-id')) as string[]);
-            }}
-            onScroll={(e) => {
-              editorRef.current.scrollBy(e.direction[0] * 10, e.direction[1] * 10);
-            }}
-            scrollOptions={{
-              container: editorRef.current,
-              throttleTime: 30,
-              threshold: 0
-            }}
-          />
           <AudioControlComponent
             onCloseButtonClicked={onCloseButtonClick}
             isSaving={isSaving}

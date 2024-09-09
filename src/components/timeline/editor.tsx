@@ -5,6 +5,8 @@ import dataStore from '@/lib/data_store';
 import { GlyphBlock } from '@/lib/glyph_model';
 import BPMSnapGridLinesComponent from './bpmGridLines';
 import HeavyTimelineBlock from '@/logic/hc_tb';
+import Selecto from 'react-selecto';
+import { useRef } from 'react';
 
 type Props = {
   // currentAudioPosition: number;
@@ -20,8 +22,7 @@ type Props = {
 export function EditorComponent({
   timelineData,
   children,
-  editorRef,
-  selectoRef
+  editorRef
 }: // currentAudioPosition,
 Props) {
   const addItem = useGlobalAppStore((state) => state.addItem);
@@ -33,6 +34,8 @@ Props) {
   const numberOfRowsToGenerate = Object.keys(itemsSchema).length;
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
   const showHeavyUi = useGlobalAppStore((state) => state.appSettings.showHeavyUi);
+  const selectItems = useGlobalAppStore((state) => state.selectItems);
+  const selectoRef = useRef(null);
 
   // label feat.
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -72,6 +75,30 @@ Props) {
           id="select-container"
           className="max-h-[30dvh] [@media(min-width:1920px)]:min-h-max overflow-auto"
         >
+          <Selecto
+            ref={selectoRef}
+            container={document.getElementById('select-container')}
+            dragContainer={document.getElementById('select-container')}
+            selectableTargets={['.target-block']}
+            selectFromInside={false}
+            selectByClick={true}
+            continueSelect={false}
+            continueSelectWithoutDeselect={true}
+            toggleContinueSelect={'shift'}
+            toggleContinueSelectWithoutDeselect={[['ctrl'], ['meta']]}
+            hitRate={0}
+            onSelectEnd={(e) => {
+              selectItems(e.selected.map((element) => element.getAttribute('data-id')) as string[]);
+            }}
+            onScroll={(e) => {
+              editorRef.current.scrollBy(e.direction[0] * 10, e.direction[1] * 10);
+            }}
+            scrollOptions={{
+              container: editorRef.current,
+              throttleTime: 30,
+              threshold: 0
+            }}
+          />
           {TimelineRows()}
         </div>
       </div>
