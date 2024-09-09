@@ -789,7 +789,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
       selectInCurrentPosition: () => {
         const items = get().items;
         const selectedItems = { ...items };
-        const currentAudioPositionInMilis = dataStore.get("currentAudioPositionInMilis") ?? 0;
+        const currentAudioPositionInMilis:number = dataStore.get("currentAudioPositionInMilis") ?? 0;
 
         for (let i = 0;  i < Object.keys(selectedItems).length; i++) {
           for (let j = 0; j < selectedItems[i].length; j++) {
