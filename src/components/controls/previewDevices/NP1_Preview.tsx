@@ -1,11 +1,6 @@
-import { KDefaultPreviewGlyphFillColor } from "@/lib/consts";
+import { KDefaultPreviewGlyphFillColor } from '@/lib/consts';
 
-
-export default function NP1_5_Preview({
-  zoneColors,
-}: {
-  zoneColors: string[];
-}) {
+export default function NP1_5_Preview({ zoneColors }: { zoneColors: string[] }) {
   return (
     <svg
       version="1.1"

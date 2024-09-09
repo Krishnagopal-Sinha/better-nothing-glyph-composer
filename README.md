@@ -66,8 +66,9 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 
 Contributions are welcomed! Feel free to open issues or submit pull requests.
 
-## 🙌 Credits 
-- Special thanks to the amazing contributors behind [custom-nothing-glyph-tools](https://github.com/SebiAi/custom-nothing-glyph-tools)! For their comprehensive technical documentation. It guided me through the process and demystified the magic behind Nothing Glyphs! 🚀 
+## 🙌 Credits
+
+- Special thanks to the amazing contributors behind [custom-nothing-glyph-tools](https://github.com/SebiAi/custom-nothing-glyph-tools)! For their comprehensive technical documentation. It guided me through the process and demystified the magic behind Nothing Glyphs! 🚀
 - A huge thank you to SebiAi (creator of the above) for generously dedicating time to checkout and test my project. His feedback and support were invaluable! 🙏🎉
 
 ## 📄 License
@@ -76,7 +77,7 @@ This project is licensed under the GNU General Public License v3.0.
 
 ---
 
-Happy Composing! 🎵✨ 
+Happy Composing! 🎵✨
 Disclaimer: I am not affiliated with Nothing. This is just a personal hobby project.
 
 ---
@@ -89,9 +90,9 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 ## TODO:
 
--[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture 
+-[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture
 
--[ ] Read glyph data from input ogg files
+-[X] Read glyph data from input ogg files
 
 -[ ] Solve existing github issues
 
@@ -103,6 +104,8 @@ _Made with ❤️ by Krishnagopal Sinha_
 
 -[ ] Fix Timeline preview in composer or make it empty ish or somthing?
 
--[ ] UI Refresh :eyes:
+-[X] UI Refresh :eyes:
+
+-[X] Add audio beat map / waveform
 
 -[ ] Add visualizer or would that just slow the website down ?

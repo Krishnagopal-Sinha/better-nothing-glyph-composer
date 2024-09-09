@@ -1,17 +1,28 @@
-import { kMaxBrightness, kTimeStepMilis } from "@/lib/consts";
-import { GlyphBlock } from "@/lib/glyph_model";
-import pako from "pako";
+import { kMaxBrightness, kTimeStepMilis } from '@/lib/consts';
+import { GlyphBlock, GlyphStore } from '@/lib/glyph_model';
+import { convertArrayToObjects } from '@/lib/helpers';
+import pako from 'pako';
 
-export function processEdits(csv: string): string | null {
+export function encodeStuffTheWayNothingLikesIt(input: string): string | null {
   try {
-    // const utf8Encoded = new TextEncoder().encode(csv);
+    // const utf8Encoded = new TextEncoder().encode(csv); //No need as Pako does this outta the box
 
-    const compressedData = pako.deflate(csv, { level: 9 });
+    const compressedData = pako.deflate(input, { level: 9 });
 
-    // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below!
-    const base64Data = btoa(
-      String.fromCharCode(...new Uint8Array(compressedData))
-    );
+    // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below | can't directly do a simple, const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData))); as thanks to spread operator for big uInt8Arr it'll throw below error!
+    // Bug Fix: Convert Uint8Array to string in chunks to avoid "maximum call stack size exceeded" error
+    const uint8Array = new Uint8Array(compressedData);
+    let binaryString = '';
+    const chunkSize = 0x8000; // Process in chunks of 32KB
+
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      binaryString += String.fromCharCode.apply(
+        null,
+        Array.from(uint8Array.subarray(i, i + chunkSize))
+      );
+    }
+
+    const base64Data = btoa(binaryString);
 
     // console.warn(`data:${csv}\nbase64Encoded:\n${base64Data}`);
 
@@ -20,6 +31,65 @@ export function processEdits(csv: string): string | null {
     console.error(`Error: while processing final glyph data -> ${error}`);
     return null;
   }
+}
+
+export function restoreAppGlyphData(base64DataArr: string[]): GlyphStore | undefined {
+  function decodeBase64(base64: string): Uint8Array {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    return bytes;
+  }
+  function cleanBase64String(base64String: string) {
+    return base64String.replace(/[^A-Za-z0-9+/=]/g, '');
+  }
+
+  try {
+    // to binary
+    const binaryData = decodeBase64(cleanBase64String(base64DataArr[0]));
+
+    let decompressedData = pako.inflate(binaryData, { to: 'string' });
+
+    // try 2nd regex result to hit
+    if (!decompressedData) {
+      console.log('Info: 1st import strategy failed, trying the 2nd one...');
+      const binaryData = decodeBase64(cleanBase64String(base64DataArr[1]));
+
+      decompressedData = pako.inflate(binaryData, { to: 'string' });
+    }
+
+    return actuallyRestoreGlyphData(decompressedData);
+  } catch (error) {
+    console.error(`Error: while decompressing glyph data -> ${error}`);
+  }
+  return;
+}
+
+export function actuallyRestoreGlyphData(csvString: string): GlyphStore {
+  // convert into arr[][]
+
+  function csvStringToNumberArray(csvString: string): number[][] {
+    return csvString
+      .trim()
+      .split('\n')
+      .map((row) =>
+        row
+          .split(',')
+          .filter((cell) => cell.trim() !== '') // Remove empty cells resulting from trailing commas
+          .map((cell) => {
+            const trimmedCell = cell.trim();
+            return trimmedCell !== '' ? parseInt(trimmedCell, 10) : 0;
+          })
+      );
+  }
+  const csv = csvStringToNumberArray(csvString);
+
+  return convertArrayToObjects(csv, 3);
 }
 
 export function generateEffectData(
@@ -66,9 +136,7 @@ export function generateEffectData(
       } else {
         // fade out
         const decreaseFactor = brightness / halfIterLimit;
-        return smoothCalculation(
-          brightness - decreaseFactor * (iterCount - halfIterLimit)
-        );
+        return smoothCalculation(brightness - decreaseFactor * (iterCount - halfIterLimit));
       }
     }
     case 5: {
@@ -80,9 +148,7 @@ export function generateEffectData(
     case 6: {
       // CHAOSSSS!
       const randomness = Math.random();
-      const spikeFactor = Math.sin(
-        (Math.PI * randomness * iterCount) / iterLimit
-      );
+      const spikeFactor = Math.sin((Math.PI * randomness * iterCount) / iterLimit);
       const intensity = brightness * spikeFactor;
 
       //Random decision maker attempt
@@ -101,18 +167,14 @@ export function generateEffectData(
       if (iterCount < pulseDuration) {
         return smoothCalculation(brightness * (iterCount / pulseDuration));
       } else if (iterCount < 2 * pulseDuration) {
-        return smoothCalculation(
-          brightness * (1 - (iterCount - pulseDuration) / pulseDuration)
-        );
+        return smoothCalculation(brightness * (1 - (iterCount - pulseDuration) / pulseDuration));
       } else if (iterCount < 3 * pulseDuration) {
         return smoothCalculation(
           brightness * 0.5 * ((iterCount - 2 * pulseDuration) / pulseDuration)
         );
       } else if (iterCount < 4 * pulseDuration) {
         return smoothCalculation(
-          brightness *
-            0.5 *
-            (1 - (iterCount - 3 * pulseDuration) / pulseDuration)
+          brightness * 0.5 * (1 - (iterCount - 3 * pulseDuration) / pulseDuration)
         );
       } else {
         return 0;
@@ -188,28 +250,30 @@ export function generateCSV(
     for (let j = 0; j < data[i].length; j++) {
       const curr = data[i][j];
       const startTimeIdx = Math.floor(curr.startTimeMilis / kTimeStepMilis);
-      const endTimeIdx = Math.floor(
-        (curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis
-      );
-
+      const endTimeIdx = Math.floor((curr.startTimeMilis + curr.durationMilis) / kTimeStepMilis);
+      // const iterLimit = endTimeIdx - startTimeIdx;
       for (let z = startTimeIdx; z < endTimeIdx; z++) {
         const iterCount = z - startTimeIdx;
-        const iterLimit = endTimeIdx - startTimeIdx;
-        const brightnessValue = generateEffectData(
-          curr.effectId,
-          curr.startingBrightness,
-          iterCount,
-          iterLimit
-        );
+        // Use below if you wanna recreate/revalidate effect from some reason - probably has stopped working cuz of changes done
+        // const brightnessValue = generateEffectData(
+        //   curr.effectId,
+        //   curr.startingBrightness,
+        //   iterCount,
+        //   iterLimit
+        // );
+        // using precomputed values
+        const brightnessValue = curr.effectData[iterCount];
 
-        intervals[z][i] = brightnessValue;
+        // Bug temp fix, few old ogg making interval become undefined, hekk cuz ending might just go over ending.
+        if (!intervals[z]) intervals[z] = [...emptyRow];
+        intervals[z][i] = brightnessValue ?? 0;
       }
     }
   }
 
   // Create CSV string
   // Having a comma at the end versus not having it, dont seem to make a difference?
-  const csvContent = intervals.join(",\r\n") + ","; //extra comma for last line end
+  const csvContent = intervals.join(',\r\n') + ','; //extra comma for last line end
 
   return csvContent;
 }

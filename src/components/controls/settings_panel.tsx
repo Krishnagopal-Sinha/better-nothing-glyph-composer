@@ -1,69 +1,56 @@
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import DeviceChoiceComponent from "./device_choice";
-import dataStore from "@/lib/data_store";
-import { useGlobalAudioPlayer } from "react-use-audio-player";
-import useGlobalAppStore from "@/lib/timeline_state";
-import { showError } from "@/lib/helpers";
-import { kMaxBrightness } from "@/lib/consts";
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import DeviceChoiceComponent from './device_choice';
+import dataStore from '@/lib/data_store';
+import useGlobalAppStore from '@/lib/timeline_state';
+import { showError } from '@/lib/helpers';
+import { kMaxBrightness } from '@/lib/consts';
+import { useRef } from 'react';
 
 export default function SettingsPanel() {
-  const { setRate, duration } = useGlobalAudioPlayer();
+  const spanRef = useRef<HTMLLegendElement>(null);
 
   // get settings
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
   );
-  const isMultiSelectActive = useGlobalAppStore(
-    (state) => state.appSettings.isMultiSelectActive
-  );
-  const showAudioTimeStamp = useGlobalAppStore(
-    (state) => state.appSettings.showAudioTimeStamp
-  );
-  const snapToBpmActive = useGlobalAppStore(
-    (state) => state.appSettings.snapToBpmActive
-  );
-  const snapSensitivity = useGlobalAppStore(
-    (state) => state.appSettings.snapSensitivity
-  );
-  const alsoSnapDuration = useGlobalAppStore(
-    (state) => state.appSettings.alsoSnapDuration
-  );
+  const isMultiSelectActive = useGlobalAppStore((state) => state.appSettings.isMultiSelectActive);
+  const showAudioTimeStamp = useGlobalAppStore((state) => state.appSettings.showAudioTimeStamp);
+  const snapToBpmActive = useGlobalAppStore((state) => state.appSettings.snapToBpmActive);
+  const isZoneVisible = useGlobalAppStore((state) => state.appSettings.isZoneVisible);
+  const snapSensitivity = useGlobalAppStore((state) => state.appSettings.snapSensitivity);
+  const alsoSnapDuration = useGlobalAppStore((state) => state.appSettings.alsoSnapDuration);
   const bpmValue = useGlobalAppStore((state) => state.appSettings.bpmValue);
-  const toggleShowAudioTimeStamp = useGlobalAppStore(
-    (state) => state.toggleShowAudioTimeStamp
-  );
-  const toggleKeyboardGesture = useGlobalAppStore(
-    (state) => state.toggleKeyboardGesture
-  );
-  const toggleMultiSelect = useGlobalAppStore(
-    (state) => state.toggleMultiSelect
-  );
+  const showHeavyUi = useGlobalAppStore((state) => state.appSettings.showHeavyUi);
+  const toggleShowAudioTimeStamp = useGlobalAppStore((state) => state.toggleShowAudioTimeStamp);
+  const toggleKeyboardGesture = useGlobalAppStore((state) => state.toggleKeyboardGesture);
+  const toggleMultiSelect = useGlobalAppStore((state) => state.toggleMultiSelect);
   const toggleAlsoSnapBlockDuration = useGlobalAppStore(
     (state) => state.toggleAlsoSnapBlockDuration
   );
+  const toggleShowShowHeavyUi = useGlobalAppStore((state) => state.toggleShowShowHeavyUi);
   const toggleSnapToBpm = useGlobalAppStore((state) => state.toggleSnapToBpm);
+  const toggleZoneVisibility = useGlobalAppStore((state) => state.toggleZoneVisibility);
+
   const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
-  const setSnapSensitivity = useGlobalAppStore(
-    (state) => state.setSnapSensitivity
-  );
+  const setSnapSensitivity = useGlobalAppStore((state) => state.setSnapSensitivity);
 
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
-    dataStore.set("overwriteBrightnessWithNewBlock", e);
+    dataStore.set('overwriteBrightnessWithNewBlock', e);
   };
   const onBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.currentTarget.value);
-    if (value * 60 > duration) {
+    if (value * 60 > (dataStore.get('currentAudioDurationInMilis') as number)) {
       showError(
-        "Warning!",
-        "The BPM is on the low side, may cause bad experience with Snap to BPM feature. Provided it is on.",
+        'Warning!',
+        'The BPM is on the low side, may cause bad experience with Snap to BPM feature. Provided it is on.',
         1500
       );
     }
     setBpmForSnap(value);
   };
-  
+
   const onSnapSensitivityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.currentTarget.value);
     setSnapSensitivity(value);
@@ -72,52 +59,60 @@ export default function SettingsPanel() {
   const onNewBlockDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Math.round(parseInt(e.currentTarget.value));
     if (value >= 50 && value <= 10000) {
-      dataStore.set("newBlockDurationMilis", value);
+      dataStore.set('newBlockDurationMilis', value);
     } else {
-      showError(
-        "Invalid Value - Glyph Duration",
-        "Should be between 50ms to 10s"
-      );
+      showError('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
     }
   };
 
-  const onNewBlockBrightnessChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const onNewBlockBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Max val -> 4095
     const selectedValue = parseInt(e.currentTarget.value);
     const value = Math.round((selectedValue / 100) * 4095);
     // console.log(value);
     if (selectedValue >= 1 && selectedValue <= 100) {
-      dataStore.set("newBlockBrightness", value);
+      dataStore.set('newBlockBrightness', value);
     } else {
-      showError(
-        "Invalid Value - Glyph Brightness",
-        "Should be between 1% to 100%"
-      );
+      showError('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
     }
   };
 
   const onAudioSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.currentTarget.value);
-    if (value >= 0.5 && value <= 2) {
-      dataStore.set("audioSpeed", value);
+    if (value >= 0.1 && value <= 16) {
+      dataStore.set('audioSpeed', value);
       try {
-        setRate(value);
+        //patch via datastore
+        dataStore.set('playbackSpeed', value);
       } catch (e) {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      showError("Invalid Value - Audio Speed", "Should be between 0.5x to 2x");
+      showError('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
     }
   };
   return (
     <>
       {/* Config panel */}
-      <form className="space-y-2  ">
-        {/* COntrol Grid  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg p-4 overflow-y-scroll h-[270px]">
-          <legend className="-ml-1 px-1 text-sm font-medium">Settings</legend>
+      <form>
+        {/* COntrol Grid - match height to left panel  */}
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-0 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+          <legend
+            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
+            ref={spanRef}
+            onMouseLeave={() => {
+              if (spanRef.current) {
+                spanRef.current.style.textShadow = '';
+              }
+            }}
+            onMouseEnter={() => {
+              if (spanRef.current) {
+                spanRef.current.style.textShadow = '#fff 8px 0 20px';
+              }
+            }}
+          >
+            SETTINGS
+          </legend>
           {/* Configure Device */}
           <Label htmlFor="multiSelect" className="text-lg font-light">
             Device
@@ -132,7 +127,7 @@ export default function SettingsPanel() {
           <Input
             id="newBlockDurationMilis"
             type="number"
-            defaultValue={dataStore.get("newBlockDurationMilis") ?? 500}
+            defaultValue={dataStore.get('newBlockDurationMilis') ?? 500}
             max={10000}
             min={50}
             step={1}
@@ -149,9 +144,7 @@ export default function SettingsPanel() {
             id="newBlockBrightness"
             type="number"
             defaultValue={
-              (((dataStore.get("newBlockBrightness") as number) ?? 3072) /
-                kMaxBrightness) *
-              100
+              (((dataStore.get('newBlockBrightness') as number) ?? 3072) / kMaxBrightness) * 100
             }
             max={100}
             min={1}
@@ -171,10 +164,10 @@ export default function SettingsPanel() {
             onChange={onAudioSpeedChange}
             id="newBlockBrightness"
             type="number"
-            defaultValue={dataStore.get("audioSpeed") ?? 1}
-            max={2}
-            min={0.5}
-            step={0.1}
+            defaultValue={dataStore.get('audioSpeed') ?? 1}
+            max={16}
+            min={0.1}
+            step={0.05}
           />
           {/* MultiSelect */}
           <Label htmlFor="multiSelect" className="text-lg font-light">
@@ -213,6 +206,16 @@ export default function SettingsPanel() {
             checked={showAudioTimeStamp}
           />
 
+          {/* Toggle zones feat. */}
+          <Label
+            htmlFor="toggleZones"
+            className="text-lg font-light"
+            title="Toggle Glyph Zones ID ? Scroll on bottom editor to trigger if it's not visible..."
+          >
+            Show Glyph Zones
+          </Label>
+          <Switch id="toggleZones" onCheckedChange={toggleZoneVisibility} checked={isZoneVisible} />
+
           {/* Snap to BPM feat. */}
           <Label
             htmlFor="snapToBPM"
@@ -221,11 +224,7 @@ export default function SettingsPanel() {
           >
             Snap to BPM
           </Label>
-          <Switch
-            id="snapToBPM"
-            onCheckedChange={toggleSnapToBpm}
-            checked={snapToBpmActive}
-          />
+          <Switch id="snapToBPM" onCheckedChange={toggleSnapToBpm} checked={snapToBpmActive} />
 
           {/* Snap to BPM feat. - allow duration to also snap */}
           <Label
@@ -274,9 +273,23 @@ export default function SettingsPanel() {
             id="snapSens"
             type="number"
             defaultValue={snapSensitivity}
-            max={60}
-            min={1}
+            max={25}
+            min={13}
             step={1}
+          />
+
+          {/* Render Heavy Ui */}
+          <Label
+            htmlFor="renderHeavy"
+            className="text-lg font-light"
+            title="Render more demanding UI? Only do this if PC can support it!"
+          >
+            Switch to Heavy UI?
+          </Label>
+          <Switch
+            id="renderHeavy"
+            onCheckedChange={toggleShowShowHeavyUi}
+            defaultValue={showHeavyUi.toString()}
           />
 
           {/* Modifiable paste brightness */}
@@ -290,7 +303,7 @@ export default function SettingsPanel() {
           <Switch
             id="overwriteBrightness"
             onCheckedChange={onPasteBrightnessOverwriteToggle}
-            defaultValue={dataStore.get("overwriteBrightnessWithNewBlock")}
+            defaultValue={dataStore.get('overwriteBrightnessWithNewBlock')}
           />
         </fieldset>
       </form>
