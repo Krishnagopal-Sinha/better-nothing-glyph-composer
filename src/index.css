@@ -140,4 +140,5 @@
 
 .checkbox-round:checked {
   background-color: red;
+  border: none;
 }
