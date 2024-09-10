@@ -65,7 +65,7 @@ class FFmpegService {
       composer: `v1-Spacewar Glyph Composer`,
       album: `BNGC v${kMajorVersion}`,
       custom2: '5cols',
-      custom1: `eNoljVsKAEEIwy60A+r4qPe/2E7pj8FAiZ340vvYh8S7HjBiPB7ivUQ1ZexS3owkUJxlDGWOUZZfyqrmrs24awVahVFhVIAKUAEqrAqrwg8LSR98`
+      custom1: `eNoDAAAAAAE=`
     };
     const composer = phoneInfo.composer;
 

@@ -56,9 +56,9 @@ Props) {
   // UI
   return (
     // added to for scroll
-    <div className="min-h-[50dvh] overflow-auto" ref={editorRef} onScroll={handleScroll}>
+    <div className="overflow-auto" ref={editorRef} onScroll={handleScroll}>
       <div className="flex flex-col flex-grow min-w-max relative bg-black">
-        {/* AudioControls */}
+        {/* AudioControls and timebar */}
         {children}
 
         {/* playing indicator */}
@@ -74,7 +74,6 @@ Props) {
 
         <div
           id="select-container"
-          className="max-h-[30dvh] [@media(min-width:1920px)]:min-h-max overflow-auto"
         >
           <Selecto
             ref={selectoRef}

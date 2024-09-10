@@ -60,7 +60,7 @@ export default function MainTopPanel({
 
   const deviceControlsToShow = generateDeviceControls();
   return (
-    <div className="grid grid-flow-row sm:grid-flow-col  gap-4 max-h-[50dvh] rounded-lg shadow-lg p-2 flex-grow justify-between [@media(min-width:1920px)]:justify-evenly sm:items-start  items-center ">
+    <div className="grid grid-flow-row sm:grid-flow-col  gap-4 max-h-[50dvh] rounded-lg  p-2 flex-grow justify-between sm:items-start  items-center ">
       <div
         className="flex gap-2 sm:gap-6 bg-[#111111] py-4 px-6 rounded-md outline outline-[#212121] 
      hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500"
@@ -688,8 +688,8 @@ export function OpenInstructionButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="left-0 max-w-[120px] " variant="link" title="Open instructions">
-          Read Instructions
+        <Button className="left-0 max-w-[220px] " variant="link" title="Open instructions">
+          <span>&#8592;</span> Draggable | Read Instructions
         </Button>
       </DialogTrigger>
       <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit">

@@ -18,6 +18,7 @@ import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
 import { showError, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
+import { kWidthBound } from './lib/consts';
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
@@ -88,7 +89,7 @@ export default function App() {
         if (plainFiles[0] && plainFiles[0].type === 'audio/ogg') {
           showError(
             'Trying to Recover Glyph Data',
-            '.ogg file detected | Working in background to get data...',
+            '.ogg file detected, Working in background to get data...',
             2500
           );
           extractGlyphData(plainFiles[0]);
@@ -264,9 +265,9 @@ export default function App() {
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
       {isSaving && <SaveDialog isOpen={true} />}
 
-      {/* Upper Section - Fixed */}
-      {/* Mobile Only - load audio */}
-      <div className="px-4 py-4 w-full overflow-auto">
+      {/* Upper Section - W Fixed */}
+      <div className={` py-4 mx-auto overflow-auto`} style={{ width: `${kWidthBound}px` }}>
+        {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
             variant="outline"
@@ -281,21 +282,24 @@ export default function App() {
         ) : (
           <></>
         )}
-        <div className={`space-y-4 `}>
+        <div className={`space-y-4`}>
           {/* Main Top Half Component */}
           <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
 
           {/* Load audio n play controls  */}
           {!isInputLoaded && (
-            <Button
-              className="w-full py-6  font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
-              onClick={(e) => {
-                e.preventDefault();
-                loadAudioFile();
-              }}
-            >
-              Load Audio
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                style={{ width: `${kWidthBound - 10}px` }}
+                className={`py-6 font-normal font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  loadAudioFile();
+                }}
+              >
+                Load Audio
+              </Button>
+            </div>
           )}
         </div>
       </div>

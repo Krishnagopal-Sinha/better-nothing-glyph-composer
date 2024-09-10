@@ -17,6 +17,7 @@ import WaveSurfer from 'wavesurfer.js';
 import Hover from 'wavesurfer.js/dist/plugins/hover.esm.js';
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
+import { kWidthBound } from '@/lib/consts';
 type Props = {
   audioUrl: string;
   isSaving: boolean;
@@ -33,7 +34,7 @@ export default function AudioControlComponent({
   onCloseButtonClicked
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [isNotLoaded, setIsNotLoaded] = useState(true);
   const waveSurferRef = useRef<WaveSurfer | null>(null);
   const playControlsBarRef = useRef<HTMLDivElement | null>(null);
   const [scrollY, setScrollY] = useState(0);
@@ -96,7 +97,8 @@ export default function AudioControlComponent({
         setWidthToForce(audioDurationInSecs * timelinePixelFactor);
         dataStore.set('currentAudioDurationInMilis', audioDurationInSecs * 1000);
         updateDuration(audioDurationInSecs * 1000);
-        setLoaded(true);
+        // Added a bit of delay to ensure that other helper stuff is also rendered
+        setTimeout(() => setIsNotLoaded(false), 180);
       });
       // Runs every instance of playing audio
       waveSurferRef.current.on('timeupdate', () => {
@@ -185,7 +187,7 @@ export default function AudioControlComponent({
       return () => {
         waveSurferRef.current?.destroy();
         waveSurferRef.current?.unAll();
-        setLoaded(false);
+        setIsNotLoaded(true);
       };
     }
   }, [audioUrl]);
@@ -206,7 +208,7 @@ export default function AudioControlComponent({
     return () => window.removeEventListener('keypress', onSpaceKeyPress);
   }, [isKeyboardGestureEnabled]);
 
-    // scroll play controls on scroll
+  // scroll play controls on scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -218,14 +220,28 @@ export default function AudioControlComponent({
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+  //  UI
 
   return (
     <>
       <AudioControls />
-      {!loaded && (
+      {isNotLoaded && (
         <div
-          className="flex absolute z-20 space-x-20 pt-4 left-[20%]
+          className="flex z-20 space-x-20
         top-[16%] dark:invert transition-all duration-300"
+          id="loader-debug"
+          style={{
+            position: 'fixed',
+            top:
+              window.screen.width >= 1920
+                ? ''
+                : scrollY > window.innerHeight / 2
+                  ? `40px`
+                  : `calc(57% - ${scrollY}px)`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            transition: 'top 0.3s ease'
+          }}
         >
           <span className="sr-only">Loading...</span>
           <div className="h-8 w-8 bg-white rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -238,7 +254,11 @@ export default function AudioControlComponent({
       <div
         ref={containerRef}
         className="mt-[50px] bg-black"
-        style={{ width: `${widthToForce != 0 ? `${widthToForce}px` : ''}`,height:'calc(10%)' }}
+        style={{
+          width: `${widthToForce != 0 ? `${widthToForce}px` : ''}`,
+          height: 'calc(10%)',
+          opacity: isNotLoaded ? 0 : 1
+        }}
         onClick={() => {
           const currentTime = waveSurferRef.current?.getCurrentTime() ?? 0;
           editorRef.current?.scrollTo({
@@ -261,17 +281,19 @@ export default function AudioControlComponent({
       //   <div className="relative">
       <div
         ref={playControlsBarRef}
-        className={`min-w-[96vw] max-w-[1920px] flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] ${
+        // putting same width contraints for main upper UI but as max width!
+        className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] ${
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
+          width: `${kWidthBound - 10}px`,
           position: 'fixed',
           top:
             window.screen.width >= 1920
               ? ''
               : scrollY > window.innerHeight / 2
-              ? `40px`
-              : `calc(45% - ${scrollY}px)`,
+                ? `40px`
+                : `calc(45% - ${scrollY}px)`,
           left: '50%',
           transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'

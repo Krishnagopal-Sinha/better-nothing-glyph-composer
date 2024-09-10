@@ -96,7 +96,7 @@ export default function SettingsPanel() {
       {/* Config panel */}
       <form>
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-0 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
           <legend
             className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
             ref={spanRef}

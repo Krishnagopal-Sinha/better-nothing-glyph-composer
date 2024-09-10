@@ -7,6 +7,9 @@ import NP1_15_Preview from './previewDevices/NP1_15_Preview';
 import { getPrettyTime } from '@/lib/helpers';
 import { kTimeStepMilis } from '@/lib/consts';
 import dataStore from '@/lib/data_store';
+import { useSpring, animated } from '@react-spring/web';
+import { useDrag } from '@use-gesture/react';
+
 export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded: boolean }) {
   const timelineData = useGlobalAppStore((state) => state.items);
   const currentDevice = useGlobalAppStore((state) => state.phoneModel);
@@ -87,20 +90,64 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
     default:
       previewComponent = <div className="select-none p-2">Feels Redundant. Scrap this?</div>;
   }
-
+  const timeTextRef = useRef<HTMLDivElement>(null);
+  // Drag to position feat.
+  const [{ x, y }, api] = useSpring(() => ({ x: 0, y: 0 }));
+  const bind = useDrag(
+    ({ down, xy: [ox, oy] }) => api.start({ x: ox - 100, y: oy - 200, immediate: down }),
+    {
+      // bounds: { left: -100, right: 100, top: -50, bottom: 50 }
+    }
+  );
   return (
-    <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center outline outline-[#212121] hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500">
-      {/* actual glyphs lights */}
-      {previewComponent}
-      {/* Time component */}
-      {isAudioLoaded && showAudioTimeStamp && (
-        <div className="absolute text-sm text-center text-gray-700">
-          {`${getPrettyTime(
-            currentPosition / 1000,
-            ((dataStore.get('currentAudioDurationInMilis') as number) ?? 1) / 1000
-          )}`}
-        </div>
-      )}
-    </div>
+    <>
+      <div
+        className="h-[300px] w-[150px] rounded-[20px] flex justify-center bg-black items-center p-3 text-[#616161] text-center cursor-pointer"
+        onClick={() => {
+          api.set({ x: 0, y: 0 });
+        }}
+      >
+        Click here to Reset Position
+      </div>
+      <animated.div
+        {...bind()}
+        onClick={(e) => e.preventDefault()}
+        style={{
+          x,
+          y,
+          touchAction: 'none'
+        }}
+        className="bg-[#090909] z-20 fixed rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center outline outline-[#272727] hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500 cursor-move"
+      >
+        {/* actual glyphs lights */}
+        {previewComponent}
+        {/* Time component */}
+        {isAudioLoaded && showAudioTimeStamp && (
+          <div
+            ref={timeTextRef}
+            className="absolute text-center text-md font-[ndot] text-[#818181]"
+            onMouseLeave={() => {
+              if (timeTextRef.current) {
+                timeTextRef.current.style.textShadow = '';
+                timeTextRef.current.style.fontFamily = 'ndot';
+                timeTextRef.current.style.color = '#818181';
+              }
+            }}
+            onMouseEnter={() => {
+              if (timeTextRef.current) {
+                timeTextRef.current.style.textShadow = '#dfdfdf 4px 2px 20px';
+                timeTextRef.current.style.color = 'white';
+                timeTextRef.current.style.fontFamily = 'arial';
+              }
+            }}
+          >
+            {`${getPrettyTime(
+              currentPosition / 1000,
+              ((dataStore.get('currentAudioDurationInMilis') as number) ?? 1) / 1000
+            )}`}
+          </div>
+        )}
+      </animated.div>
+    </>
   );
 }

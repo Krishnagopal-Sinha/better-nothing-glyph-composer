@@ -137,7 +137,7 @@ function TimelineBlockComponent({ stringifiedGlyphItem }: Props) {
             removeItem(glyphItem.id, glyphItem.glyphId);
           }}
         >
-          Delete
+          Delete``
         </ContextMenuItem>
         {Object.entries(kEffectNames).map((e) => (
           <ContextMenuItem key={e[0]} onClick={() => onEffectSelect(+e[0])}>
