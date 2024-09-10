@@ -8,16 +8,17 @@ import {
 } from '@/components/ui/context-menu';
 import { useSpring, animated } from '@react-spring/web';
 import { kEffectNames, kMaxBrightness } from '@/lib/consts';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { DeltaUpdateBlock, GlyphBlock } from '@/lib/glyph_model';
 import { useDrag } from '@use-gesture/react';
 
 type Props = {
   // prevItem?: GlyphBlock;
-  glyphItem: GlyphBlock;
+  stringifiedGlyphItem: string;
   // nextItem?: GlyphBlock;
 };
-export default function TimelineBlockComponent({ glyphItem }: Props) {
+function TimelineBlockComponent({ stringifiedGlyphItem }: Props) {
+  const glyphItem = JSON.parse(stringifiedGlyphItem) as GlyphBlock;
   const removeItem = useGlobalAppStore((state) => state.removeItem);
   const updateSelectedItem = useGlobalAppStore((state) => state.updateSelectedItem);
   const selectItem = useGlobalAppStore((state) => state.toggleSelection);
@@ -41,7 +42,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     };
 
     updateSelectedItem(deltaBlock);
-  }, 5);
+  }, 1);
 
   const dragHandler = useDrag(
     ({ delta }) => {
@@ -161,6 +162,8 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     </ContextMenu>
   );
 }
+
+export default memo(TimelineBlockComponent);
 
 // eslint-disable-next-line react-refresh/only-export-components, @typescript-eslint/no-explicit-any
 function throttle(func: (...args: any[]) => void, limit: number) {

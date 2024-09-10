@@ -5,6 +5,7 @@ import dataStore from '@/lib/data_store';
 import { GlyphBlock } from '@/lib/glyph_model';
 import BPMSnapGridLinesComponent from './bpmGridLines';
 import HeavyTimelineBlock from '@/logic/hc_tb';
+import { memo, useMemo } from 'react';
 import Selecto from 'react-selecto';
 import { useRef } from 'react';
 
@@ -138,9 +139,9 @@ Props) {
               <div>{i + 1}</div>
             </div>
           )}
-          <TimelineBlocks
+          <MemoizedTimelineblocks
             showHeavyUi={showHeavyUi}
-            rowTimelineData={timelineData[i]}
+            rowTimelineData={JSON.stringify(timelineData[i])}
             timelinePixelFactor={timelinePixelFactor}
           />
         </div>
@@ -156,27 +157,28 @@ const TimelineBlocks = ({
   timelinePixelFactor,
   showHeavyUi
 }: {
-  rowTimelineData: GlyphBlock[];
+  rowTimelineData: string;
   timelinePixelFactor: number;
   showHeavyUi: boolean;
 }) => {
   const row: React.JSX.Element[] = [];
-  for (let i = 0; i < rowTimelineData.length; i++) {
+  const parsedRowTimelineData = JSON.parse(rowTimelineData);
+  for (let i = 0; i < parsedRowTimelineData.length; i++) {
     row.push(
       <div
-        key={rowTimelineData[i].id}
+        key={parsedRowTimelineData[i].id}
         className="h-full w-[50px] absolute inset-0 py-[4px]"
         style={{
-          marginLeft: `${(rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`
+          marginLeft: `${(parsedRowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`
         }}
       >
         {!showHeavyUi ? (
           <TimelineBlockComponent
-            glyphItem={rowTimelineData[i]}
+            stringifiedGlyphItem={JSON.stringify(parsedRowTimelineData[i])}
             // duration={duration}
           />
         ) : (
-          <HeavyTimelineBlock glyphItem={rowTimelineData[i]} />
+          <HeavyTimelineBlock stringifiedGlyphItem={JSON.stringify(parsedRowTimelineData[i])} />
         )}
         {/* Debug Stuff */}
         {/* {e.startTime} */}
@@ -187,3 +189,5 @@ const TimelineBlocks = ({
 
   return <>{row}</>;
 };
+
+const MemoizedTimelineblocks = memo(TimelineBlocks);
