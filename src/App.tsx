@@ -85,7 +85,7 @@ export default function App() {
         if (plainFiles[0] && plainFiles[0].type === 'audio/ogg') {
           showError(
             'Trying to Recover Glyph Data',
-            '.ogg file detected | Working in background to get data...',
+            '.ogg file detected, Working in background to get data...',
             2500
           );
           extractGlyphData(plainFiles[0]);
@@ -277,14 +277,14 @@ export default function App() {
         ) : (
           <></>
         )}
-        <div className={`space-y-4 `}>
+        <div className={`space-y-4`}>
           {/* Main Top Half Component */}
           <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
 
           {/* Load audio n play controls  */}
           {!isInputLoaded && (
             <Button
-              className="w-full py-6  font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
+              className="w-full py-6 font-normal hidden font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700"
               onClick={(e) => {
                 e.preventDefault();
                 loadAudioFile();

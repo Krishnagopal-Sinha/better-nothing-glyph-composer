@@ -49,9 +49,9 @@ Props) {
   // UI
   return (
     // added to for scroll
-    <div className="min-h-[50dvh] overflow-auto" ref={editorRef} onScroll={handleScroll}>
+    <div className="overflow-auto" ref={editorRef} onScroll={handleScroll}>
       <div className="flex flex-col flex-grow min-w-max relative bg-black">
-        {/* AudioControls */}
+        {/* AudioControls and timebar */}
         {children}
 
         {/* playing indicator */}
@@ -65,7 +65,7 @@ Props) {
           />
         )}
 
-        <div className="max-h-[30dvh] [@media(min-width:1920px)]:min-h-max overflow-auto">
+        <div className="max-h-[30dvh] [@media(min-width:1920px)]:max-h-[48dvh] [@media(min-width:3840px)]:min-h-[75dvh] overflow-auto">
           {TimelineRows()}
         </div>
       </div>
@@ -74,7 +74,6 @@ Props) {
 
   function TimelineRows() {
     const timelineRows: React.ReactNode[] = [];
-
 
     for (let i = 0; i < numberOfRowsToGenerate; i++) {
       timelineRows.push(

@@ -96,6 +96,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             if (glyphItem.isSelected) {
               selectItem(glyphItem, false);
             } else {
+              if (isTrimActive) setIsTrimActive(false); //DevBugFix: At time's the trim was being active; Reason could be that, in hot reloading Dev environments state's can be stale, gotta reload for it to get reinit and proper.
               selectItem(glyphItem, true);
             }
           }}
