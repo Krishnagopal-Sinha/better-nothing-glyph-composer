@@ -96,7 +96,6 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             if (glyphItem.isSelected) {
               selectItem(glyphItem, false);
             } else {
-              if (isTrimActive) setIsTrimActive(false); //DevBugFix: At time's the trim was being active; Reason could be that, in hot reloading Dev environments state's can be stale, gotta reload for it to get reinit and proper.
               selectItem(glyphItem, true);
             }
           }}
@@ -136,7 +135,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
             removeItem(glyphItem.id, glyphItem.glyphId);
           }}
         >
-          Delete
+          Delete``
         </ContextMenuItem>
         {Object.entries(kEffectNames).map((e) => (
           <ContextMenuItem key={e[0]} onClick={() => onEffectSelect(+e[0])}>

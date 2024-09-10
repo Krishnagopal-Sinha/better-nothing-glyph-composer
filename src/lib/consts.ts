@@ -2,6 +2,7 @@ export const kTimeStepMilis = 16.666;
 export const KDefaultPreviewGlyphFillColor = '#111111';
 export const kAllowedModels = ['NP1', 'NP1_15', 'NP2', 'NP2a'];
 export const kMouseCursorOffset = 32;
+export const kWidthBound = 1420;
 export const kMaxBrightness = 4095;
 export const kPhoneModelNames: { [key: string]: string } = {
   NP1: 'Phone (1)',

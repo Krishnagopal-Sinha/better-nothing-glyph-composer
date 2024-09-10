@@ -65,9 +65,7 @@ Props) {
           />
         )}
 
-        <div className="max-h-[30dvh] [@media(min-width:1920px)]:max-h-[48dvh] [@media(min-width:3840px)]:min-h-[75dvh] overflow-auto">
-          {TimelineRows()}
-        </div>
+        <div>{TimelineRows()}</div>
       </div>
     </div>
   );
