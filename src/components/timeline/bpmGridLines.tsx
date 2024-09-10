@@ -20,7 +20,7 @@ export default function BPMSnapGridLinesComponent({
       bpmSnapGridLines.push(
         <div
           key={i}
-          className="absolute h-full outline-dashed outline-gray-700 z-[-10]"
+          className="absolute h-full outline-dashed outline-[#333333] z-[10] pointer-events-none"
           style={{
             width: `${gridWidth}px`,
             left: `${gridWidth * iter}px`
