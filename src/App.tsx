@@ -262,7 +262,7 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* Upper Section - W Fixed */}
-      <div className={` py-4 mx-auto w-[${kWidthBound}px] overflow-auto`}>
+      <div className={` py-4 mx-auto overflow-auto`} style={{ width: `${kWidthBound}px` }}>
         {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
