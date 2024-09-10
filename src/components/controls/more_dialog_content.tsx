@@ -195,7 +195,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
             </div>
           </div>
           <DialogFooter className="flex-grow justify-between">
-            <Button variant="destructive" onClick={() => setIsSettingsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={onGenerateClick}>Generate</Button>
@@ -220,7 +220,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
           </DialogHeader>
           <WaterMarkerComponent
             cancelButton={
-              <Button variant="destructive" onClick={() => setIsSettingsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
                 Cancel
               </Button>
             }
@@ -309,7 +309,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
             </div>
           </div>
           <DialogFooter className="flex-grow justify-between">
-            <Button variant="destructive" onClick={() => setIsSettingsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={onAdvancedEditApply}>Apply</Button>

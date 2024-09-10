@@ -87,6 +87,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
     default:
       previewComponent = <div className="select-none p-2">Feels Redundant. Scrap this?</div>;
   }
+  const timeTextRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="bg-black rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center outline outline-[#212121] hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500">
@@ -94,7 +95,24 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
       {previewComponent}
       {/* Time component */}
       {isAudioLoaded && showAudioTimeStamp && (
-        <div className="absolute text-sm text-center text-gray-700">
+        <div
+          ref={timeTextRef}
+          className="absolute text-center text-md font-[ndot] text-[#818181]"
+          onMouseLeave={() => {
+            if (timeTextRef.current) {
+              timeTextRef.current.style.textShadow = '';
+              timeTextRef.current.style.fontFamily = 'ndot';
+              timeTextRef.current.style.color = '#818181';
+            }
+          }}
+          onMouseEnter={() => {
+            if (timeTextRef.current) {
+              timeTextRef.current.style.textShadow = '#dfdfdf 4px 2px 20px';
+              timeTextRef.current.style.color = 'white';
+              timeTextRef.current.style.fontFamily = 'arial';
+            }
+          }}
+        >
           {`${getPrettyTime(
             currentPosition / 1000,
             ((dataStore.get('currentAudioDurationInMilis') as number) ?? 1) / 1000
