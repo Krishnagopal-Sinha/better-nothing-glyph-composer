@@ -5,7 +5,7 @@ import dataStore from '@/lib/data_store';
 import { GlyphBlock } from '@/lib/glyph_model';
 import BPMSnapGridLinesComponent from './bpmGridLines';
 import HeavyTimelineBlock from '@/logic/hc_tb';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import Selecto from 'react-selecto';
 import { useRef } from 'react';
 
@@ -72,9 +72,7 @@ Props) {
           />
         )}
 
-        <div
-          id="select-container"
-        >
+        <div id="select-container">
           <Selecto
             ref={selectoRef}
             container={document.getElementById('select-container')}
