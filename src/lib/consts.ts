@@ -2,7 +2,7 @@ export const kTimeStepMilis = 16.666;
 export const KDefaultPreviewGlyphFillColor = '#111111';
 export const kAllowedModels = ['NP1', 'NP1_15', 'NP2', 'NP2a'];
 export const kMouseCursorOffset = 32;
-export const kWidthBound = 1420;
+export const kWidthBound = 99;
 export const kMaxBrightness = 4095;
 export const kPhoneModelNames: { [key: string]: string } = {
   NP1: 'Phone (1)',
@@ -36,7 +36,7 @@ export const kEffectNames: { [key: number]: string } = {
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
 export const kMinorVersion = 1;
-export const kPatchVersion = 8;
+export const kPatchVersion = 9;
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 

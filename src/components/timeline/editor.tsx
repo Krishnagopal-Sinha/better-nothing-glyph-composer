@@ -5,6 +5,9 @@ import dataStore from '@/lib/data_store';
 import { GlyphBlock } from '@/lib/glyph_model';
 import BPMSnapGridLinesComponent from './bpmGridLines';
 import HeavyTimelineBlock from '@/logic/hc_tb';
+import { useAreaSelection } from '@/lib/area_selection_helper';
+import { useRef } from 'react';
+import { SelectionContext } from '@/lib/area_select_context';
 
 type Props = {
   // currentAudioPosition: number;
@@ -46,6 +49,8 @@ Props) {
       label.style.borderBottomLeftRadius = `0px`;
     });
   };
+  const selectContainerRef = useRef<HTMLDivElement | null>(null);
+  const selection = useAreaSelection({ container: selectContainerRef });
   // UI
   return (
     // added to for scroll
@@ -64,8 +69,9 @@ Props) {
             timelinePixelFactor={timelinePixelFactor}
           />
         )}
-
-        <div>{TimelineRows()}</div>
+        <SelectionContext.Provider value={selection}>
+          <div ref={selectContainerRef}>{TimelineRows()}</div>
+        </SelectionContext.Provider>
       </div>
     </div>
   );

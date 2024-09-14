@@ -32,6 +32,7 @@ class DataStore {
     blockDragAccumulator: 0,
     durationBlockDragAccumulator: 0,
     exportCustom1: 'eNoDAAAAAAE=',
+    isDragSelectActive: false,
 
     // Note: Phone custom 1 are just legacy, TOOD: Remove when ya have time
     // Base Phone 1 Info

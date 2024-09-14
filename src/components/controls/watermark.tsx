@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import dataStore from '@/lib/data_store';
+import { showPopUp } from '@/lib/helpers';
 type Props = {
   cancelButton: React.ReactNode;
   applyAction: () => void;
@@ -47,6 +48,7 @@ export default function WaterMarkerComponent({ cancelButton, applyAction }: Prop
     //   '✌️processedOfficialComposerPreviewData --->',
     //   processedOfficialComposerPreviewData
     // );
+    showPopUp('Watermark Applied', 'Your custom watermark is set to be applied on export.', 950);
     applyAction(); //closes dialog
   };
 

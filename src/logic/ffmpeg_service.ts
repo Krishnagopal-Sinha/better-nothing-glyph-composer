@@ -2,7 +2,7 @@
 
 import { kMajorVersion } from '@/lib/consts';
 import dataStore, { PhoneSpecificInfo } from '@/lib/data_store';
-import { getDateTime, showError } from '@/lib/helpers';
+import { getDateTime, showPopUp } from '@/lib/helpers';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import fileDownload from 'js-file-download';
@@ -116,7 +116,7 @@ class FFmpegService {
     // console.warn("EXTRACTed:", author);
     if (!author) {
       console.warn('Input file is not a valid Glyph composed file!');
-      showError(
+      showPopUp(
         'Import Error',
         'Input file is not a valid Glyph composed file! But you can change that, by composing ;D',
         1800

@@ -15,24 +15,24 @@ import SaveDialog from './components/controls/save_dialog';
 import { Toaster } from './components/ui/sonner';
 import dataStore from './lib/data_store';
 import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
-import { showError, validateCSV } from './lib/helpers';
+import { showPopUp, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
 import { kWidthBound } from './lib/consts';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return '';
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return '';
+  //   }
 
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener('beforeunload', beforeUnload);
+  //   return () => {
+  //     window.removeEventListener('beforeunload', beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -84,7 +84,7 @@ export default function App() {
       try {
         setIsInputLoaded(true);
         if (plainFiles[0] && plainFiles[0].type === 'audio/ogg') {
-          showError(
+          showPopUp(
             'Trying to Recover Glyph Data',
             '.ogg file detected, Working in background to get data...',
             2500
@@ -187,7 +187,7 @@ export default function App() {
         // call it twice cuz of selection thingy to skip selection change,improve on this, same wid redo
         if (pastStates.length <= 0) {
           console.error('Error - Nothing to undo!');
-          showError('Action Skipped - Nothing to Undo', "There's nothing to Undo.");
+          showPopUp('Action Skipped - Nothing to Undo', "There's nothing to Undo.");
 
           return;
         }
@@ -200,7 +200,7 @@ export default function App() {
       if (e.ctrlKey && e.code === 'KeyY') {
         if (futureStates.length <= 0) {
           console.error('Error - Nothing to Redo!');
-          showError('Action Skipped - Nothing to Rndo', "There's nothing to Rndo.");
+          showPopUp('Action Skipped - Nothing to Rndo', "There's nothing to Rndo.");
 
           return;
         }
@@ -262,7 +262,7 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* Upper Section - W Fixed */}
-      <div className={` py-4 mx-auto overflow-auto`} style={{ width: `${kWidthBound}px` }}>
+      <div className={` py-4 mx-auto overflow-auto max-w-[2280px]`} style={{ width: `${kWidthBound}%` }}>
         {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
@@ -284,9 +284,9 @@ export default function App() {
 
           {/* Load audio n play controls  */}
           {!isInputLoaded && (
-            <div className="flex justify-center">
+            <div className=" justify-center hidden sm:flex">
               <Button
-                style={{ width: `${kWidthBound - 10}px` }}
+                style={{ width: `${kWidthBound}%` }}
                 className={`py-6 font-normal font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
                 onClick={(e) => {
                   e.preventDefault();

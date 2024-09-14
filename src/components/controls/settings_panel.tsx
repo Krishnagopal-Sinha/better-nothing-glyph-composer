@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import DeviceChoiceComponent from './device_choice';
 import dataStore from '@/lib/data_store';
 import useGlobalAppStore from '@/lib/timeline_state';
-import { showError } from '@/lib/helpers';
+import { showPopUp } from '@/lib/helpers';
 import { kMaxBrightness } from '@/lib/consts';
 import { useRef } from 'react';
 
@@ -35,14 +35,17 @@ export default function SettingsPanel() {
 
   const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
   const setSnapSensitivity = useGlobalAppStore((state) => state.setSnapSensitivity);
-
+  const toggleDragSelect = () => {
+    const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
+    dataStore.set('isDragSelectActive', !isDragSelectActive);
+  };
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
     dataStore.set('overwriteBrightnessWithNewBlock', e);
   };
   const onBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.currentTarget.value);
     if (value * 60 > (dataStore.get('currentAudioDurationInMilis') as number)) {
-      showError(
+      showPopUp(
         'Warning!',
         'The BPM is on the low side, may cause bad experience with Snap to BPM feature. Provided it is on.',
         1500
@@ -61,7 +64,7 @@ export default function SettingsPanel() {
     if (value >= 50 && value <= 10000) {
       dataStore.set('newBlockDurationMilis', value);
     } else {
-      showError('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
+      showPopUp('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
     }
   };
 
@@ -73,7 +76,7 @@ export default function SettingsPanel() {
     if (selectedValue >= 1 && selectedValue <= 100) {
       dataStore.set('newBlockBrightness', value);
     } else {
-      showError('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
+      showPopUp('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
     }
   };
 
@@ -88,7 +91,7 @@ export default function SettingsPanel() {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      showError('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
+      showPopUp('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
     }
   };
   return (
@@ -96,9 +99,9 @@ export default function SettingsPanel() {
       {/* Config panel */}
       <form>
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[304px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
           <legend
-            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
+            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide  "
             ref={spanRef}
             onMouseLeave={() => {
               if (spanRef.current) {
@@ -178,18 +181,19 @@ export default function SettingsPanel() {
             onCheckedChange={toggleMultiSelect}
             checked={isMultiSelectActive}
           />
-          {/* Keyboard controls */}
+
+          {/* Drag Select */}
           <Label
-            htmlFor="keyboardControls"
+            htmlFor="dragSelect"
             className="text-lg font-light"
-            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+            title={`Enables Drag to Multi Select Gesture`}
           >
-            Enable Keyboard Gesture
+            Enable Drag Select
           </Label>
           <Switch
-            id="keyboardControls"
-            onCheckedChange={toggleKeyboardGesture}
-            checked={isKeyboardGestureEnabled}
+            id="dragSelect"
+            onCheckedChange={toggleDragSelect}
+            // checked={dataStore.get('isDragSelectActive') ?? false}
           />
 
           {/* Show audio timestamp */}
@@ -215,6 +219,20 @@ export default function SettingsPanel() {
             Show Glyph Zones
           </Label>
           <Switch id="toggleZones" onCheckedChange={toggleZoneVisibility} checked={isZoneVisible} />
+
+          {/* Keyboard controls */}
+          <Label
+            htmlFor="keyboardControls"
+            className="text-lg font-light"
+            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+          >
+            Enable Keyboard Gesture
+          </Label>
+          <Switch
+            id="keyboardControls"
+            onCheckedChange={toggleKeyboardGesture}
+            checked={isKeyboardGestureEnabled}
+          />
 
           {/* Snap to BPM feat. */}
           <Label

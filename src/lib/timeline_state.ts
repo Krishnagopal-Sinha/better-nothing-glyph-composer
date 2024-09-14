@@ -11,7 +11,7 @@ import {
   generateNewGlyphBlock,
   insertInSortedOrder,
   removeAudioBoundsViolators,
-  showError,
+  showPopUp,
   snapToNearestBeat,
   sortObjectByStartTimeMilis,
   validateJsonStructure
@@ -210,7 +210,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
       setBpmForSnap: (value: number) => {
         if (value < 1 || value > 700) {
-          showError('Invalid Value - BPM', 'BPM must be between 1 and 700.');
+          showPopUp('Invalid Value - BPM', 'BPM must be between 1 and 700.');
           return;
         }
         set((state) => ({
@@ -223,7 +223,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
       setSnapSensitivity: (value: number) => {
         if (value < 13 || value > 25) {
-          showError(
+          showPopUp(
             'Invalid Value - Snap Sensitivity',
             'BPM range is between 13 and 25. Invserve Sensitivity value not updated.',
             1500
@@ -282,7 +282,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           // Otherwise phone 1 will load up 33 zone cuz it item.length dependent lulz
           const zonesInImportedData = Object.keys(data).length;
           if (Object.keys(get().items).length !== zonesInImportedData) {
-            showError(
+            showPopUp(
               'Import Error - Phone Model Mismatch',
               `Are you sure correct Phone model is selected? ${
                 kPhoneZones[zonesInImportedData]
@@ -311,7 +311,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
           scheme(sortedData);
         } else {
-          showError(
+          showPopUp(
             'Import Error - Glyph data',
             'Format error in Glyph data detected, skipping import.',
             2100
@@ -622,13 +622,13 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
 
         set({ clipboard: newCopyBuffer });
         if (newCopyBuffer.length > 500) {
-          showError(
+          showPopUp(
             `Copied Items Count - ${newCopyBuffer.length}`,
             'This is allowed but may slow down the app, for real!',
             1500
           );
         } else {
-          showError('Items Copied', 'Selected items have been copied.');
+          showPopUp('Items Copied', 'Selected items have been copied.');
         }
       },
 
@@ -648,7 +648,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         get().removeSelectedItem();
         set({ clipboard: newCopyBuffer, isCutActive: true });
 
-        showError('Items Cut', 'Selected items have been cut.');
+        showPopUp('Items Cut', 'Selected items have been cut.');
       },
 
       pasteItems: () => {
@@ -673,8 +673,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           // first block's start time would be current audio position
           // feat. brightness - also ensure brightness is there
           const newBrightness: number =
-            (dataStore.get('overwriteBrightnessWithNewBlock') ?? false)
-              ? (dataStore.get('newBlockBrightness') ?? clipboardItems[i].startingBrightness)
+            dataStore.get('overwriteBrightnessWithNewBlock') ?? false
+              ? dataStore.get('newBlockBrightness') ?? clipboardItems[i].startingBrightness
               : clipboardItems[i].startingBrightness;
 
           // actual paste logic

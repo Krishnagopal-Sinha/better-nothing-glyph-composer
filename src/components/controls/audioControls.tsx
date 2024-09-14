@@ -236,8 +236,8 @@ export default function AudioControlComponent({
               window.screen.width >= 1920
                 ? ''
                 : scrollY > window.innerHeight / 2
-                  ? `40px`
-                  : `calc(57% - ${scrollY}px)`,
+                ? `40px`
+                : `calc(57% - ${scrollY}px)`,
             left: '50%',
             transform: 'translateX(-50%)',
             transition: 'top 0.3s ease'
@@ -282,18 +282,18 @@ export default function AudioControlComponent({
       <div
         ref={playControlsBarRef}
         // putting same width contraints for main upper UI but as max width!
-        className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] ${
+        className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] max-w-[2280px] ${
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
-          width: `${kWidthBound - 10}px`,
+          width: `${kWidthBound - 0.5}%`,
           position: 'fixed',
           top:
             window.screen.width >= 1920
               ? ''
-              : scrollY > window.innerHeight / 2
-                ? `40px`
-                : `calc(45% - ${scrollY}px)`,
+              : scrollY > window.innerHeight / 3.5
+              ? `40px`
+              : undefined,
           left: '50%',
           transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'
