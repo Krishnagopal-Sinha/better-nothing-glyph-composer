@@ -223,7 +223,7 @@ const throttledShowError = throttle((message: string, description: string, durat
   });
 }, 1400);
 
-export function showError(message: string, description: string, duration?: number) {
+export function showPopUp(message: string, description: string, duration?: number) {
   throttledShowError(message, description, duration);
 }
 
@@ -241,7 +241,7 @@ export function canAddItem2(
   suppressErrorIfOffsetTryRemaining: boolean = false
 ): boolean {
   if (newItem.durationMilis <= 0 || newItem.startTimeMilis < 0) {
-    showError('Error - Item not added', 'Invalid start time or duration.');
+    showPopUp('Error - Item not added', 'Invalid start time or duration.');
     return false;
   }
 
@@ -249,7 +249,7 @@ export function canAddItem2(
     newItem.startTimeMilis >= audioDurationInMilis ||
     newItem.startTimeMilis + newItem.durationMilis > audioDurationInMilis
   ) {
-    showError(
+    showPopUp(
       'Error - Item not added or modified',
       "Glyph timings must be within audio's time bounds."
     );
@@ -257,7 +257,7 @@ export function canAddItem2(
   }
 
   if (newItem.durationMilis < 20) {
-    showError('Error - Item not added or modified', 'Glyph block duration must be least 20s!');
+    showPopUp('Error - Item not added or modified', 'Glyph block duration must be least 20s!');
     return false;
   }
 
@@ -276,7 +276,7 @@ export function canAddItem2(
       if (newItem.startTimeMilis + newItem.durationMilis > rightNeighbor.startTimeMilis) {
         // Error dispatched, suppress if offset try is remaining!
         if (!suppressErrorIfOffsetTryRemaining) {
-          showError(
+          showPopUp(
             'Error - A Block was not added or modified',
             'New block duration exceeds or overlaps with the start time of the next block.'
           );
@@ -294,7 +294,7 @@ export function canAddItem2(
       if (newItem.startTimeMilis < leftNeighbor.startTimeMilis + leftNeighbor.durationMilis) {
         // Error dispatched, suppress if offset try is remaining!
         if (!suppressErrorIfOffsetTryRemaining) {
-          showError(
+          showPopUp(
             'Error - A Block was not added or modified',
             'Overlap with the left neighbor Glyph block detected.'
           );
@@ -314,7 +314,7 @@ export function canAddItem2(
     if (prevIndex >= 0) {
       const prevNeighbor = existingItems[prevIndex];
       if (newItem.startTimeMilis < prevNeighbor.startTimeMilis + prevNeighbor.durationMilis) {
-        showError(
+        showPopUp(
           'Error - A Block was not added or modified',
           'Overlap with the Glyph block on the left detected.'
         );
@@ -326,7 +326,7 @@ export function canAddItem2(
     if (nextIndex >= 0) {
       const nextNeighbor = existingItems[nextIndex];
       if (newItem.startTimeMilis + newItem.durationMilis > nextNeighbor.startTimeMilis) {
-        showError(
+        showPopUp(
           'Error - A Block was not added or modified',
           'Overlap with the Glyph block on the right detected.'
         );
@@ -365,7 +365,7 @@ export function basicCanAddCheck(
   if (newItem.durationMilis > 0 && newItem.startTimeMilis >= 0) {
     /* empty */
   } else {
-    showError('Error - Item not added', 'Invalid start time or duration.');
+    showPopUp('Error - Item not added', 'Invalid start time or duration.');
     return false;
   }
 
@@ -376,7 +376,7 @@ export function basicCanAddCheck(
   ) {
     // empty
   } else {
-    showError(
+    showPopUp(
       'Error - Item not added',
       "Glyph timings must be within audio's time bounds.\nYes, the UI might say otherwise but the audio has reached it's end"
     );
@@ -392,7 +392,7 @@ export function basicCanAddCheck(
       newItem.startTimeMilis < currentItem.startTimeMilis + currentItem.durationMilis &&
       newItem.startTimeMilis + newItem.durationMilis > currentItem.startTimeMilis
     ) {
-      showError(
+      showPopUp(
         'Error - Item not added or modified',
         'Overlap with another existing Glyph detected'
       );
@@ -488,7 +488,7 @@ export function validateCSV(csvString: string): boolean {
           `Some error occured during processing (malformed output processed), export .json project file as safety and retry exporting. Err:`,
           errors
         );
-        showError(
+        showPopUp(
           `Error - While Processing Audio`,
           `Some error occured during processing (malformed output processed), export .json project file as safety and retry exporting. `,
           2100

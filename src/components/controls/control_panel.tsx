@@ -60,26 +60,30 @@ export default function MainTopPanel({
 
   const deviceControlsToShow = generateDeviceControls();
   return (
-    <div className="grid grid-flow-row sm:grid-flow-col  gap-4 max-h-[50dvh] rounded-lg  p-2 flex-grow justify-between sm:items-start  items-center ">
-      <div
-        className="flex gap-2 sm:gap-6 bg-[#111111] py-4 px-6 rounded-md outline outline-[#212121] 
-     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500"
-      >
-        {/* 1st col - Glyph preview */}
-        <GlyphPreviewComponent isAudioLoaded={isAudioLoaded} />
-
-        {/* 2nd col - Title n all */}
-        <TitleAndControlsPanel />
+    <div
+      className={`grid max-h-[50dvh] rounded-lg p-2 items-center ${
+        isAudioLoaded ? ' sm:grid-cols-[3.5fr_1fr_3.5fr] grid-flow-row min-[869px]:grid-flow-col' : 'grid-cols-2'
+      }`}
+    >
+      {/*1st col - Title n all */}
+      <div className={currentDevice === 'NP2' && window.screen.width <1920 ? 'scale-95 ml-[-20px]':''}>
+      <TitleAndControlsPanel className={`${currentDevice === 'NP2' &&  window.screen.width <1920 && 'py-[12px] px-[10px]'}`}/>
       </div>
+
+      {/*  2nd col - Glyph preview */}
+      {isAudioLoaded && <GlyphPreviewComponent isAudioLoaded={isAudioLoaded} />}
 
       {/* 3rd col - Config panel */}
       <SettingsPanel />
     </div>
   );
 
-  function TitleAndControlsPanel() {
+  function TitleAndControlsPanel({className}:{className?:string}) {
     return (
-      <div className="flex flex-col justify-between">
+      <div
+        className={`flex flex-col justify-between bg-[#111111] py-4  rounded-md outline outline-[#212121]
+     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500 px-6 h-[300px] overflow-auto ${className}`}
+      >
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-primary">
             <AppNameComponent playing={showEasterEgg} />
@@ -110,7 +114,7 @@ export default function MainTopPanel({
         <OpenInstructionButton />
 
         {isAudioLoaded && (
-          <div className="flex flex-col space-y-3">
+          <div className="space-y-3 grid grid-row-2">
             {/* Command Center */}
             <CommandCenter />
             {/* Glyph Zone Add Center */}
@@ -303,7 +307,7 @@ export default function MainTopPanel({
 
       case 'NP2':
         return (
-          <div className="grid grid-flow-rows grid-cols-8 lg:flex">
+          <div className="grid grid-cols-5 sm:grid-cols-[repeat(15,minmax(0,1fr))]">
             <Button
               variant="ghost"
               onClick={() => {
@@ -563,7 +567,9 @@ export default function MainTopPanel({
             onClick={() => {
               selectInCurrentPosition();
             }}
-            title={'Select / Unselect All Blocks at Current Audio Position; Shortcut Keys: Ctrl + Alt/Option + A'}
+            title={
+              'Select / Unselect All Blocks at Current Audio Position; Shortcut Keys: Ctrl + Alt/Option + A'
+            }
             aria-label="select items in current audio position"
           >
             <TextCursorInput />
@@ -688,8 +694,8 @@ export function OpenInstructionButton() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button className="left-0 max-w-[220px] " variant="link" title="Open instructions">
-          <span>&#8592;</span> Draggable | Read Instructions
+        <Button className="left-0 w-[120px]" variant="link" title="Open instructions">
+          Read Instructions
         </Button>
       </DialogTrigger>
       <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit">

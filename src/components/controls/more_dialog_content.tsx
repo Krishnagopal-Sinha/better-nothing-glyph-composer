@@ -20,7 +20,7 @@ import {
 import { kEffectNames } from '@/lib/consts';
 import { DeltaUpdateBlock, GlyphGenerationModel } from '@/lib/glyph_model';
 
-import { showError } from '@/lib/helpers';
+import { showPopUp } from '@/lib/helpers';
 import useGlobalAppStore from '@/lib/timeline_state';
 import { useState } from 'react';
 import dataStore from '@/lib/data_store';
@@ -339,7 +339,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
   function onGenerationStartTimeMilisChanged(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseInt(e.currentTarget.value);
     if (value < 0 || value > audioInfo.durationInMilis) {
-      showError(
+      showPopUp(
         'Error - Invalid Start Time',
         `Generation Start Time must be between 0ms and ${(audioInfo.durationInMilis / 1000).toFixed(
           2
@@ -353,7 +353,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
   function onGenerationEndTimeMilisChanged(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseInt(e.currentTarget.value);
     if (value < 0 || value > audioInfo.durationInMilis) {
-      showError(
+      showPopUp(
         'Error - Invalid End Time',
         `Generation End Time must be between 0ms and ${(audioInfo.durationInMilis / 1000).toFixed(
           2
@@ -367,7 +367,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
   function onGenerationBlockDurationMilis(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseInt(e.currentTarget.value);
     if (value < 20 || value > (blockStartTimeMilis ?? 0) + audioInfo.durationInMilis) {
-      showError(
+      showPopUp(
         'Error - Invalid Duration',
         `Block Duration must be between 20ms and ${(
           ((blockStartTimeMilis ?? 0) + audioInfo.durationInMilis) /
@@ -383,7 +383,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     const value = parseInt(e.currentTarget.value);
 
     if (value < 20) {
-      showError('Error - Invalid Glyph Gap', `Generation Gap should be atleast of 20ms`, 1500);
+      showPopUp('Error - Invalid Glyph Gap', `Generation Gap should be atleast of 20ms`, 1500);
       return;
     }
     setGenerationGlyphGap(value);
@@ -395,7 +395,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     if (selectedValue >= 1 && selectedValue <= 100) {
       setGenerationBlockBrightness(value);
     } else {
-      showError('Invalid Value - Glyph Brightness', 'Brightness should be between 1% to 100%');
+      showPopUp('Invalid Value - Glyph Brightness', 'Brightness should be between 1% to 100%');
     }
   }
 
@@ -407,7 +407,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
       setGenerationGlyphZone(value);
       return;
     } else if (value > len - 1 || value < 0) {
-      showError('Error - Invalid Glyph Zone', 'An invalid Glyph Zone was selected.');
+      showPopUp('Error - Invalid Glyph Zone', 'An invalid Glyph Zone was selected.');
       return;
     }
     setGenerationGlyphZone(value);
@@ -416,7 +416,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     const value = parseInt(e);
     const len = Object.keys(kEffectNames).length;
     if (value > len - 1 || value < 0) {
-      showError('Error - Invalid Effect', 'An invalid effect was selected.');
+      showPopUp('Error - Invalid Effect', 'An invalid effect was selected.');
       return;
     }
     setGenerationBlockEffectId(value);
@@ -444,14 +444,14 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     if (selectedValue >= 1 && selectedValue <= 100) {
       setBlockBrightnessPercentage(value);
     } else {
-      showError('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
+      showPopUp('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
     }
   }
 
   function onBlockDurationChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseInt(e.currentTarget.value);
     if (value < 20 || value > (blockStartTimeMilis ?? 0) + audioInfo.durationInMilis) {
-      showError(
+      showPopUp(
         'Error - Invalid Duration',
         `Block Duration must be between 20ms and ${(
           ((blockStartTimeMilis ?? 0) + audioInfo.durationInMilis) /
@@ -466,7 +466,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
   function onBlockStartTimeChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = parseInt(e.currentTarget.value);
     if (value < 0 || value > audioInfo.durationInMilis) {
-      showError(
+      showPopUp(
         'Error - Invalid Start Time',
         `Block start time must be between 0ms and ${(audioInfo.durationInMilis / 1000).toFixed(
           2
@@ -482,7 +482,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     const value = parseInt(e);
     const len = Object.keys(kEffectNames).length;
     if (value > len - 1 || value < 0) {
-      showError('Error - Invalid Effect Option', 'An invalid effect was selected.');
+      showPopUp('Error - Invalid Effect Option', 'An invalid effect was selected.');
       return;
     }
     setBlockEffectId(value);

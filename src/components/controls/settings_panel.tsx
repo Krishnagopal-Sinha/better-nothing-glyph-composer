@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import DeviceChoiceComponent from './device_choice';
 import dataStore from '@/lib/data_store';
 import useGlobalAppStore from '@/lib/timeline_state';
-import { showError } from '@/lib/helpers';
+import { showPopUp } from '@/lib/helpers';
 import { kMaxBrightness } from '@/lib/consts';
 import { useRef } from 'react';
 
@@ -45,7 +45,7 @@ export default function SettingsPanel() {
   const onBpmChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.currentTarget.value);
     if (value * 60 > (dataStore.get('currentAudioDurationInMilis') as number)) {
-      showError(
+      showPopUp(
         'Warning!',
         'The BPM is on the low side, may cause bad experience with Snap to BPM feature. Provided it is on.',
         1500
@@ -64,7 +64,7 @@ export default function SettingsPanel() {
     if (value >= 50 && value <= 10000) {
       dataStore.set('newBlockDurationMilis', value);
     } else {
-      showError('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
+      showPopUp('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
     }
   };
 
@@ -76,7 +76,7 @@ export default function SettingsPanel() {
     if (selectedValue >= 1 && selectedValue <= 100) {
       dataStore.set('newBlockBrightness', value);
     } else {
-      showError('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
+      showPopUp('Invalid Value - Glyph Brightness', 'Should be between 1% to 100%');
     }
   };
 
@@ -91,7 +91,7 @@ export default function SettingsPanel() {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      showError('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
+      showPopUp('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
     }
   };
   return (
@@ -99,9 +99,9 @@ export default function SettingsPanel() {
       {/* Config panel */}
       <form>
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[332px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[304px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
           <legend
-            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide "
+            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide  "
             ref={spanRef}
             onMouseLeave={() => {
               if (spanRef.current) {
