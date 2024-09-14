@@ -286,7 +286,7 @@ export default function AudioControlComponent({
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
         style={{
-          width: `${kWidthBound - 10}px`,
+          width: `${kWidthBound -0.5}%`,
           position: 'fixed',
           top:
             window.screen.width >= 1920

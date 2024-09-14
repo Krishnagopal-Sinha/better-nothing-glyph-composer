@@ -8,9 +8,13 @@ import {
 } from '@/components/ui/context-menu';
 import { useSpring, animated } from '@react-spring/web';
 import { kEffectNames, kMaxBrightness } from '@/lib/consts';
-import { useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { DeltaUpdateBlock, GlyphBlock } from '@/lib/glyph_model';
 import { useDrag } from '@use-gesture/react';
+import { SelectionContext } from '@/lib/area_select_context';
+import { useSelected } from '@/lib/area_selection_helper';
+import dataStore from '@/lib/data_store';
+import { throttle } from '@/lib/helpers';
 
 type Props = {
   // prevItem?: GlyphBlock;
@@ -22,8 +26,9 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
   const updateSelectedItem = useGlobalAppStore((state) => state.updateSelectedItem);
   const selectItem = useGlobalAppStore((state) => state.toggleSelection);
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
-  const [isTrimActive, setIsTrimActive] = useState<boolean>(false);
 
+  const [isTrimActive, setIsTrimActive] = useState<boolean>(false);
+  const toggleMultiSelect = useGlobalAppStore((state) => state.toggleMultiSelect);
   const onEffectSelect = (effectId: number) => {
     const deltaBlock: DeltaUpdateBlock = {
       effectId: effectId
@@ -74,6 +79,21 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     { axis: 'x' }
   );
 
+  const ref = useRef(null);
+  const selection = useContext(SelectionContext);
+  const isSelected = useSelected(ref, selection);
+  useEffect(() => {
+    if (isSelected) {
+      if (glyphItem.isSelected) return;
+      const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
+      if (!isDragSelectActive) return;
+      console.log('sel: ', isSelected);
+      toggleMultiSelect(true);
+      selectItem(glyphItem, true);
+      toggleMultiSelect(false);
+    }
+  }, [glyphItem, isSelected, selectItem, toggleMultiSelect]);
+
   return (
     <ContextMenu>
       <ContextMenuTrigger
@@ -82,6 +102,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         }}
       >
         <div
+          ref={ref}
           {...dragHandler()}
           title={`Click to select / unselect, right click to delete\nStart Time: ${(
             glyphItem.startTimeMilis / 1000
@@ -145,33 +166,4 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
       </ContextMenuContent>
     </ContextMenu>
   );
-}
-
-// eslint-disable-next-line react-refresh/only-export-components, @typescript-eslint/no-explicit-any
-function throttle(func: (...args: any[]) => void, limit: number) {
-  let lastFunc: ReturnType<typeof setTimeout>;
-  let lastRan: number | undefined;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return function (...args: any[]) {
-    if (!lastRan) {
-      // Delay the first call instead of calling it immediately
-      lastRan = Date.now();
-      lastFunc = setTimeout(() => {
-        func(...args);
-        lastRan = Date.now();
-      }, limit);
-    } else {
-      clearTimeout(lastFunc);
-      lastFunc = setTimeout(
-        () => {
-          if (Date.now() - lastRan! >= limit) {
-            func(...args);
-            lastRan = Date.now();
-          }
-        },
-        limit - (Date.now() - lastRan)
-      );
-    }
-  };
 }

@@ -22,17 +22,17 @@ import { kWidthBound } from './lib/consts';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
 
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return '';
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return '';
+  //   }
 
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener('beforeunload', beforeUnload);
+  //   return () => {
+  //     window.removeEventListener('beforeunload', beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -262,7 +262,7 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* Upper Section - W Fixed */}
-      <div className={` py-4 mx-auto overflow-auto`} style={{ width: `${kWidthBound}px` }}>
+      <div className={` py-4 mx-auto overflow-auto`} style={{ width: `${kWidthBound}%` }}>
         {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
@@ -284,9 +284,9 @@ export default function App() {
 
           {/* Load audio n play controls  */}
           {!isInputLoaded && (
-            <div className="flex justify-center">
+            <div className=" justify-center hidden sm:flex">
               <Button
-                style={{ width: `${kWidthBound - 10}px` }}
+                style={{ width: `${kWidthBound}%` }}
                 className={`py-6 font-normal font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
                 onClick={(e) => {
                   e.preventDefault();

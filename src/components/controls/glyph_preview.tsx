@@ -102,7 +102,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
   return (
     <>
       <div
-        className="h-[300px] w-[150px] rounded-[20px] flex justify-center bg-black items-center p-3 text-[#616161] text-center cursor-pointer"
+        className="h-[300px] max-h-[300px] w-[150px]  min-w-[150px] rounded-[20px] flex justify-center bg-black items-center p-3 text-[#616161] text-center cursor-pointer  text-wrap"
         onClick={() => {
           api.set({ x: 0, y: 0 });
         }}

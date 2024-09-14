@@ -35,7 +35,10 @@ export default function SettingsPanel() {
 
   const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
   const setSnapSensitivity = useGlobalAppStore((state) => state.setSnapSensitivity);
-
+  const toggleDragSelect = () => {
+    const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
+    dataStore.set('isDragSelectActive', !isDragSelectActive);
+  };
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
     dataStore.set('overwriteBrightnessWithNewBlock', e);
   };
@@ -178,18 +181,19 @@ export default function SettingsPanel() {
             onCheckedChange={toggleMultiSelect}
             checked={isMultiSelectActive}
           />
-          {/* Keyboard controls */}
+
+          {/* Drag Select */}
           <Label
-            htmlFor="keyboardControls"
+            htmlFor="dragSelect"
             className="text-lg font-light"
-            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+            title={`Enables Drag to Multi Select Gesture`}
           >
-            Enable Keyboard Gesture
+            Enable Drag Select
           </Label>
           <Switch
-            id="keyboardControls"
-            onCheckedChange={toggleKeyboardGesture}
-            checked={isKeyboardGestureEnabled}
+            id="dragSelect"
+            onCheckedChange={toggleDragSelect}
+            // checked={dataStore.get('isDragSelectActive') ?? false}
           />
 
           {/* Show audio timestamp */}
@@ -215,6 +219,20 @@ export default function SettingsPanel() {
             Show Glyph Zones
           </Label>
           <Switch id="toggleZones" onCheckedChange={toggleZoneVisibility} checked={isZoneVisible} />
+
+          {/* Keyboard controls */}
+          <Label
+            htmlFor="keyboardControls"
+            className="text-lg font-light"
+            title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
+          >
+            Enable Keyboard Gesture
+          </Label>
+          <Switch
+            id="keyboardControls"
+            onCheckedChange={toggleKeyboardGesture}
+            checked={isKeyboardGestureEnabled}
+          />
 
           {/* Snap to BPM feat. */}
           <Label

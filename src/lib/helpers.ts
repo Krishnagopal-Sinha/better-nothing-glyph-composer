@@ -163,28 +163,55 @@ export function getDateTime(): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function throttle(func: (...args: any[]) => void, limit: number) {
+// function throttle(func: (...args: any[]) => void, limit: number) {
+//   let lastFunc: ReturnType<typeof setTimeout>;
+//   let lastRan: number | undefined;
+//   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//   return function (...args: any[]) {
+//     if (!lastRan) {
+//       func(...args);
+//       lastRan = Date.now();
+//     } else {
+//       clearTimeout(lastFunc);
+//       lastFunc = setTimeout(
+//         () => {
+//           if (Date.now() - lastRan! >= limit) {
+//             func(...args);
+//             lastRan = Date.now();
+//           }
+//         },
+//         limit - (Date.now() - lastRan)
+//       );
+//     }
+//   };
+// }
+
+// eslint-disable-next-line react-refresh/only-export-components, @typescript-eslint/no-explicit-any
+export function throttle(func: (...args: any[]) => void, limit: number) {
   let lastFunc: ReturnType<typeof setTimeout>;
   let lastRan: number | undefined;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return function (...args: any[]) {
     if (!lastRan) {
-      func(...args);
+      // Delay the first call instead of calling it immediately
       lastRan = Date.now();
+      lastFunc = setTimeout(() => {
+        func(...args);
+        lastRan = Date.now();
+      }, limit);
     } else {
       clearTimeout(lastFunc);
-      lastFunc = setTimeout(
-        () => {
-          if (Date.now() - lastRan! >= limit) {
-            func(...args);
-            lastRan = Date.now();
-          }
-        },
-        limit - (Date.now() - lastRan)
-      );
+      lastFunc = setTimeout(() => {
+        if (Date.now() - lastRan! >= limit) {
+          func(...args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
     }
   };
 }
+
 const throttledShowError = throttle((message: string, description: string, duration?: number) => {
   toast.error(message, {
     description,
