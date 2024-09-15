@@ -34,6 +34,8 @@ Props) {
   const numberOfRowsToGenerate = Object.keys(itemsSchema).length;
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
   const showHeavyUi = useGlobalAppStore((state) => state.appSettings.showHeavyUi);
+  // Hover to see which glyph lights up feat
+  const updateHoveredGlyphZone = useGlobalAppStore((state) => state.updateHoveredGlyphZone);
 
   // label feat.
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -84,8 +86,10 @@ Props) {
         <div
           key={i}
           title="Double tap to add a new glyph block"
-          className={`border-dotted border-t border-[#3e3e3e] relative select-none min-h-[50px]`}
+          className={`relative select-none min-h-[50px] border-dotted border-[#333]  border-t-2 hover:border-[#939393] hover:border-y-2`}
           // ^^ controls editor row track size
+          onMouseEnter={() => updateHoveredGlyphZone(i)}
+          onMouseLeave={() => updateHoveredGlyphZone(null)}
           onDoubleClick={(e) => {
             e.preventDefault();
             const scrollValue: number = dataStore.get('editorScrollX') ?? 0;

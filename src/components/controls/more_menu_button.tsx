@@ -102,7 +102,7 @@ export default function MoreMenuButton() {
                   Embed Custom Watermark&nbsp;<span className="font-[ndot]">;)</span>
                 </MenubarItem>
 
-                <MenubarItem onClick={onImportGlyphClick}>Import Glyph Data</MenubarItem>
+                <MenubarItem onClick={onImportGlyphClick}>Import Project (.json) | BNGC</MenubarItem>
                 <MenubarItem onClick={onExportGlyphClick}>
                   Export Project (.json) | BNGC
                 </MenubarItem>

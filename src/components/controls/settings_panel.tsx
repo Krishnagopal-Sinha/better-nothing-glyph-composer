@@ -35,6 +35,12 @@ export default function SettingsPanel() {
 
   const setBpmForSnap = useGlobalAppStore((state) => state.setBpmForSnap);
   const setSnapSensitivity = useGlobalAppStore((state) => state.setSnapSensitivity);
+  const showHoverGlyphPreview = useGlobalAppStore(
+    (state) => state.appSettings.showHoverGlyphPreview
+  );
+  const toggleShowHoverGlyphPreview = useGlobalAppStore(
+    (state) => state.toggleShowHoverGlyphPreview
+  );
   const toggleDragSelect = () => {
     const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
     dataStore.set('isDragSelectActive', !isDragSelectActive);
@@ -61,10 +67,10 @@ export default function SettingsPanel() {
 
   const onNewBlockDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Math.round(parseInt(e.currentTarget.value));
-    if (value >= 50 && value <= 10000) {
+    if (value >= 20 && value <= 10000) {
       dataStore.set('newBlockDurationMilis', value);
     } else {
-      showPopUp('Invalid Value - Glyph Duration', 'Should be between 50ms to 10s');
+      showPopUp('Invalid Value - Glyph Duration', 'Should be between 20ms to 10s');
     }
   };
 
@@ -91,15 +97,16 @@ export default function SettingsPanel() {
         console.error(`Error while setting audio rate: ${e}`);
       }
     } else {
-      showPopUp('Invalid Value - Audio Speed', 'Should be between 0.25x to 4x');
+      showPopUp('Invalid Value - Audio Speed', 'Should be between 0.1x to 16x');
     }
   };
+  //  UI
   return (
     <>
       {/* Config panel */}
       <form>
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 pt-1 max-h-[304px] overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111]">
+        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 py-1 pb-3 overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111] max-h-[380px]">
           <legend
             className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide  "
             ref={spanRef}
@@ -132,7 +139,7 @@ export default function SettingsPanel() {
             type="number"
             defaultValue={dataStore.get('newBlockDurationMilis') ?? 500}
             max={10000}
-            min={50}
+            min={20}
             step={1}
             onChange={onNewBlockDurationChange}
           />
@@ -307,7 +314,21 @@ export default function SettingsPanel() {
           <Switch
             id="renderHeavy"
             onCheckedChange={toggleShowShowHeavyUi}
-            defaultValue={showHeavyUi.toString()}
+            checked={showHeavyUi}
+          />
+
+          {/* Glyph Preview on Hover */}
+          <Label
+            htmlFor="glyphZonePreviewOnHover"
+            className="text-lg font-light"
+            title="Show which Glyph Zone a Row in the Editor Corresponds to on Hover?"
+          >
+            Glyph Preview on Hover
+          </Label>
+          <Switch
+            id="glyphZonePreviewOnHover"
+            onCheckedChange={toggleShowHoverGlyphPreview}
+            checked={showHoverGlyphPreview}
           />
 
           {/* Modifiable paste brightness */}

@@ -32,11 +32,13 @@ type AppSettings = {
   bpmValue: number;
   snapSensitivity: number;
   showHeavyUi: boolean;
+  showHoverGlyphPreview: boolean;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
   clipboard: GlyphBlock[];
   isCutActive: boolean;
+  currentlyHoveredGlyphZone: number | null;
   audioInformation: {
     durationInMilis: number;
     title: string;
@@ -67,6 +69,7 @@ export type Action = {
   changePhoneModel: (phoneType: string) => void;
   fillEntireZone: (startGlyphId: number, endGlyphId: number, startTimeMilis: number) => void;
   generateGlyphs: (glyphGenerateData: GlyphGenerationModel) => void;
+  updateHoveredGlyphZone: (glyphZone: number | null) => void;
 
   // Settings
   toggleKeyboardGesture: (value?: boolean) => void;
@@ -84,6 +87,7 @@ export type Action = {
   setBpmForSnap: (value: number) => void;
   setSnapSensitivity: (value: number) => void;
   toggleShowShowHeavyUi: () => void;
+  toggleShowHoverGlyphPreview: () => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -105,6 +109,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         title: '',
         currentPositionInMilis: 0
       },
+      currentlyHoveredGlyphZone: null,
       // App Settings State  ============================================
       appSettings: {
         isZoneVisible: true,
@@ -113,12 +118,13 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         timelinePixelFactor: 160,
         isSettingsDialogOpen: false,
         settingDialogContentIndex: 0,
-        showAudioTimeStamp: false,
+        showAudioTimeStamp: true,
         bpmValue: 60,
         snapToBpmActive: false,
         alsoSnapDuration: false,
         snapSensitivity: 15,
-        showHeavyUi: false
+        showHeavyUi: false,
+        showHoverGlyphPreview: true
       },
 
       // Setting update functions
@@ -130,6 +136,14 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           }
         })),
 
+      toggleShowHoverGlyphPreview: () =>
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            showHoverGlyphPreview: !state.appSettings.showHoverGlyphPreview
+          }
+        })),
+        
       toggleShowAudioTimeStamp: () =>
         set((state) => ({
           appSettings: {
@@ -260,7 +274,11 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         };
         set({ appSettings: newSettings });
       },
-
+      // Update Hovered Glyph Preview
+      updateHoveredGlyphZone: (glyphZone: number | null) =>
+        set(() => ({
+          currentlyHoveredGlyphZone: glyphZone
+        })),
       // Update Duration
       updateAudioDuration: (durationInMilis: number) =>
         set((state) => ({
