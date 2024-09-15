@@ -237,7 +237,7 @@ export default function AudioControlComponent({
                 ? ''
                 : scrollY > window.innerHeight / 2
                 ? `40px`
-                : `calc(57% - ${scrollY}px)`,
+                : `calc(57% - ${scrollY + 5}px)`,
             left: '50%',
             transform: 'translateX(-50%)',
             transition: 'top 0.3s ease'
@@ -253,7 +253,7 @@ export default function AudioControlComponent({
       )}
       <div
         ref={containerRef}
-        className="mt-[50px] bg-black"
+        className="mt-[60px] bg-black"
         style={{
           width: `${widthToForce != 0 ? `${widthToForce}px` : ''}`,
           height: 'calc(10%)',
@@ -288,12 +288,7 @@ export default function AudioControlComponent({
         style={{
           width: `${kWidthBound - 0.5}%`,
           position: 'fixed',
-          top:
-            window.screen.width >= 1920
-              ? ''
-              : scrollY > window.innerHeight / 3.5
-              ? `40px`
-              : undefined,
+          top: (scrollY > 390 ? `40px` : `calc(410px - ${scrollY - 5}px)`),
           left: '50%',
           transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'

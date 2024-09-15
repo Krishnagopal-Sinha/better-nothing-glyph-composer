@@ -19,20 +19,20 @@ import { showPopUp, validateCSV } from './lib/helpers';
 import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
 import { kWidthBound } from './lib/consts';
+import GlyphPreviewComponent from './components/controls/glyph_preview';
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
+  useEffect(() => {
+    function beforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      return '';
+    }
 
-  // useEffect(() => {
-  //   function beforeUnload(e: BeforeUnloadEvent) {
-  //     e.preventDefault();
-  //     return '';
-  //   }
-
-  //   window.addEventListener('beforeunload', beforeUnload);
-  //   return () => {
-  //     window.removeEventListener('beforeunload', beforeUnload);
-  //   };
-  // }, []);
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -262,7 +262,10 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* Upper Section - W Fixed */}
-      <div className={` py-4 mx-auto overflow-auto max-w-[2280px]`} style={{ width: `${kWidthBound}%` }}>
+      <div
+        className={` py-4 mx-auto overflow-auto max-w-[2280px]`}
+        style={{ width: `${kWidthBound}%` }}
+      >
         {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
@@ -299,6 +302,8 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {isInputLoaded && <GlyphPreviewComponent isAudioLoaded={isInputLoaded} />}
 
       {/* Lower Section */}
 

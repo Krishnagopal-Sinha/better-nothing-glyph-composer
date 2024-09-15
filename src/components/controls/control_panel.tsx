@@ -26,7 +26,6 @@ import { kAppName, kAppVersion } from '@/lib/consts';
 import { useRef, useState } from 'react';
 import SettingsPanel from './settings_panel';
 import MoreMenuButton from './more_menu_button';
-import GlyphPreviewComponent from './glyph_preview';
 import dataStore from '@/lib/data_store';
 
 export default function MainTopPanel({
@@ -60,29 +59,22 @@ export default function MainTopPanel({
 
   const deviceControlsToShow = generateDeviceControls();
   return (
-    <div
-      className={`grid max-h-[50dvh] rounded-lg p-2 items-center ${
-        isAudioLoaded ? ' sm:grid-cols-[3.5fr_1fr_3.5fr] grid-flow-row min-[869px]:grid-flow-col' : 'grid-cols-2'
-      }`}
-    >
-      {/*1st col - Title n all */}
-      <div className={currentDevice === 'NP2' && window.screen.width <1920 ? 'scale-95 ml-[-20px]':''}>
-      <TitleAndControlsPanel className={`${currentDevice === 'NP2' &&  window.screen.width <1920 && 'py-[12px] px-[10px]'}`}/>
+    <>
+      <div className={`grid rounded-lg p-2  grid-cols-2 overflow-auto max-h-[390px] ${currentDevice === 'NP2' ? 'gap-2' : 'gap-[5%]'}`}>
+        {/*1st col - Title n all */}
+        <TitleAndControlsPanel />
+
+        {/* 2nd col - Config panel */}
+        <SettingsPanel />
       </div>
-
-      {/*  2nd col - Glyph preview */}
-      {isAudioLoaded && <GlyphPreviewComponent isAudioLoaded={isAudioLoaded} />}
-
-      {/* 3rd col - Config panel */}
-      <SettingsPanel />
-    </div>
+    </>
   );
 
-  function TitleAndControlsPanel({className}:{className?:string}) {
+  function TitleAndControlsPanel({ className }: { className?: string }) {
     return (
       <div
-        className={`flex flex-col justify-between bg-[#111111] py-4  rounded-md outline outline-[#212121]
-     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500 px-6 h-[300px] overflow-auto ${className}`}
+        className={`flex flex-col justify-between bg-[#111111] p-4  rounded-md outline outline-[#212121]
+     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500 overflow-visible ${className}`}
       >
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-primary">

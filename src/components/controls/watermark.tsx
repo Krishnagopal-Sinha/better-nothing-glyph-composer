@@ -1,16 +1,21 @@
 import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import dataStore from '@/lib/data_store';
-import { showPopUp } from '@/lib/helpers';
+import { getDateTime, showPopUp } from '@/lib/helpers';
+import fileDownload from 'js-file-download';
+import { useFilePicker } from 'use-file-picker';
 type Props = {
   cancelButton: React.ReactNode;
   applyAction: () => void;
 };
 export default function WaterMarkerComponent({ cancelButton, applyAction }: Props) {
   const [checkedBoxes, setCheckedBoxes] = useState<Set<string>>(new Set());
-
+  const { openFilePicker, filesContent, errors } = useFilePicker({
+    accept: '.json',
+    multiple: false
+  });
   const totalDurationMilis: number = dataStore.get('currentAudioDurationInMilis') ?? 1;
 
   const rowsPerColumn = 5;
@@ -28,6 +33,36 @@ export default function WaterMarkerComponent({ cancelButton, applyAction }: Prop
       }
       return newSet;
     });
+  };
+  useEffect(() => {
+    if (filesContent.length > 0 && filesContent[0]?.content) {
+      try {
+        const arr = JSON.parse(filesContent[0].content);
+        const checkBoxSet = new Set(arr) as Set<string>;
+        setCheckedBoxes(checkBoxSet);
+      } catch (e) {
+        console.error('Error while loading Watermark file:', e);
+        showPopUp(
+          `Import Error`,
+          `Error while importing watermark file, possible file format mismatch?`,
+          1200
+        );
+      }
+    } else if (errors.length > 0) {
+      console.error('Error while selecting Watermark data file:', errors);
+      alert(
+        `File error.\nError while importing Glyph watermark file, possible file format mismatch?`
+      );
+    }
+  }, [filesContent, errors]);
+
+  const handleExport = () => {
+    const jsonString = JSON.stringify([...checkedBoxes], null, 2); //prettify it with spacing of 2
+    fileDownload(jsonString, `watermark_export_${getDateTime()}.json`);
+  };
+
+  const handleImport = () => {
+    openFilePicker();
   };
 
   const handleSubmit = () => {
@@ -83,9 +118,20 @@ export default function WaterMarkerComponent({ cancelButton, applyAction }: Prop
         ))}
       </div>
 
-      <DialogFooter className="flex-grow justify-between mt-2">
-        {cancelButton}
-        <Button onClick={handleSubmit}>Apply</Button>
+      <DialogFooter className="mt-2 flex sm:justify-between justify-between sm:items-center items-center ">
+        <div className="space-x-2">
+          <Button variant="outline" onClick={handleImport}>
+            Import Watermark
+          </Button>
+          <Button variant="outline" onClick={handleExport}>
+            Export Watermark
+          </Button>
+        </div>
+
+        <div className="space-x-2">
+          {cancelButton}
+          <Button onClick={handleSubmit}>Apply</Button>
+        </div>
       </DialogFooter>
     </>
   );
