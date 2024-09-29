@@ -1,9 +1,11 @@
 import { kMaxBrightness, kTimeStepMilis } from '@/lib/consts';
+import dataStore from '@/lib/data_store';
 import { GlyphBlock, GlyphStore } from '@/lib/glyph_model';
-import { convertArrayToObjects } from '@/lib/helpers';
+import { convertArrayToObjects, showPopUp } from '@/lib/helpers';
 import pako from 'pako';
 
-export function encodeStuffTheWayNothingLikesIt(input: string): string | null {
+export function encodeStuffTheWayNothingLikesIt(input: string | undefined): string | undefined {
+  if (!input) return;
   try {
     // const utf8Encoded = new TextEncoder().encode(csv); //No need as Pako does this outta the box
 
@@ -29,7 +31,7 @@ export function encodeStuffTheWayNothingLikesIt(input: string): string | null {
     return base64Data;
   } catch (error) {
     console.error(`Error: while processing final glyph data -> ${error}`);
-    return null;
+    return;
   }
 }
 
@@ -231,10 +233,13 @@ export function generateEffectData(
   } //switch end
 }
 
-export function generateCSV(
-  data: { [key: number]: GlyphBlock[] },
-  totalDurationInMilis: number
-): string {
+export function generateCSV(data: { [key: number]: GlyphBlock[] }): string | undefined {
+  const totalDurationInMilis: number | undefined = dataStore.get('currentAudioDurationInMilis');
+  if (!totalDurationInMilis) {
+    showPopUp('Error - Audio File', 'Audio Duration is 0 ?');
+    return;
+  }
+
   const intervals = [];
   const emptyRow: number[] = [];
   for (let i = 0; i < Object.keys(data).length; i++) {
@@ -277,3 +282,131 @@ export function generateCSV(
 
   return csvContent;
 }
+//=======================
+const mapPeakToBrightness = (peak: number, minPeak: number, maxPeak: number): number => {
+
+  const threshold = 0.6; 
+
+
+  let normalizedPeak = (peak - minPeak) / (maxPeak - minPeak);
+
+
+  if (normalizedPeak < threshold) {
+    return 0;
+  }
+
+  normalizedPeak = Math.pow(normalizedPeak, 2); 
+
+  const brightness = Math.floor(normalizedPeak * kMaxBrightness);
+
+  return brightness;
+};
+
+const findMinMaxPeaks = (peaks: number[]): { minPeak: number; maxPeak: number } => {
+  const minPeak = Math.min(...peaks);
+  const maxPeak = Math.max(...peaks);
+
+  return { minPeak, maxPeak };
+};
+
+// Utility function to generate a random number between a range
+const getRandomFactor = (min: number, max: number): number => {
+  return Math.random() * (max - min) + min;
+};
+
+// Function to detect strong beats based on threshold
+const isStrongBeat = (peak: number, minPeak: number, maxPeak: number): boolean => {
+  const threshold = minPeak + (maxPeak - minPeak) * 0.8;  // 80% of the peak range
+  return peak >= threshold;
+};
+
+// Generate LED pattern effects based on audio peaks
+export const generateLEDBrightnessCSV = (): string | undefined => {
+  const ledCount = 5; // Adjust based on your circular LED arrangement
+  const peaks: number[] | undefined = dataStore.get('currentAudioPeaks');
+  const totalDurationInMilis: number | undefined = dataStore.get('currentAudioDurationInMilis');
+  
+  if (!totalDurationInMilis || !peaks) {
+    showPopUp('Error - Audio File', 'Audio Duration is 0 or Some other issue occurred');
+    return;
+  }
+
+  const totalRows = Math.floor(totalDurationInMilis / kTimeStepMilis);  // Total number of rows based on 16.66ms slices
+  const totalPeaks = peaks.length;
+
+  let csvData = '';
+
+  // Find min and max peak values for proper normalization
+  const { minPeak, maxPeak } = findMinMaxPeaks(peaks);
+
+  // Duration of each peak (in milliseconds)
+  const peakDurationInMilis = totalDurationInMilis / totalPeaks;
+
+  for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+    const row = [];
+    
+    // Start and end time for this row's time slice
+    const sliceStartTime = rowIndex * kTimeStepMilis;
+    const sliceEndTime = sliceStartTime + kTimeStepMilis;
+
+    // Aggregate peaks that fall within this time slice
+    const peaksInSlice: number[] = [];
+    for (let peakIndex = 0; peakIndex < totalPeaks; peakIndex++) {
+      const peakTime = peakIndex * peakDurationInMilis;
+      if (peakTime >= sliceStartTime && peakTime < sliceEndTime) {
+        peaksInSlice.push(peaks[peakIndex]);
+      }
+    }
+
+    // If no peaks are found in this slice, default to 0
+    const peakForThisSlice = peaksInSlice.length > 0 ? Math.max(...peaksInSlice) : 0;
+
+    // Rotational offset to create wave-like effects, spread the wave with distinct separation
+    const waveOffset = rowIndex % (ledCount * 2);  // Modulo to rotate around the circle with stronger separation
+
+    // Detect if this peak represents a strong beat
+    const strongBeat = isStrongBeat(peakForThisSlice, minPeak, maxPeak);
+
+    // Choose a random lighting pattern: either wave or flashing, or full-LED flash on strong beat
+    const isFlashingPattern = Math.random() < 0.5 && !strongBeat;  // Flash or wave, but not during strong beat
+
+    for (let ledIndex = 0; ledIndex < ledCount; ledIndex++) {
+      let brightness = 0;
+
+      if (strongBeat) {
+        // Strong beat: flash all LEDs at max brightness
+        brightness = 4095;  // Max brightness for a strong beat flash
+      } else if (!isFlashingPattern) {
+        // Wave-like effect: each LED lights up in sequence with distinct separation
+        const offsetIndex = (ledIndex + waveOffset) % ledCount;
+        const randomWaveFactor = getRandomFactor(0.8, 1.2);  // Randomize each LED's reaction to the wave with a sharper factor
+
+        // Create more pronounced separation between LEDs by skipping brightness for some
+        const isActiveLED = Math.abs(offsetIndex - waveOffset) < 2;  // Only light up LEDs closer to the wave position
+
+        if (isActiveLED) {
+          brightness = mapPeakToBrightness(peakForThisSlice * randomWaveFactor, minPeak, maxPeak);
+        } else {
+          brightness = 0;  // Sharp cutoff for LEDs that aren't close to the wave
+        }
+
+      } else {
+        // Flashing effect: Random LEDs flash in sync with the peak
+        if (Math.random() > 0.6) {  // Randomly choose some LEDs to flash
+          const randomFlashFactor = getRandomFactor(1.0, 1.5);  // Make flashes more intense
+          brightness = mapPeakToBrightness(peakForThisSlice * randomFlashFactor, minPeak, maxPeak);
+        } else {
+          brightness = 0;  // Other LEDs stay off in the flashing pattern
+        }
+      }
+
+      row.push(brightness);
+    }
+
+    // Create CSV row with brightness values for each LED
+    csvData += row.join(',') + ',\r\n';
+  }
+
+  // console.log('✌️csvData --->\n', csvData);
+  return csvData;
+};

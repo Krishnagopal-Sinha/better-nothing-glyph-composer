@@ -26,14 +26,17 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
   const getAudioPosition: () => number = () => {
     return (dataStore.get('currentAudioPositionInMilis') ?? 0) as number;
   };
-
+  const isPlaying = useRef(false);
   //   check for position changes
   useEffect(() => {
     if (isAudioLoaded) {
       const pollAudioPosition = () => {
         const newPosition = getAudioPosition();
         if (newPosition !== currentPosition) {
+          isPlaying.current = true;
           setCurrentPosition(newPosition);
+        }else{
+          isPlaying.current = false;
         }
       };
       // poll for checks every <16ms
@@ -72,7 +75,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
         }
       }
     }
-    if ((currentlyHoveredGlyphZone || currentlyHoveredGlyphZone === 0) && showHoverGlyphPreview) {
+    if (!isPlaying.current && (currentlyHoveredGlyphZone || currentlyHoveredGlyphZone === 0) && showHoverGlyphPreview) {
       if (zoneColors[currentlyHoveredGlyphZone]) {
         zoneColors[currentlyHoveredGlyphZone] = `rgba(255, 0, 0, 0.8)`;
       } else {

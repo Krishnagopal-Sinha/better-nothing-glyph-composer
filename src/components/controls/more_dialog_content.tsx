@@ -25,6 +25,9 @@ import useGlobalAppStore from '@/lib/timeline_state';
 import { useState } from 'react';
 import dataStore from '@/lib/data_store';
 import WaterMarkerComponent from './watermark';
+import { autoGenerateGlyphs } from '../auto_gen/autoGen2';
+import { actuallyRestoreGlyphData } from '@/logic/export_logic';
+import { newFuncTest } from '../auto_gen/autoGen1';
 
 export default function SettingDialogContent({ dialogContentIdx }: { dialogContentIdx: number }) {
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -54,6 +57,9 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
   const [generationGlyphGap, setGenerationGlyphGap] = useState<number>(500);
   const [generationGlyphZone, setGenerationGlyphZone] = useState<number>(0);
   const generateGlyphs = useGlobalAppStore((state) => state.generateGlyphs);
+  const currentDevice = useGlobalAppStore((state) => state.phoneModel);
+  const importJsonData = useGlobalAppStore((state) => state.importJsonData);
+  const [autoGenStart, setAutoGenStart] = useState(false);
   switch (dialogContentIdx) {
     // BPM Glyph Generator
     case 1:
@@ -226,6 +232,141 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
             }
             applyAction={() => setIsSettingsDialogOpen(false)}
           />
+        </DialogContent>
+      );
+
+    case 3:
+      return (
+        <DialogContent className="sm:max-w-[700px] dontClose">
+          <DialogHeader>
+            <DialogTitle>
+              Auto Generating Glyphs <span className="animate-pulse">(Alpha)</span>
+            </DialogTitle>
+            <DialogDescription>
+              <br />
+
+              <span>
+                This is still very much in beta, you may not like all the effects produced. This
+                can't really nail down what you want, should only be treated as a starting base that
+                you can further customize as per you needs. Click "Auto Generate" to confirm and
+                proceed :D
+              </span>
+              <br />
+              <span className="text-yellow-50">
+                <span className="font-bold text-yellow-200"> Warning:</span> This will replace and
+                overwrite all the current Glyphs, ideally this should be used in the start!
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-grow justify-between mt-4">
+            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setAutoGenStart(true);
+                // Glyph Auto Gen Feature =============
+                let ledIdx: number[][] = [[0], [1], [2], [3], [4]]; //NP1
+                if (currentDevice === 'NP2') {
+                  ledIdx = [
+                    [0],
+                    [1],
+                    [2],
+                    //center start
+                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                    [19],
+                    [20],
+                    [21],
+                    [22],
+                    [23],
+                    // center end
+                    [24],
+                    [25, 26, 27, 28, 29, 30, 31, 32]
+                  ];
+                } else if (currentDevice === 'NP2a') {
+                  ledIdx = [
+                    [
+                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                      22, 23
+                    ],
+                    [24],
+                    [25]
+                  ];
+                } else if (currentDevice === 'NP1_15') {
+                  ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14]];
+                }
+                // console.warn('deivce is: ', currentDevice, ledIdx);
+                await newFuncTest({
+                  ledIdx: ledIdx
+                }).then((csv) => {
+                  if (csv) {
+                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                    if (restoredGlyphData) {
+                      importJsonData(JSON.stringify(restoredGlyphData));
+                    }
+                  } else {
+                    showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
+                  }
+                });
+                setAutoGenStart(false);
+                setIsSettingsDialogOpen(false);
+              }}
+            >
+            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen Type 1'}
+            </Button>
+            <Button
+              onClick={async () => {
+                setAutoGenStart(true);
+                // Glyph Auto Gen Feature =============
+                let ledIdx: number[][] = [[0], [1], [2], [3], [4]]; //NP1
+                if (currentDevice === 'NP2') {
+                  ledIdx = [
+                    [0],
+                    [1],
+                    [2],
+                    //center start
+                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                    [19],
+                    [20],
+                    [21],
+                    [22],
+                    [23],
+                    // center end
+                    [24],
+                    [25, 26, 27, 28, 29, 30, 31, 32]
+                  ];
+                } else if (currentDevice === 'NP2a') {
+                  ledIdx = [
+                    [
+                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+                      22, 23
+                    ],
+                    [24],
+                    [25]
+                  ];
+                } else if (currentDevice === 'NP1_15') {
+                  ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14]];
+                }
+                // console.warn('deivce is: ', currentDevice, ledIdx);
+                await autoGenerateGlyphs({
+                  ledIdx: ledIdx
+                }).then((csv) => {
+                  if (csv) {
+                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                    if (restoredGlyphData) {
+                      importJsonData(JSON.stringify(restoredGlyphData));
+                    }
+                  } else {
+                    showPopUp('Critical Error - AutoGen 2', 'Could not auto generate Glyphs.');
+                  }
+                });
+                setAutoGenStart(false);
+                setIsSettingsDialogOpen(false);
+              }}
+            >
+            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen Type 2'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       );
 

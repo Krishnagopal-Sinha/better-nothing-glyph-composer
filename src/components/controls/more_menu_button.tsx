@@ -2,13 +2,12 @@ import { EllipsisVertical } from 'lucide-react';
 import { Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarTrigger } from '../ui/menubar';
 import useGlobalAppStore from '@/lib/timeline_state';
 import fileDownload from 'js-file-download';
-import { getDateTime } from '@/lib/helpers';
+import { getDateTime, showPopUp } from '@/lib/helpers';
 import { useFilePicker } from 'use-file-picker';
 import { useEffect } from 'react';
 import { Dialog, DialogTrigger } from '../ui/dialog';
 import SettingDialogContent from './more_dialog_content';
 import { generateCSV } from '@/logic/export_logic';
-import dataStore from '@/lib/data_store';
 
 // type Props = {
 //   isAdvOpen: boolean;
@@ -58,11 +57,12 @@ export default function MoreMenuButton() {
   };
 
   const onExportGlyphCsvClick = () => {
-    const csvToExport = generateCSV(
-      timelineData,
-      dataStore.get('currentAudioDurationInMilis') as number
-    );
-    fileDownload(csvToExport, `${phoneModel}_glyph_data_${getDateTime()}.csv`);
+    const csvToExport = generateCSV(timelineData);
+    if (csvToExport) {
+      fileDownload(csvToExport, `${phoneModel}_glyph_data_${getDateTime()}.csv`);
+    } else {
+      showPopUp('Critical Error', 'Could not generate a valid CSV data.', 1500);
+    }
   };
   // Dialog was not getting opened as on MenuItem click, menu unmounts, so nothing else is there to show, this is the only way to escape that.
   return (
@@ -75,6 +75,15 @@ export default function MoreMenuButton() {
                 <EllipsisVertical />
               </MenubarTrigger>
               <MenubarContent>
+                <MenubarItem
+                  onClick={() => {
+                    setIsSettingsDialogOpen(true);
+                    setDialogContentIndex(3);
+                  }}
+                >
+                 <div className='animate-pulse text-yellow-100'> Auto Generate Glyphs (alpha ver.)</div>
+                </MenubarItem>
+
                 <MenubarItem
                   onClick={() => {
                     setIsSettingsDialogOpen(true);
@@ -102,7 +111,9 @@ export default function MoreMenuButton() {
                   Embed Custom Watermark&nbsp;<span className="font-[ndot]">;)</span>
                 </MenubarItem>
 
-                <MenubarItem onClick={onImportGlyphClick}>Import Project (.json) | BNGC</MenubarItem>
+                <MenubarItem onClick={onImportGlyphClick}>
+                  Import Project (.json) | BNGC
+                </MenubarItem>
                 <MenubarItem onClick={onExportGlyphClick}>
                   Export Project (.json) | BNGC
                 </MenubarItem>

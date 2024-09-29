@@ -50,7 +50,9 @@ export default function AudioControlComponent({
   // const increasePixelFactor = useGlobalAppStore(
   //   (state) => state.increasePixelFactor
   // );
+
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+
   const regionsRef = useRef(RegionsPlugin.create());
   useEffect(() => {
     if (containerRef.current) {
@@ -97,7 +99,9 @@ export default function AudioControlComponent({
         setWidthToForce(audioDurationInSecs * timelinePixelFactor);
         dataStore.set('currentAudioDurationInMilis', audioDurationInSecs * 1000);
         updateDuration(audioDurationInSecs * 1000);
+
         // Added a bit of delay to ensure that other helper stuff is also rendered
+        dataStore.set('audioSrc', audioUrl);
         setTimeout(() => setIsNotLoaded(false), 180);
       });
       // Runs every instance of playing audio
@@ -284,11 +288,12 @@ export default function AudioControlComponent({
         // putting same width contraints for main upper UI but as max width!
         className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] max-w-[2280px] ${
           playin ? 'animate-pulse' : ''
-        }  hover:shadow-[0px_0px_10px_1px_#777777] duration-[1300]`}
+        }  hover:shadow-[0px_0px_10px_1px_#777777]`}
         style={{
+          animationDuration: '1.5s',
           width: `${kWidthBound - 0.5}%`,
           position: 'fixed',
-          top: (scrollY > 390 ? `40px` : `calc(410px - ${scrollY - 5}px)`),
+          top: scrollY > 390 ? `40px` : `calc(410px - ${scrollY - 5}px)`,
           left: '50%',
           transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'
@@ -353,6 +358,7 @@ export default function AudioControlComponent({
         <button
           onClick={() => {
             onCloseButtonClicked();
+            dataStore.set('audioSrc', undefined);
             player.destroy();
           }}
           title={'Close audio'}
