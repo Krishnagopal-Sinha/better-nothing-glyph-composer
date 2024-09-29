@@ -312,7 +312,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
                 setIsSettingsDialogOpen(false);
               }}
             >
-            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen Type 1'}
+            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen (Beats)'}
             </Button>
             <Button
               onClick={async () => {
