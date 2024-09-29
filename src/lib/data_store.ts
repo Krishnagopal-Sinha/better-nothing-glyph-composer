@@ -33,6 +33,8 @@ class DataStore {
     durationBlockDragAccumulator: 0,
     exportCustom1: 'eNoDAAAAAAE=',
     isDragSelectActive: false,
+    currentAudioPeaks: null,
+    audioSrc: undefined,
 
     // Note: Phone custom 1 are just legacy, TOOD: Remove when ya have time
     // Base Phone 1 Info

@@ -353,7 +353,7 @@ export default function App() {
   async function onSaveButtonClick() {
     const inputFile = plainFiles[0];
     const processedEditData = encodeStuffTheWayNothingLikesIt(
-      generateCSV(timelineData, dataStore.get('currentAudioDurationInMilis') as number)
+      generateCSV(timelineData)
     );
     if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {
       setIsSaving(true);

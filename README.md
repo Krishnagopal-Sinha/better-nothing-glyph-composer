@@ -20,6 +20,7 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 
 - **Load Audio Files**: Import your favorite `.mp3` or `.ogg` files to start creating.
 - **Media Controls**: Easily play, pause, stop, and seek through your audio tracks.
+- **Auto Generate Glyphs**: Generate Glyph lighting automatically on basis of audio, for all Nothing Phone (in Alpha)
 - **Glyph Editing**: Customize Glyphs with an intuitive editor that feels like a professional timeline tool.
 - **Interactive Glyph Blocks**:
   - Add as many glyph blocks as you'd like
@@ -60,7 +61,7 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
 ## 📜 Early Release Notes
 
 - **Stay Humorous**: Remember, this is an early version, so let's keep a light-hearted approach while using it! 😄
-- **More Demo & Discussion**: Available on this forum on [Nothing's official discord server channel](https://discord.com/channels/930878214237200394/1275717674634051661)
+- **More Demo & Discussion**: Available on this forum channel on [Nothing's official discord server channel](https://discord.com/channels/930878214237200394/1275717674634051661)
 
 ## 📫 Contributing
 
@@ -89,6 +90,8 @@ _Made with ❤️ by Krishnagopal Sinha_
 [![Donate with PayPal](https://raw.githubusercontent.com/stefan-niedermann/paypal-donate-button/master/paypal-donate-button.png)](https://paypal.me/krishnagopalsinha)
 
 ## TODO:
+
+-[X] Auto Generate Glyphs
 
 -[X] Exit confirmation feat. as while sliding on laptop one may trigger back gesture
 
