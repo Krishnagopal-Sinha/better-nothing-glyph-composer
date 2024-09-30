@@ -235,7 +235,34 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
         </DialogContent>
       );
 
-    case 3:
+    case 3: {
+      // Glyph Auto Gen Feature =============
+      let ledIdx: number[][] = [[0], [1], [2], [3], [4]]; //NP1
+      if (currentDevice === 'NP2') {
+        ledIdx = [
+          [0],
+          [1],
+          [2],
+          //center start
+          [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+          [19],
+          [20],
+          [21],
+          [22],
+          [23],
+          // center end
+          [24],
+          [25, 26, 27, 28, 29, 30, 31, 32]
+        ];
+      } else if (currentDevice === 'NP2a') {
+        ledIdx = [
+          [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+          [24],
+          [25]
+        ];
+      } else if (currentDevice === 'NP1_15') {
+        ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14]];
+      }
       return (
         <DialogContent className="sm:max-w-[700px] dontClose">
           <DialogHeader>
@@ -263,38 +290,10 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
               Cancel
             </Button>
             <Button
+              className="w-[150px]"
               onClick={async () => {
                 setAutoGenStart(true);
-                // Glyph Auto Gen Feature =============
-                let ledIdx: number[][] = [[0], [1], [2], [3], [4]]; //NP1
-                if (currentDevice === 'NP2') {
-                  ledIdx = [
-                    [0],
-                    [1],
-                    [2],
-                    //center start
-                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-                    [19],
-                    [20],
-                    [21],
-                    [22],
-                    [23],
-                    // center end
-                    [24],
-                    [25, 26, 27, 28, 29, 30, 31, 32]
-                  ];
-                } else if (currentDevice === 'NP2a') {
-                  ledIdx = [
-                    [
-                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                      22, 23
-                    ],
-                    [24],
-                    [25]
-                  ];
-                } else if (currentDevice === 'NP1_15') {
-                  ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14]];
-                }
+
                 // console.warn('deivce is: ', currentDevice, ledIdx);
                 await newFuncTest({
                   ledIdx: ledIdx
@@ -312,41 +311,46 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
                 setIsSettingsDialogOpen(false);
               }}
             >
-            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen (Beats)'}
+              {autoGenStart ? (
+                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
+              ) : (
+                'AutoGen (Beats)'
+              )}
             </Button>
             <Button
+              className="w-[150px]"
               onClick={async () => {
                 setAutoGenStart(true);
-                // Glyph Auto Gen Feature =============
-                let ledIdx: number[][] = [[0], [1], [2], [3], [4]]; //NP1
-                if (currentDevice === 'NP2') {
-                  ledIdx = [
-                    [0],
-                    [1],
-                    [2],
-                    //center start
-                    [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-                    [19],
-                    [20],
-                    [21],
-                    [22],
-                    [23],
-                    // center end
-                    [24],
-                    [25, 26, 27, 28, 29, 30, 31, 32]
-                  ];
-                } else if (currentDevice === 'NP2a') {
-                  ledIdx = [
-                    [
-                      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                      22, 23
-                    ],
-                    [24],
-                    [25]
-                  ];
-                } else if (currentDevice === 'NP1_15') {
-                  ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14]];
-                }
+
+                // console.warn('deivce is: ', currentDevice, ledIdx);
+                await newFuncTest({
+                  ledIdx: ledIdx,
+                  antiFlicker: true
+                }).then((csv) => {
+                  if (csv) {
+                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                    if (restoredGlyphData) {
+                      importJsonData(JSON.stringify(restoredGlyphData));
+                    }
+                  } else {
+                    showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
+                  }
+                });
+                setAutoGenStart(false);
+                setIsSettingsDialogOpen(false);
+              }}
+            >
+              {autoGenStart ? (
+                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
+              ) : (
+                'AutoGen (Smooth)'
+              )}
+            </Button>
+            <Button
+              className="w-[150px]"
+              onClick={async () => {
+                setAutoGenStart(true);
+
                 // console.warn('deivce is: ', currentDevice, ledIdx);
                 await autoGenerateGlyphs({
                   ledIdx: ledIdx
@@ -364,11 +368,16 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
                 setIsSettingsDialogOpen(false);
               }}
             >
-            {  autoGenStart ?<div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div> :   'AutoGen Type 2'}
+              {autoGenStart ? (
+                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
+              ) : (
+                'AutoGen Type 2'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       );
+    }
 
     // Advance Edit
     // case 0
