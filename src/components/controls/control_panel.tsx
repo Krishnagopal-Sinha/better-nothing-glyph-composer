@@ -93,7 +93,7 @@ export default function MainTopPanel({
             This app is usable but is still being <span className="line-through">actively</span>{' '}
             being worked upon!
             <br />
-            Supports: Nothing Phone (1), (2), (2a) / (2a) Plus
+            Supports: Nothing Phone (1), (2), (2a) / (2a) Plus, (3a) / (3a) Plus
             <br />
             Use on fullscreen Desktop / Laptop
             <br />
