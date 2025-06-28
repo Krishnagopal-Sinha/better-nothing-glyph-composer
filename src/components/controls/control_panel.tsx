@@ -60,7 +60,11 @@ export default function MainTopPanel({
   const deviceControlsToShow = generateDeviceControls();
   return (
     <>
-      <div className={`grid rounded-lg p-2  grid-cols-2 overflow-auto max-h-[390px] ${currentDevice === 'NP2' ? 'gap-2' : 'gap-[5%]'}`}>
+      <div
+        className={`grid rounded-lg p-2  grid-cols-2 overflow-auto max-h-[390px] ${
+          currentDevice === 'NP2' ? 'gap-2' : 'gap-[5%]'
+        }`}
+      >
         {/*1st col - Title n all */}
         <TitleAndControlsPanel />
 
@@ -86,7 +90,8 @@ export default function MainTopPanel({
 
           {/*  Info content */}
           <p className="text-muted-foreground">
-            This app is usable but is still being actively being worked upon!
+            This app is usable but is still being <span className="line-through">actively</span>{' '}
+            being worked upon!
             <br />
             Supports: Nothing Phone (1), (2), (2a) / (2a) Plus
             <br />
@@ -511,6 +516,118 @@ export default function MainTopPanel({
           </>
         );
 
+      case 'NP3a':
+        return (
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(0, 19, startTimeMilis);
+              }}
+            >
+              1
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(0, 6, startTimeMilis);
+              }}
+            >
+              1.1
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(7, 13, startTimeMilis);
+              }}
+            >
+              1.2
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(14, 19, startTimeMilis);
+              }}
+            >
+              1.3
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(20, 30, startTimeMilis);
+              }}
+            >
+              2
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(20, 22, startTimeMilis);
+              }}
+            >
+              2.1
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(23, 27, startTimeMilis);
+              }}
+            >
+              2.2
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(28, 30, startTimeMilis);
+              }}
+            >
+              2.3
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(31, 35, startTimeMilis);
+              }}
+            >
+              3
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(31, 32, startTimeMilis);
+              }}
+            >
+              3.1
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(33, 35, startTimeMilis);
+              }}
+            >
+              3.2
+            </Button>
+          </>
+        );
+
       default:
         return <></>;
     }
@@ -668,6 +785,20 @@ export default function MainTopPanel({
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 25, startTimeMilis);
+              }}
+            >
+              <SquarePlus />
+            </Button>
+          )}
+
+          {/* Phone 2a Add all glyphs */}
+          {currentDevice === 'NP3a' && (
+            <Button
+              variant="ghost"
+              title="Add all the Glyphs of NP(3a) "
+              onClick={() => {
+                const startTimeMilis = getPosition();
+                fillEntireZone(0, 35, startTimeMilis);
               }}
             >
               <SquarePlus />

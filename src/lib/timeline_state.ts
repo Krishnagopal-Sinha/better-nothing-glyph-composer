@@ -615,7 +615,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             NP1: 5,
             NP1_15: 15,
             NP2: 33,
-            NP2a: 26
+            NP2a: 26,
+            NP3a: 36, //NP3a or 3a Pro
           }[get().phoneModel] ?? 5;
 
         // Remember: calling zundo's clear method from here didn't work, so it is being called when device dropdown changes, from that ui

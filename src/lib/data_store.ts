@@ -65,6 +65,13 @@ class DataStore {
       album: `BNGC v${kMajorVersion}`,
       custom2: '26cols',
       custom1: `eNoDAAAAAAE=`
+    },
+    // Phone 3a Info
+    NP3a: <PhoneSpecificInfo>{
+      composer: `v1-Asteroids Glyph Composer`,
+      album: `BNGC v${kMajorVersion}`,
+      custom2: '36cols',
+      custom1: `eNoDAAAAAAE=`
     }
   };
   // Actual data store

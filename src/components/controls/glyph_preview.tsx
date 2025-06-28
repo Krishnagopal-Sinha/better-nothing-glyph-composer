@@ -4,6 +4,7 @@ import NP1_5_Preview from './previewDevices/NP1_Preview';
 import NP2_Preview from './previewDevices/NP2_Preview';
 import NP2a_Preview from './previewDevices/NP2a_Preview';
 import NP1_15_Preview from './previewDevices/NP1_15_Preview';
+import NP3a_Preview from './previewDevices/NP3a_Preview';
 import { getPrettyTime } from '@/lib/helpers';
 import { kTimeStepMilis } from '@/lib/consts';
 import dataStore from '@/lib/data_store';
@@ -99,6 +100,9 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
       break;
     case 'NP2a':
       previewComponent = <NP2a_Preview zoneColors={zoneColors} />;
+      break;
+    case 'NP3a':
+      previewComponent = <NP3a_Preview zoneColors={zoneColors} />;
       break;
 
     default:

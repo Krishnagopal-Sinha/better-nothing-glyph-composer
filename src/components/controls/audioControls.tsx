@@ -165,7 +165,6 @@ export default function AudioControlComponent({
           e.stopPropagation(); // prevent triggering a click on the waveform
           activeRegion = region;
           region.play();
-          // @ts-expect-error works
           region.setOptions({
             color: regionActiveColor
           });

@@ -1,6 +1,6 @@
 export const kTimeStepMilis = 16.666;
 export const KDefaultPreviewGlyphFillColor = '#111111';
-export const kAllowedModels = ['NP1', 'NP1_15', 'NP2', 'NP2a'];
+export const kAllowedModels = ['NP1', 'NP1_15', 'NP2', 'NP2a', 'NP3a'];
 export const kMouseCursorOffset = 32;
 export const kWidthBound = 99;
 export const kMaxBrightness = 4095;
@@ -8,13 +8,15 @@ export const kPhoneModelNames: { [key: string]: string } = {
   NP1: 'Phone (1)',
   NP1_15: 'Phone (1) | 15 Zone',
   NP2: 'Phone (2)',
-  NP2a: 'Phone (2a) / (2a) Plus'
+  NP2a: 'Phone (2a) / (2a) Plus',
+  NP3a: 'Phone (3a) / (3a) Pro'
 };
 export const kPhoneZones: { [key: number]: string } = {
   5: 'Phone (1)',
   15: 'Phone (1) | 15 Zone',
   33: 'Phone (2)',
-  26: 'Phone (2a) / (2a) Plus'
+  26: 'Phone (2a) / (2a) Plus',
+  36: 'Phone (3a) / (3a) Pro'
 };
 export const kEffectNames: { [key: number]: string } = {
   0: 'Constant Brightness',
@@ -35,8 +37,8 @@ export const kEffectNames: { [key: number]: string } = {
 // Version Info
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
-export const kMinorVersion = 2;
-export const kPatchVersion = 2;
+export const kMinorVersion = 3;
+export const kPatchVersion = 0;
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 
