@@ -266,40 +266,24 @@ export default function App() {
         className={`p-0 mx-auto max-w-[2280px] overflow-auto`}
         style={{ width: `${kWidthBound}%` }}
       >
-        {/* Mobile Only - load audio */}
-        {!isInputLoaded ? (
-          <Button
-            variant="outline"
-            className="sm:hidden mb-2 p-4 sm:p-6 text-base sm:text-lg font-normal border-white w-full"
-            onClick={(e) => {
-              e.preventDefault();
-              loadAudioFile();
-            }}
-          >
-            Load Audio
-          </Button>
-        ) : (
-          <></>
+        {/* load audio */}
+        {!isInputLoaded && (
+          <div className="flex justify-center px-1 sm:px-3">
+            <Button
+              variant="outline"
+              className={`py-4 sm:py-6 font-normal font-[ndot] uppercase tracking-wider text-lg sm:text-xl sm:inline-flex bg-white text-black hover:bg-black hover:outline hover:text-white duration-700 mx-auto mt-2 w-full`}
+              onClick={(e) => {
+                e.preventDefault();
+                loadAudioFile();
+              }}
+            >
+              Load Audio
+            </Button>
+          </div>
         )}
         <div className={`max-h-[48dvh] relative`}>
           {/* Main Top Half Component */}
           <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
-
-          {/* Load audio n play controls  */}
-          {!isInputLoaded && (
-            <div className="justify-center hidden sm:flex">
-              <Button
-                style={{ width: `${kWidthBound}%` }}
-                className={`absolute bottom-1 right-1 left-1 py-4 sm:py-6 font-normal font-[ndot] uppercase tracking-wider text-lg sm:text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  loadAudioFile();
-                }}
-              >
-                Load Audio
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 

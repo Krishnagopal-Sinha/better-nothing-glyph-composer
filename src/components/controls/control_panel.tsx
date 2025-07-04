@@ -99,8 +99,8 @@ export default function MainTopPanel({
             <br />
             <span
               onDoubleClick={toggleEasterEgg}
-              className="cursor- select-none"
-              title="Easter egg?"
+              className="cursor-pointer"
+              title="Double click to toggle easter egg"
             >
               {' '}
               (v{kAppVersion})

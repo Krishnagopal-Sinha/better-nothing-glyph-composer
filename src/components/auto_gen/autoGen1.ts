@@ -100,10 +100,7 @@ export const newFuncTest = async (config: NewFuncTestConfig): Promise<string | u
 
     let ledAssignment: LEDAssignment = {
       lows: ledIdx.slice(0, ledDistribution.lows),
-      mids: ledIdx.slice(
-        ledDistribution.lows,
-        ledDistribution.lows + ledDistribution.mids
-      ),
+      mids: ledIdx.slice(ledDistribution.lows, ledDistribution.lows + ledDistribution.mids),
       highs: ledIdx.slice(ledDistribution.lows + ledDistribution.mids)
     };
 
@@ -177,10 +174,7 @@ export const newFuncTest = async (config: NewFuncTestConfig): Promise<string | u
       const shuffled = [...ledIdx].sort(() => Math.random() - 0.5);
       ledAssignment = {
         lows: shuffled.slice(0, ledDistribution.lows),
-        mids: shuffled.slice(
-          ledDistribution.lows,
-          ledDistribution.lows + ledDistribution.mids
-        ),
+        mids: shuffled.slice(ledDistribution.lows, ledDistribution.lows + ledDistribution.mids),
         highs: shuffled.slice(ledDistribution.lows + ledDistribution.mids)
       };
     };
@@ -188,9 +182,7 @@ export const newFuncTest = async (config: NewFuncTestConfig): Promise<string | u
     reassignLogicalLEDs(); // Initial shuffle
 
     // Initialize current brightness for anti-flicker if enabled
-    const currentBrightness: number[] = antiFlicker
-      ? new Array(physicalLEDCount).fill(0)
-      : [];
+    const currentBrightness: number[] = antiFlicker ? new Array(physicalLEDCount).fill(0) : [];
 
     const decayFactor = 0.9; // Adjust this value between 0 (fast decay) and 1 (slow decay)
 
@@ -210,8 +202,7 @@ export const newFuncTest = async (config: NewFuncTestConfig): Promise<string | u
         const loudness = features.loudness.total;
 
         // Dynamically adjust amplitude threshold to be more responsive
-        const dynamicAmplitudeThreshold =
-          amplitudeThreshold ?? 0.5 * Math.max(...loudnessValues);
+        const dynamicAmplitudeThreshold = amplitudeThreshold ?? 0.5 * Math.max(...loudnessValues);
 
         // Detect super heavy beats (above 90th percentile)
         const isSuperHeavyBeat = loudness > loudnessThreshold;
@@ -278,9 +269,7 @@ export const newFuncTest = async (config: NewFuncTestConfig): Promise<string | u
       underActivatedLEDs.forEach((ledIndex) => {
         // Find a logical group to reassign from
         ['lows', 'mids', 'highs'].forEach((range) => {
-          const groupIndex = ledAssignment[range].findIndex((group) =>
-            group.includes(ledIndex)
-          );
+          const groupIndex = ledAssignment[range].findIndex((group) => group.includes(ledIndex));
           if (groupIndex !== -1) {
             // Remove from current group
             ledAssignment[range][groupIndex] = ledAssignment[range][groupIndex].filter(

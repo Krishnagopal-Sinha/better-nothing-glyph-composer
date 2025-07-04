@@ -25,7 +25,8 @@ import useGlobalAppStore from '@/lib/timeline_state';
 import { useState } from 'react';
 import dataStore from '@/lib/data_store';
 import WaterMarkerComponent from './watermark';
-import { autoGenerateGlyphs } from '../auto_gen/autoGen2';
+import { autoGenerateGlyphsViaFrequency } from '../auto_gen/autoGen2';
+import { autoGenerateGlyphsViaPattern } from '../auto_gen/autoGen3';
 import { actuallyRestoreGlyphData } from '@/logic/export_logic';
 import { newFuncTest } from '../auto_gen/autoGen1';
 
@@ -64,98 +65,105 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     // BPM Glyph Generator
     case 1:
       return (
-        <DialogContent className="sm:max-w-[425px] dontClose ">
-          <DialogHeader>
-            <DialogTitle>Generate Glyph Blocks</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] dontClose">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">Generate Glyph Blocks</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Generate Glyphs with following parameters. Default values will produce 1 sec interval
               metronome for 5 secs; i.e. In each second there would be a 500ms Duration Glyph Block
               followed by 500ms gap with no block; this will repeat till specified end time.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4 items-center overflow-y-auto pr-1 max-h-[50dvh]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 items-center overflow-y-auto pr-2 max-h-[60vh] space-y-4">
             {/* Configure generation start time - 1 */}
-            <Label htmlFor="blockGenerationStartTime" className="text-lg font-light">
-              Start From (ms)
-              <br />
-            </Label>
-            <Input
-              id="blockGenerationStartTime"
-              type="number"
-              max={audioInfo.durationInMilis}
-              min={0}
-              step={1}
-              defaultValue={generationStartTimeMilis}
-              onChange={onGenerationStartTimeMilisChanged}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blockGenerationStartTime" className="text-base font-medium">
+                Start From (ms)
+              </Label>
+              <Input
+                id="blockGenerationStartTime"
+                type="number"
+                max={audioInfo.durationInMilis}
+                min={0}
+                step={1}
+                defaultValue={generationStartTimeMilis}
+                onChange={onGenerationStartTimeMilisChanged}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure generation end time - 2 */}
-            <Label htmlFor="blockGenerationEndTime" className="text-lg font-light">
-              Generate Till (ms)
-              <br />
-            </Label>
-            <Input
-              id="blockGenerationEndTime"
-              type="number"
-              max={audioInfo.durationInMilis}
-              min={0}
-              step={1}
-              defaultValue={generationEndTimeMilis}
-              onChange={onGenerationEndTimeMilisChanged}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blockGenerationEndTime" className="text-base font-medium">
+                Generate Till (ms)
+              </Label>
+              <Input
+                id="blockGenerationEndTime"
+                type="number"
+                max={audioInfo.durationInMilis}
+                min={0}
+                step={1}
+                defaultValue={generationEndTimeMilis}
+                onChange={onGenerationEndTimeMilisChanged}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure block duration - 3 */}
-            <Label htmlFor="blocksDurationMilis" className="text-lg font-light">
-              Glyph Duration (ms)
-              <br />
-            </Label>
-            <Input
-              id="blocksDurationMilis"
-              type="number"
-              max={10000}
-              min={50}
-              step={1}
-              defaultValue={generationBlockDurationMilis}
-              onChange={onGenerationBlockDurationMilis}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blocksDurationMilis" className="text-base font-medium">
+                Glyph Duration (ms)
+              </Label>
+              <Input
+                id="blocksDurationMilis"
+                type="number"
+                max={10000}
+                min={50}
+                step={1}
+                defaultValue={generationBlockDurationMilis}
+                onChange={onGenerationBlockDurationMilis}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure block Brightness - 4 */}
-            <Label htmlFor="blocksBrightness" className="text-lg font-light">
-              Glyph Brightness (%)
-              <br />
-            </Label>
-            <Input
-              id="blocksBrightness"
-              type="number"
-              max={100}
-              min={1}
-              step={1}
-              defaultValue={generationBlockBrightness}
-              onChange={onGenerationBrightnessChanged}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blocksBrightness" className="text-base font-medium">
+                Glyph Brightness (%)
+              </Label>
+              <Input
+                id="blocksBrightness"
+                type="number"
+                max={100}
+                min={1}
+                step={1}
+                defaultValue={generationBlockBrightness}
+                onChange={onGenerationBrightnessChanged}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure BPM - 5 */}
-            <Label htmlFor="audioBPM" className="text-lg font-light">
-              Glyph Gap (ms)
-              <br />
-            </Label>
-            <Input
-              id="audioBPM"
-              type="number"
-              min={1}
-              step={1}
-              defaultValue={generationGlyphGap}
-              onChange={onGenerationGapChanged}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="audioBPM" className="text-base font-medium">
+                Glyph Gap (ms)
+              </Label>
+              <Input
+                id="audioBPM"
+                type="number"
+                min={1}
+                step={1}
+                defaultValue={generationGlyphGap}
+                onChange={onGenerationGapChanged}
+                className="w-full"
+              />
+            </div>
 
             {/* Generation Block Glyph Zone ID - 6 */}
-            <Label className="text-lg font-light">
-              Glyph Zone
-              <br />
-            </Label>
-            <div>
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Glyph Zone</Label>
               <Select onValueChange={onGenerationGlyphZoneChanged} defaultValue="0">
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,13 +184,10 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
             </div>
 
             {/* Configure block effect - 7 */}
-            <Label className="text-lg font-light">
-              Glyph Effect
-              <br />
-            </Label>
-            <div>
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Glyph Effect</Label>
               <Select onValueChange={onGenerationEffectIdChanged} defaultValue="0">
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -200,11 +205,17 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
               </Select>
             </div>
           </div>
-          <DialogFooter className="flex-grow justify-between">
-            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsSettingsDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Button onClick={onGenerateClick}>Generate</Button>
+            <Button onClick={onGenerateClick} className="w-full sm:w-auto">
+              Generate
+            </Button>
           </DialogFooter>
         </DialogContent>
       );
@@ -213,25 +224,31 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     // Embed watermark
     case 2:
       return (
-        <DialogContent className="sm:max-w-[700px] dontClose">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px] dontClose">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">
               Embed <span className="font-[ndot]">YOUR</span> Custom Watermark
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm leading-relaxed">
               You put in the efforts, you should get to sign it a&nbsp;
               <span className="font-[ndot]">100%</span> <br />
               [This can be seen in official composer's audio preview screen at the bottom]
             </DialogDescription>
           </DialogHeader>
-          <WaterMarkerComponent
-            cancelButton={
-              <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
-                Cancel
-              </Button>
-            }
-            applyAction={() => setIsSettingsDialogOpen(false)}
-          />
+          <div className="py-4">
+            <WaterMarkerComponent
+              cancelButton={
+                <Button
+                  variant="outline"
+                  onClick={() => setIsSettingsDialogOpen(false)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+              }
+              applyAction={() => setIsSettingsDialogOpen(false)}
+            />
+          </div>
         </DialogContent>
       );
 
@@ -270,116 +287,164 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
         ledIdx = [[0], [1], [2, 3, 4, 5], [6], [7, 8, 9, 10, 11, 12, 13, 14], [15]];
       }
       return (
-        <DialogContent className="sm:max-w-[700px] dontClose">
-          <DialogHeader>
-            <DialogTitle>
-              Auto Generating Glyphs <span className="animate-pulse">(Alpha)</span>
+        <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px] dontClose">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">
+              Auto Generating Glyphs <span className="animate-pulse text-gray-300">(Beta)</span>
             </DialogTitle>
-            <DialogDescription>
-              <br />
-
-              <span>
+            <DialogDescription className="text-sm leading-relaxed space-y-3">
+              <p>
                 This is still very much in beta, you may not like all the effects produced. This
                 can't really nail down what you want, should only be treated as a starting base that
                 you can further customize as per you needs. Click "Auto Generate" to confirm and
                 proceed :D
-              </span>
-              <br />
-              <span className="text-yellow-50">
-                <span className="font-bold text-yellow-200"> Warning:</span> This will replace and
-                overwrite all the current Glyphs, ideally this should be used in the start!
-              </span>
+              </p>
+              <div className="bg-yellow-50 opacity-85 border border-yellow-200 rounded-lg p-3">
+                <span className="text-yellow-800 font-medium">
+                  <span className="font-bold">Warning:</span> This will replace and overwrite all
+                  the current Glyphs, ideally this should be used at the start!
+                </span>
+              </div>
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-grow justify-between mt-4">
-            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsSettingsDialogOpen(false)}
+              className="w-full sm:w-auto order-last sm:order-first"
+            >
               Cancel
             </Button>
-            <Button
-              className="w-[150px]"
-              onClick={async () => {
-                setAutoGenStart(true);
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button
+                className="w-full sm:w-[140px]"
+                onClick={async () => {
+                  setAutoGenStart(true);
 
-                // console.warn('deivce is: ', currentDevice, ledIdx);
-                await newFuncTest({
-                  ledIdx: ledIdx
-                }).then((csv) => {
-                  if (csv) {
-                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
-                    if (restoredGlyphData) {
-                      importJsonData(JSON.stringify(restoredGlyphData));
+                  // console.warn('deivce is: ', currentDevice, ledIdx);
+                  await newFuncTest({
+                    ledIdx: ledIdx
+                  }).then((csv) => {
+                    if (csv) {
+                      const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                      if (restoredGlyphData) {
+                        importJsonData(JSON.stringify(restoredGlyphData));
+                      }
+                    } else {
+                      showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
                     }
-                  } else {
-                    showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
-                  }
-                });
-                setAutoGenStart(false);
-                setIsSettingsDialogOpen(false);
-              }}
-            >
-              {autoGenStart ? (
-                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
-              ) : (
-                'AutoGen (Beats)'
-              )}
-            </Button>
-            <Button
-              className="w-[150px]"
-              onClick={async () => {
-                setAutoGenStart(true);
+                  });
+                  setAutoGenStart(false);
+                  setIsSettingsDialogOpen(false);
+                }}
+              >
+                {autoGenStart ? (
+                  <div className="animate-spin h-5 w-5 rounded-full border-2 border-current border-t-transparent"></div>
+                ) : (
+                  'Beats'
+                )}
+              </Button>
+              <Button
+                className="w-full sm:w-[140px]"
+                onClick={async () => {
+                  setAutoGenStart(true);
 
-                // console.warn('deivce is: ', currentDevice, ledIdx);
-                await newFuncTest({
-                  ledIdx: ledIdx,
-                  antiFlicker: true
-                }).then((csv) => {
-                  if (csv) {
-                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
-                    if (restoredGlyphData) {
-                      importJsonData(JSON.stringify(restoredGlyphData));
+                  // console.warn('deivce is: ', currentDevice, ledIdx);
+                  await newFuncTest({
+                    ledIdx: ledIdx,
+                    antiFlicker: true
+                  }).then((csv) => {
+                    if (csv) {
+                      const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                      if (restoredGlyphData) {
+                        importJsonData(JSON.stringify(restoredGlyphData));
+                      }
+                    } else {
+                      showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
                     }
-                  } else {
-                    showPopUp('Critical Error - AutoGen 1', 'Could not auto generate Glyphs.');
-                  }
-                });
-                setAutoGenStart(false);
-                setIsSettingsDialogOpen(false);
-              }}
-            >
-              {autoGenStart ? (
-                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
-              ) : (
-                'AutoGen (Smooth)'
-              )}
-            </Button>
-            <Button
-              className="w-[150px]"
-              onClick={async () => {
-                setAutoGenStart(true);
+                  });
+                  setAutoGenStart(false);
+                  setIsSettingsDialogOpen(false);
+                }}
+              >
+                {autoGenStart ? (
+                  <div className="animate-spin h-5 w-5 rounded-full border-2 border-current border-t-transparent"></div>
+                ) : (
+                  'Smooth'
+                )}
+              </Button>
+              <Button
+                className="w-full sm:w-[140px]"
+                onClick={async () => {
+                  setAutoGenStart(true);
 
-                // console.warn('deivce is: ', currentDevice, ledIdx);
-                await autoGenerateGlyphs({
-                  ledIdx: ledIdx
-                }).then((csv) => {
-                  if (csv) {
-                    const restoredGlyphData = actuallyRestoreGlyphData(csv);
-                    if (restoredGlyphData) {
-                      importJsonData(JSON.stringify(restoredGlyphData));
+                  // console.warn('deivce is: ', currentDevice, ledIdx);
+                  await autoGenerateGlyphsViaFrequency({
+                    ledIdx: ledIdx
+                  }).then((csv) => {
+                    if (csv) {
+                      const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                      if (restoredGlyphData) {
+                        importJsonData(JSON.stringify(restoredGlyphData));
+                      }
+                    } else {
+                      showPopUp('Critical Error - AutoGen 2', 'Could not auto generate Glyphs.');
                     }
-                  } else {
-                    showPopUp('Critical Error - AutoGen 2', 'Could not auto generate Glyphs.');
-                  }
-                });
-                setAutoGenStart(false);
-                setIsSettingsDialogOpen(false);
-              }}
-            >
-              {autoGenStart ? (
-                <div className="animate-spin h-8 w-8 rounded-full border-x-black border-x"></div>
-              ) : (
-                'AutoGen Type 2'
-              )}
-            </Button>
+                  });
+                  setAutoGenStart(false);
+                  setIsSettingsDialogOpen(false);
+                }}
+              >
+                {autoGenStart ? (
+                  <div className="animate-spin h-5 w-5 rounded-full border-2 border-current border-t-transparent"></div>
+                ) : (
+                  'Frequency'
+                )}
+              </Button>
+              <Button
+                className="w-full sm:w-[140px]"
+                onClick={async () => {
+                  setAutoGenStart(true);
+
+                  // console.warn('deivce is: ', currentDevice, ledIdx);
+                  await autoGenerateGlyphsViaPattern({
+                    ledIdx: ledIdx,
+                    patternType: 'wave',
+                    beatSensitivity: 0.7,
+                    patternSpeed: 1.0,
+                    patternComplexity: 0.6,
+                    brightnessMultiplier: 1.0,
+                    sustainDuration: 8,
+                    decayFactor: 0.9,
+                    antiFlicker: true,
+                    patternDirection: 'forward',
+                    patternLength: 4,
+                    beatThreshold: 0.5,
+                    energyThreshold: 0.3
+                  }).then((csv) => {
+                    if (csv) {
+                      const restoredGlyphData = actuallyRestoreGlyphData(csv);
+                      if (restoredGlyphData) {
+                        importJsonData(JSON.stringify(restoredGlyphData));
+                      }
+                    } else {
+                      showPopUp(
+                        'Critical Error - Pattern AutoGen',
+                        'Could not auto generate pattern-based Glyphs.'
+                      );
+                    }
+                  });
+                  setAutoGenStart(false);
+                  setIsSettingsDialogOpen(false);
+                }}
+              >
+                {autoGenStart ? (
+                  <div className="animate-spin h-5 w-5 rounded-full border-2 border-current border-t-transparent"></div>
+                ) : (
+                  'Pattern'
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       );
@@ -389,64 +454,69 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     // case 0
     default:
       return (
-        <DialogContent className="sm:max-w-[425px] dontClose">
-          <DialogHeader>
-            <DialogTitle>Edit Selected Glyph Block(s)</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[500px] md:max-w-[600px] lg:max-w-[700px] dontClose">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">
+              Edit Selected Glyph Block(s)
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
               Make advance granular changes to Glyphs here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4 items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6 items-center space-y-4">
             {/* Configure block start time */}
-            <Label htmlFor="blocksStartTimeMilis" className="text-lg font-light">
-              Glyph Start Time (ms)
-              <br />
-            </Label>
-            <Input
-              id="blocksStartTimeMilis"
-              type="number"
-              max={audioInfo.durationInMilis}
-              min={0}
-              step={1}
-              onChange={onBlockStartTimeChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blocksStartTimeMilis" className="text-base font-medium">
+                Glyph Start Time (ms)
+              </Label>
+              <Input
+                id="blocksStartTimeMilis"
+                type="number"
+                max={audioInfo.durationInMilis}
+                min={0}
+                step={1}
+                onChange={onBlockStartTimeChange}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure block duration */}
-            <Label htmlFor="blocksDurationMilis" className="text-lg font-light">
-              Glyph Duration (ms)
-              <br />
-            </Label>
-            <Input
-              id="blocksDurationMilis"
-              type="number"
-              max={10000}
-              min={50}
-              step={1}
-              onChange={onBlockDurationChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blocksDurationMilis" className="text-base font-medium">
+                Glyph Duration (ms)
+              </Label>
+              <Input
+                id="blocksDurationMilis"
+                type="number"
+                max={10000}
+                min={50}
+                step={1}
+                onChange={onBlockDurationChange}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure block brightness */}
-            <Label htmlFor="blocksBrightness" className="text-lg font-light">
-              Glyph Brightness (%)
-              <br />
-            </Label>
-            <Input
-              id="blocksBrightness"
-              type="number"
-              max={100}
-              min={1}
-              step={1}
-              onChange={onBlockBrightnessChange}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="blocksBrightness" className="text-base font-medium">
+                Glyph Brightness (%)
+              </Label>
+              <Input
+                id="blocksBrightness"
+                type="number"
+                max={100}
+                min={1}
+                step={1}
+                onChange={onBlockBrightnessChange}
+                className="w-full"
+              />
+            </div>
 
             {/* Configure block effect */}
-            <Label className="text-lg font-light">
-              Glyph Effect
-              <br />
-            </Label>
-            <div>
+            <div className="space-y-2">
+              <Label className="text-base font-medium">Glyph Effect</Label>
               <Select onValueChange={onBlockEffectChange}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -464,11 +534,17 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
               </Select>
             </div>
           </div>
-          <DialogFooter className="flex-grow justify-between">
-            <Button variant="outline" onClick={() => setIsSettingsDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setIsSettingsDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
-            <Button onClick={onAdvancedEditApply}>Apply</Button>
+            <Button onClick={onAdvancedEditApply} className="w-full sm:w-auto">
+              Apply
+            </Button>
           </DialogFooter>
         </DialogContent>
       );

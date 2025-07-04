@@ -66,10 +66,10 @@ export default function MoreMenuButton() {
   };
   // Dialog was not getting opened as on MenuItem click, menu unmounts, so nothing else is there to show, this is the only way to escape that.
   return (
-    <div className='m-auto'>
+    <div className="m-auto">
       <Dialog open={isSettingsDialogOpen}>
         <DialogTrigger asChild>
-          <Menubar className='p-0 w-min'>
+          <Menubar className="p-0 w-min">
             <MenubarMenu>
               <MenubarTrigger className="p-1 sm:p-2">
                 <EllipsisVertical className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -82,9 +82,9 @@ export default function MoreMenuButton() {
                   }}
                   className="text-xs sm:text-sm"
                 >
-                  <div className="animate-pulse text-yellow-100">
+                  <div className="animate-pulse text-white">
                     {' '}
-                    Auto Generate Glyphs (alpha ver.)
+                    Auto Generate Glyphs (Beta)
                   </div>
                 </MenubarItem>
 
