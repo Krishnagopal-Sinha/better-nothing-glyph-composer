@@ -90,7 +90,7 @@ export default function WaterMarkerComponent({ cancelButton, applyAction }: Prop
   return (
     <>
       <div
-        className="grid overflow-x-scroll gap-6 px-2 "
+        className="grid overflow-x-scroll gap-2 sm:gap-6 px-2"
         style={{
           gridTemplateColumns: `repeat(${totalColumns}, minmax(0, 1fr))`
           //   maxWidth: `${160 * totalColumns * 50}px`
@@ -118,19 +118,21 @@ export default function WaterMarkerComponent({ cancelButton, applyAction }: Prop
         ))}
       </div>
 
-      <DialogFooter className="mt-2 flex sm:justify-between justify-between sm:items-center items-center ">
-        <div className="space-x-2">
-          <Button variant="outline" onClick={handleImport}>
+      <DialogFooter className="mt-2 flex flex-col sm:flex-row sm:justify-between justify-between sm:items-center items-center gap-2 sm:gap-0">
+        <div className="space-x-2 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleImport} className="text-xs sm:text-sm">
             Import Watermark
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} className="text-xs sm:text-sm">
             Export Watermark
           </Button>
         </div>
 
-        <div className="space-x-2">
+        <div className="space-x-2 flex flex-wrap gap-2">
           {cancelButton}
-          <Button onClick={handleSubmit}>Apply</Button>
+          <Button onClick={handleSubmit} className="text-xs sm:text-sm">
+            Apply
+          </Button>
         </div>
       </DialogFooter>
     </>

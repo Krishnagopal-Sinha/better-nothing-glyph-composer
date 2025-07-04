@@ -255,7 +255,7 @@ export default function App() {
   }
   // UI
   return (
-    <main>
+    <main className="min-h-screen bg-background">
       {/* Toast setup */}
       <Toaster visibleToasts={2} position="top-center" duration={700} />
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
@@ -263,14 +263,14 @@ export default function App() {
 
       {/* Upper Section - W Fixed */}
       <div
-        className={` py-4 mx-auto overflow-auto max-w-[2280px]`}
+        className={`p-0 mx-auto max-w-[2280px] overflow-auto`}
         style={{ width: `${kWidthBound}%` }}
       >
         {/* Mobile Only - load audio */}
         {!isInputLoaded ? (
           <Button
             variant="outline"
-            className=" sm:hidden mb-[10px] p-6 text-lg font-normal border-white w-full"
+            className="sm:hidden mb-2 p-4 sm:p-6 text-base sm:text-lg font-normal border-white w-full"
             onClick={(e) => {
               e.preventDefault();
               loadAudioFile();
@@ -281,16 +281,16 @@ export default function App() {
         ) : (
           <></>
         )}
-        <div className={`space-y-4`}>
+        <div className={`max-h-[48dvh] relative`}>
           {/* Main Top Half Component */}
           <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
 
           {/* Load audio n play controls  */}
           {!isInputLoaded && (
-            <div className=" justify-center hidden sm:flex">
+            <div className="justify-center hidden sm:flex">
               <Button
                 style={{ width: `${kWidthBound}%` }}
-                className={`py-6 font-normal font-[ndot] uppercase tracking-wider text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
+                className={`absolute bottom-1 right-1 left-1 py-4 sm:py-6 font-normal font-[ndot] uppercase tracking-wider text-lg sm:text-xl sm:inline-flex hover:bg-black hover:outline hover:text-white duration-700`}
                 onClick={(e) => {
                   e.preventDefault();
                   loadAudioFile();
@@ -352,9 +352,7 @@ export default function App() {
 
   async function onSaveButtonClick() {
     const inputFile = plainFiles[0];
-    const processedEditData = encodeStuffTheWayNothingLikesIt(
-      generateCSV(timelineData)
-    );
+    const processedEditData = encodeStuffTheWayNothingLikesIt(generateCSV(timelineData));
     if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {
       setIsSaving(true);
       console.log('Save started...');

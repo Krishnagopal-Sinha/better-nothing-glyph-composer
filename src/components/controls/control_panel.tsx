@@ -61,8 +61,8 @@ export default function MainTopPanel({
   return (
     <>
       <div
-        className={`grid rounded-lg p-2  grid-cols-2 overflow-auto max-h-[390px] ${
-          currentDevice === 'NP2' ? 'gap-2' : 'gap-[5%]'
+        className={`grid rounded-lg p-2 sm:p-3 lg:p-4 grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 ${
+          currentDevice === 'NP2' ? 'gap-2 sm:gap-3' : 'gap-3 sm:gap-4'
         }`}
       >
         {/*1st col - Title n all */}
@@ -77,11 +77,11 @@ export default function MainTopPanel({
   function TitleAndControlsPanel({ className }: { className?: string }) {
     return (
       <div
-        className={`flex flex-col justify-between bg-[#111111] p-4  rounded-md outline outline-[#212121]
-     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500 overflow-visible ${className}`}
+        className={`flex flex-col justify-between bg-[#111111] p-1 sm:p-3 rounded-md outline outline-[#212121]
+     hover:shadow-[0px_0px_5px_1px_#ffffff] duration-500 overflow-visible min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] max-h-[45dvh] overflow-y-auto ${className}`}
       >
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-primary">
+        <div className="space-y-2 sm:space-y-3">
+          <h2 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-primary">
             <AppNameComponent playing={showEasterEgg} />
             <span className="animate-pulse duration-700 text-red-600">
               {isSaving ? '[Saving...]' : ''}
@@ -89,7 +89,7 @@ export default function MainTopPanel({
           </h2>
 
           {/*  Info content */}
-          <p className="text-muted-foreground">
+          <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
             This app is usable but is still being <span className="line-through">actively</span>{' '}
             being worked upon!
             <br />
@@ -111,12 +111,12 @@ export default function MainTopPanel({
         <OpenInstructionButton />
 
         {isAudioLoaded && (
-          <div className="space-y-3 grid grid-row-2">
+          <div className="space-y-2 sm:space-y-3 lg:space-y-4">
             {/* Command Center */}
             <CommandCenter />
             {/* Glyph Zone Add Center */}
             <div
-              className="grid grid-flow-col border border-white rounded-lg"
+              className="grid grid-flow-col border border-white rounded-lg p-1 sm:p-2"
               title="Macro Buttons - Eases New Glyph Block Addition"
             >
               {deviceControlsToShow}
@@ -131,9 +131,11 @@ export default function MainTopPanel({
     switch (currentDevice) {
       case 'NP1':
         return (
-          <>
+          <div className="grid grid-cols-5 gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
@@ -143,6 +145,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
@@ -152,6 +156,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
@@ -161,6 +167,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(3, startTimeMilis);
@@ -170,6 +178,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(4, startTimeMilis);
@@ -177,14 +187,16 @@ export default function MainTopPanel({
             >
               5
             </Button>
-          </>
+          </div>
         );
 
       case 'NP1_15':
         return (
-          <div className="grid grid-flow-rows grid-cols-6 lg:flex">
+          <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 xl:flex gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
@@ -194,6 +206,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
@@ -204,6 +218,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(2, 5, startTimeMilis);
@@ -214,6 +230,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(4, startTimeMilis);
@@ -224,6 +242,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(5, startTimeMilis);
@@ -233,6 +253,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
@@ -242,6 +264,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(3, startTimeMilis);
@@ -252,6 +276,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(7, 14, startTimeMilis);
@@ -262,6 +288,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(7, 8, startTimeMilis);
@@ -272,6 +300,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(9, 11, startTimeMilis);
@@ -282,6 +312,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(12, 14, startTimeMilis);
@@ -292,6 +324,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(6, startTimeMilis);
@@ -304,9 +338,11 @@ export default function MainTopPanel({
 
       case 'NP2':
         return (
-          <div className="grid grid-cols-5 sm:grid-cols-[repeat(15,minmax(0,1fr))]">
+          <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-15 xl:grid-cols-15 gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(0, startTimeMilis);
@@ -316,6 +352,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(1, startTimeMilis);
@@ -325,6 +363,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(2, startTimeMilis);
@@ -335,6 +375,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(3, 7, startTimeMilis);
@@ -345,6 +387,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(8, 14, startTimeMilis);
@@ -355,6 +399,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(15, 18, startTimeMilis);
@@ -365,6 +411,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(19, startTimeMilis);
@@ -375,6 +423,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(20, startTimeMilis);
@@ -385,6 +435,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(21, startTimeMilis);
@@ -395,6 +447,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(22, startTimeMilis);
@@ -405,6 +459,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(23, startTimeMilis);
@@ -415,6 +471,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(25, 27, startTimeMilis);
@@ -425,6 +483,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(28, 30, startTimeMilis);
@@ -435,6 +495,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(31, 32, startTimeMilis);
@@ -445,6 +507,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(24, startTimeMilis);
@@ -457,9 +521,11 @@ export default function MainTopPanel({
 
       case 'NP2a':
         return (
-          <>
+          <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-8 xl:flex gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 23, startTimeMilis);
@@ -469,6 +535,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 7, startTimeMilis);
@@ -478,6 +546,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(8, 15, startTimeMilis);
@@ -487,6 +557,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(16, 23, startTimeMilis);
@@ -497,6 +569,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(24, startTimeMilis);
@@ -506,6 +580,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 addItem(25, startTimeMilis);
@@ -513,14 +589,16 @@ export default function MainTopPanel({
             >
               3
             </Button>
-          </>
+          </div>
         );
 
       case 'NP3a':
         return (
-          <>
+          <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-8 xl:flex gap-1 sm:gap-2">
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 19, startTimeMilis);
@@ -530,6 +608,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 6, startTimeMilis);
@@ -539,6 +619,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(7, 13, startTimeMilis);
@@ -548,6 +630,8 @@ export default function MainTopPanel({
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(14, 19, startTimeMilis);
@@ -558,6 +642,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(20, 30, startTimeMilis);
@@ -568,6 +654,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(20, 22, startTimeMilis);
@@ -578,6 +666,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(23, 27, startTimeMilis);
@@ -588,6 +678,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(28, 30, startTimeMilis);
@@ -598,6 +690,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(31, 35, startTimeMilis);
@@ -608,6 +702,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(31, 32, startTimeMilis);
@@ -618,6 +714,8 @@ export default function MainTopPanel({
 
             <Button
               variant="ghost"
+              size="sm"
+              className="text-xs sm:text-sm lg:text-base h-8 sm:h-10 lg:h-12"
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(33, 35, startTimeMilis);
@@ -625,7 +723,7 @@ export default function MainTopPanel({
             >
               3.2
             </Button>
-          </>
+          </div>
         );
 
       default:
@@ -636,31 +734,56 @@ export default function MainTopPanel({
   function CommandCenter() {
     return (
       <>
-        <div className="border rounded-lg border-white grid grid-flow-col">
+        <div className="border rounded-lg border-white grid grid-flow-col gap-1 sm:gap-2 p-1 sm:p-2 overflow-x-auto">
           {/* copy button */}
-          <Button variant="ghost" onClick={copyItems} title={'Copy'} aria-label="copy button">
-            <Copy />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
+            onClick={copyItems}
+            title={'Copy'}
+            aria-label="copy button"
+          >
+            <Copy className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Cut button */}
-          <Button variant="ghost" onClick={cutItems} title={'Cut'} aria-label="cut button">
-            <Scissors />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
+            onClick={cutItems}
+            title={'Cut'}
+            aria-label="cut button"
+          >
+            <Scissors className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Paste button */}
-          <Button variant="ghost" onClick={pasteItems} title={'Paste'} aria-label="paste button">
-            <Clipboard />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
+            onClick={pasteItems}
+            title={'Paste'}
+            aria-label="paste button"
+          >
+            <Clipboard className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Delete button */}
           <Button
             variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
             onClick={removeSelectedItem}
             title={'Delete Selected'}
             aria-label="delete button"
           >
-            <Trash />
+            <Trash className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* select all button unselect all */}
           <Button
             variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
             onClick={() => {
               selectAllItems(selectAll);
               setSelectAll((v) => !v);
@@ -668,11 +791,13 @@ export default function MainTopPanel({
             title={'Select / Unselect All'}
             aria-label="select or unselect all button"
           >
-            <SquareDashedMousePointer />
+            <SquareDashedMousePointer className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Select in current position */}
           <Button
             variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
             onClick={() => {
               selectInCurrentPosition();
             }}
@@ -681,11 +806,13 @@ export default function MainTopPanel({
             }
             aria-label="select items in current audio position"
           >
-            <TextCursorInput />
+            <TextCursorInput className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Undo */}
           <Button
             variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
             title="Undo Changes"
             disabled={pastStates.length <= 0}
             onClick={() => {
@@ -695,11 +822,13 @@ export default function MainTopPanel({
               undo();
             }}
           >
-            <UndoDot />
+            <UndoDot className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Redo */}
           <Button
             variant="ghost"
+            size="sm"
+            className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
             title="Redo Changes"
             disabled={futureStates.length <= 0}
             onClick={() => {
@@ -708,20 +837,22 @@ export default function MainTopPanel({
               redo();
             }}
           >
-            <RedoDot />
+            <RedoDot className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
           </Button>
           {/* Add All Glyphs Button */}
           {/* ========== PHONE 1  ============= */}
           {currentDevice === 'NP1' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Add all the Glyphs of NP(1) "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 4, startTimeMilis);
               }}
             >
-              <SquarePlus />
+              <SquarePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
           {/* ========== PHONE 1 | 15 Zone ============= */}
@@ -729,13 +860,15 @@ export default function MainTopPanel({
           {currentDevice === 'NP1_15' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 14, startTimeMilis);
               }}
             >
-              <SquarePlus />
+              <SquarePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
 
@@ -743,37 +876,43 @@ export default function MainTopPanel({
           {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Add all the Glyphs of NP(2) "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 32, startTimeMilis);
               }}
             >
-              <SquarePlus />
+              <SquarePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
           {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Fill the Top Right Glyph Zone of NP(2) "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(3, 18, startTimeMilis);
               }}
             >
-              <DiamondPlus />
+              <DiamondPlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
           {currentDevice === 'NP2' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Fill the Battery Glyph Zone of NP(2) "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(25, 32, startTimeMilis);
               }}
             >
-              <CirclePlus />
+              <CirclePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
 
@@ -781,13 +920,15 @@ export default function MainTopPanel({
           {currentDevice === 'NP2a' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Add all the Glyphs of NP(1) | 15 Zone Mode "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 25, startTimeMilis);
               }}
             >
-              <SquarePlus />
+              <SquarePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
 
@@ -795,13 +936,15 @@ export default function MainTopPanel({
           {currentDevice === 'NP3a' && (
             <Button
               variant="ghost"
+              size="sm"
+              className="h-8 sm:h-10 lg:h-12 p-1 sm:p-2"
               title="Add all the Glyphs of NP(3a) "
               onClick={() => {
                 const startTimeMilis = getPosition();
                 fillEntireZone(0, 35, startTimeMilis);
               }}
             >
-              <SquarePlus />
+              <SquarePlus className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
             </Button>
           )}
 
@@ -821,11 +964,13 @@ export function OpenInstructionButton() {
           Read Instructions
         </Button>
       </DialogTrigger>
-      <DialogContent className="min-w-[400px] sm:min-w-[400px] md:min-w-[900px] h-[450px] md:h-fit">
+      <DialogContent className="min-w-[90vw] sm:min-w-[400px] md:min-w-[600px] lg:min-w-[900px] h-[80vh] sm:h-[450px] md:h-fit max-h-[80vh]">
         <InstructionComponent />
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="submit">Ok</Button>
+            {/* <Button type="submit">
+              Ok
+            </Button> */}
           </DialogClose>
         </DialogFooter>
       </DialogContent>
@@ -838,7 +983,9 @@ export function AppNameComponent({ playing }: { playing: boolean }) {
   const spanRef = useRef<HTMLSpanElement>(null);
   return (
     <span
-      className={`${playing ? 'neon' : ''} font-[ndot] tracking-wider uppercase`}
+      className={`${
+        playing ? 'neon' : ''
+      } font-[ndot] tracking-wider uppercase text-sm sm:text-base lg:text-lg xl:text-xl`}
       ref={spanRef}
       onMouseLeave={() => {
         if (spanRef.current) {

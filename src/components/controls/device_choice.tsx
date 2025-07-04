@@ -48,12 +48,12 @@ export default function DeviceChoiceComponent() {
         clear();
       }}
     >
-      <SelectTrigger>
+      <SelectTrigger className="text-sm sm:text-base">
         <SelectValue placeholder={kPhoneModelNames[currentDevice]} />
       </SelectTrigger>
       <SelectContent>
         <SelectGroup>
-          <SelectLabel>Nothing Phones</SelectLabel>
+          <SelectLabel className="text-sm sm:text-base">Nothing Phones</SelectLabel>
           {selectableItems}
         </SelectGroup>
       </SelectContent>

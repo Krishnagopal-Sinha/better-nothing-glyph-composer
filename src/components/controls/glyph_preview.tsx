@@ -36,7 +36,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
         if (newPosition !== currentPosition) {
           isPlaying.current = true;
           setCurrentPosition(newPosition);
-        }else{
+        } else {
           isPlaying.current = false;
         }
       };
@@ -76,7 +76,11 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
         }
       }
     }
-    if (!isPlaying.current && (currentlyHoveredGlyphZone || currentlyHoveredGlyphZone === 0) && showHoverGlyphPreview) {
+    if (
+      !isPlaying.current &&
+      (currentlyHoveredGlyphZone || currentlyHoveredGlyphZone === 0) &&
+      showHoverGlyphPreview
+    ) {
       if (zoneColors[currentlyHoveredGlyphZone]) {
         zoneColors[currentlyHoveredGlyphZone] = `rgba(255, 0, 0, 0.8)`;
       } else {
@@ -131,7 +135,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
           y,
           touchAction: 'none'
         }}
-        className="bg-[#090909] fixed right-3 bottom-3 z-20 rounded-[20px] h-[300px] w-[150px] text-center flex items-center justify-center outline outline-[#272727] hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500 cursor-move"
+        className="bg-[#090909] fixed right-2 sm:right-3 bottom-2 sm:bottom-3 z-20 rounded-[20px] h-[200px] sm:h-[300px] w-[100px] sm:w-[150px] text-center flex items-center justify-center outline outline-[#272727] hover:shadow-[0px_0px_20px_1px_#aaaaaa] duration-500 cursor-move"
       >
         {/* actual glyphs lights */}
         {previewComponent}
@@ -139,7 +143,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
         {isAudioLoaded && showAudioTimeStamp && (
           <div
             ref={timeTextRef}
-            className="absolute text-center text-md font-[ndot] text-[#818181]"
+            className="absolute text-center text-sm sm:text-md font-[ndot] text-[#818181]"
             onMouseLeave={() => {
               if (timeTextRef.current) {
                 timeTextRef.current.style.textShadow = '';

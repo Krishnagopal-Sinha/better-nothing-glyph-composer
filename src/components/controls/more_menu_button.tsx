@@ -66,22 +66,26 @@ export default function MoreMenuButton() {
   };
   // Dialog was not getting opened as on MenuItem click, menu unmounts, so nothing else is there to show, this is the only way to escape that.
   return (
-    <>
+    <div className='m-auto'>
       <Dialog open={isSettingsDialogOpen}>
         <DialogTrigger asChild>
-          <Menubar>
+          <Menubar className='p-0 w-min'>
             <MenubarMenu>
-              <MenubarTrigger>
-                <EllipsisVertical />
+              <MenubarTrigger className="p-1 sm:p-2">
+                <EllipsisVertical className="w-4 h-4 sm:w-5 sm:h-5" />
               </MenubarTrigger>
-              <MenubarContent>
+              <MenubarContent className="text-sm sm:text-base">
                 <MenubarItem
                   onClick={() => {
                     setIsSettingsDialogOpen(true);
                     setDialogContentIndex(3);
                   }}
+                  className="text-xs sm:text-sm"
                 >
-                 <div className='animate-pulse text-yellow-100'> Auto Generate Glyphs (alpha ver.)</div>
+                  <div className="animate-pulse text-yellow-100">
+                    {' '}
+                    Auto Generate Glyphs (alpha ver.)
+                  </div>
                 </MenubarItem>
 
                 <MenubarItem
@@ -89,6 +93,7 @@ export default function MoreMenuButton() {
                     setIsSettingsDialogOpen(true);
                     setDialogContentIndex(0);
                   }}
+                  className="text-xs sm:text-sm"
                 >
                   Edit Selected (Advanced)
                 </MenubarItem>
@@ -98,6 +103,7 @@ export default function MoreMenuButton() {
                     setIsSettingsDialogOpen(true);
                     setDialogContentIndex(1);
                   }}
+                  className="text-xs sm:text-sm"
                 >
                   Generate Glyphs (Advanced)
                 </MenubarItem>
@@ -107,18 +113,19 @@ export default function MoreMenuButton() {
                     setIsSettingsDialogOpen(true);
                     setDialogContentIndex(2);
                   }}
+                  className="text-xs sm:text-sm"
                 >
                   Embed Custom Watermark&nbsp;<span className="font-[ndot]">;)</span>
                 </MenubarItem>
 
-                <MenubarItem onClick={onImportGlyphClick}>
+                <MenubarItem onClick={onImportGlyphClick} className="text-xs sm:text-sm">
                   Import Project (.json) | BNGC
                 </MenubarItem>
-                <MenubarItem onClick={onExportGlyphClick}>
+                <MenubarItem onClick={onExportGlyphClick} className="text-xs sm:text-sm">
                   Export Project (.json) | BNGC
                 </MenubarItem>
 
-                <MenubarItem onClick={onExportGlyphCsvClick}>
+                <MenubarItem onClick={onExportGlyphCsvClick} className="text-xs sm:text-sm">
                   Export Glyph Data (.csv) | Custom ROMs
                 </MenubarItem>
               </MenubarContent>
@@ -127,6 +134,6 @@ export default function MoreMenuButton() {
         </DialogTrigger>
         <SettingDialogContent dialogContentIdx={settingDialogContentIndex} />
       </Dialog>
-    </>
+    </div>
   );
 }

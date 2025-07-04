@@ -33,20 +33,22 @@ export default function SaveDialog({ isOpen }: { isOpen: boolean }) {
     <Dialog open={val}>
       {/* TODO: Header comes down as a banner from top, fix and reimplement */}
       {/* <DialogHeader>Save File</DialogHeader>  */}
-      <DialogContent className="overflow-auto dontClose">
+      <DialogContent className="overflow-auto dontClose max-w-[90vw] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Saving ({saveProgress}% done)</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-lg sm:text-xl">Saving ({saveProgress}% done)</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Don't leave this site! You can close this popup, file will be still be processed and
             saved in the background :D
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center justify-center mt-12">
-          <Loader2 className="mr-2 h-8 w-8 animate-spin" />{' '}
-          <div className="text-xl">Saving file</div>
+        <div className="flex items-center justify-center mt-8 sm:mt-12">
+          <Loader2 className="mr-2 h-6 w-6 sm:h-8 sm:w-8 animate-spin" />{' '}
+          <div className="text-lg sm:text-xl">Saving file</div>
         </div>
         <DialogFooter>
-          <Button onClick={() => setVal(false)}>Ok</Button>
+          <Button onClick={() => setVal(false)} className="text-sm sm:text-base">
+            Ok
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

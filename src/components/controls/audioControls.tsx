@@ -292,7 +292,7 @@ export default function AudioControlComponent({
           animationDuration: '1.5s',
           width: `${kWidthBound - 0.5}%`,
           position: 'fixed',
-          top: scrollY > 390 ? `40px` : `calc(410px - ${scrollY - 5}px)`,
+          top: scrollY > 390 ? `40px` : `calc(49dvh - ${scrollY - 5}px)`,
           left: '50%',
           transform: 'translateX(-50%)',
           transition: 'top 0.3s ease'

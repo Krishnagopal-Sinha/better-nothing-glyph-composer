@@ -106,9 +106,9 @@ export default function SettingsPanel() {
       {/* Config panel */}
       <form>
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-2 items-center gap-2 border rounded-lg px-4 py-1 pb-3 overflow-auto hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111] max-h-[380px]">
+        <fieldset className="grid grid-cols-1 sm:grid-cols-2 items-center gap-2 sm:gap-2 border rounded-lg px-3 sm:px-4 py-1 pb-3 hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111] max-h-[45dvh] p-1 pt-0 overflow-y-auto">
           <legend
-            className="-ml-1 px-1 font-medium font-[ndot] text-lg tracking-wide  "
+            className="-ml-1 px-1 font-medium font-[ndot] text-base sm:text-lg tracking-wide"
             ref={spanRef}
             onMouseLeave={() => {
               if (spanRef.current) {
@@ -124,13 +124,13 @@ export default function SettingsPanel() {
             SETTINGS
           </legend>
           {/* Configure Device */}
-          <Label htmlFor="multiSelect" className="text-lg font-light">
+          <Label htmlFor="multiSelect" className="text-base sm:text-lg font-light">
             Device
           </Label>
           <DeviceChoiceComponent />
 
           {/* Configure block time */}
-          <Label htmlFor="newBlockDurationMilis" className="text-lg font-light">
+          <Label htmlFor="newBlockDurationMilis" className="text-base sm:text-lg font-light">
             New Glyph Duration (ms)
             <br />
           </Label>
@@ -142,10 +142,11 @@ export default function SettingsPanel() {
             min={20}
             step={1}
             onChange={onNewBlockDurationChange}
+            className="text-sm sm:text-base"
           />
 
           {/* Configure new block brightness */}
-          <Label htmlFor="newBlockBrightness" className="text-lg font-light">
+          <Label htmlFor="newBlockBrightness" className="text-base sm:text-lg font-light">
             New Glyph Brightness (%)
             <br />
           </Label>
@@ -159,12 +160,13 @@ export default function SettingsPanel() {
             max={100}
             min={1}
             step={1}
+            className="text-sm sm:text-base"
           />
 
           {/* Configure audio speed */}
           <Label
             htmlFor="newBlockBrightness"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Set audio's playback speed. Values can range from 0.5x till 2x, in steps of 0.1x, if needed."
           >
             Audio Speed
@@ -178,9 +180,10 @@ export default function SettingsPanel() {
             max={16}
             min={0.1}
             step={0.05}
+            className="text-sm sm:text-base"
           />
           {/* MultiSelect */}
-          <Label htmlFor="multiSelect" className="text-lg font-light">
+          <Label htmlFor="multiSelect" className="text-base sm:text-lg font-light">
             Enable Multi-Select
           </Label>
           <Switch
@@ -192,7 +195,7 @@ export default function SettingsPanel() {
           {/* Drag Select */}
           <Label
             htmlFor="dragSelect"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title={`Enables Drag to Multi Select Gesture`}
           >
             Enable Drag Select
@@ -206,7 +209,7 @@ export default function SettingsPanel() {
           {/* Show audio timestamp */}
           <Label
             htmlFor="showAudioTimeStamp"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Overwrite the brightness of blocks that would be pasted with the new block brightness value?"
           >
             Show Audio TimeStamp
@@ -220,7 +223,7 @@ export default function SettingsPanel() {
           {/* Toggle zones feat. */}
           <Label
             htmlFor="toggleZones"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Toggle Glyph Zones ID ? Scroll on bottom editor to trigger if it's not visible..."
           >
             Show Glyph Zones
@@ -230,7 +233,7 @@ export default function SettingsPanel() {
           {/* Keyboard controls */}
           <Label
             htmlFor="keyboardControls"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title={`Enables keyboard controls like:\n-Pressing Spacebar to Play / Pause Audio.\n-Pressing Delete / Backspace to Delete selected Glyph Blocks\n-Shift to Select multiple at a time\n-Ctrl+Z / Cmd+Z to Undo\n-Ctrl+Y to Redo\n-Ctrl+A / Cmd + A to Select All`}
           >
             Enable Keyboard Gesture
@@ -244,7 +247,7 @@ export default function SettingsPanel() {
           {/* Snap to BPM feat. */}
           <Label
             htmlFor="snapToBPM"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Enable for blocks to snap to Audio BPM?"
           >
             Snap to BPM
@@ -254,7 +257,7 @@ export default function SettingsPanel() {
           {/* Snap to BPM feat. - allow duration to also snap */}
           <Label
             htmlFor="snapToDurationToBPM"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Enable for blocks' duration to also snap to Audio BPM? Snap to BPM must be switched on too, for this to apply."
           >
             Snap Duration to BPM
@@ -268,7 +271,7 @@ export default function SettingsPanel() {
           {/* Configure BPM */}
           <Label
             htmlFor="setBPM"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Set audio's BPM. Applies to and used to configure the above, Snap to BPM settings."
           >
             Audio BPM
@@ -282,12 +285,13 @@ export default function SettingsPanel() {
             max={700}
             min={1}
             step={1}
+            className="text-sm sm:text-base"
           />
 
           {/* Configure Snap Sens */}
           <Label
             htmlFor="snapSens"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Higher value here means lower sensitivity overall."
           >
             Snap Inverse Sensitivity
@@ -301,26 +305,23 @@ export default function SettingsPanel() {
             max={25}
             min={13}
             step={1}
+            className="text-sm sm:text-base"
           />
 
           {/* Render Heavy Ui */}
           <Label
             htmlFor="renderHeavy"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Render more demanding UI? Only do this if PC can support it!"
           >
             Switch to Heavy UI?
           </Label>
-          <Switch
-            id="renderHeavy"
-            onCheckedChange={toggleShowShowHeavyUi}
-            checked={showHeavyUi}
-          />
+          <Switch id="renderHeavy" onCheckedChange={toggleShowShowHeavyUi} checked={showHeavyUi} />
 
           {/* Glyph Preview on Hover */}
           <Label
             htmlFor="glyphZonePreviewOnHover"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Show which Glyph Zone a Row in the Editor Corresponds to on Hover?"
           >
             Glyph Preview on Hover
@@ -334,7 +335,7 @@ export default function SettingsPanel() {
           {/* Modifiable paste brightness */}
           <Label
             htmlFor="overwriteBrightness"
-            className="text-lg font-light"
+            className="text-base sm:text-lg font-light"
             title="Overwrite the brightness of blocks that would be pasted with the new block brightness value?"
           >
             Modify Paste Brightness

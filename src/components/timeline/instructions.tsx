@@ -1,12 +1,12 @@
 export default function InstructionComponent() {
   return (
     // Instructions
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-primary font-[ndot] uppercase tracking-wide">
+    <div className="p-3 sm:p-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-primary font-[ndot] uppercase tracking-wide">
         Instructions
       </h2>
       <br />
-      <pre className="text-muted-foreground text-wrap overflow-auto max-h-[40dvh] sm:max-h-[60dvh] ">
+      <pre className="text-muted-foreground text-wrap overflow-auto max-h-[40dvh] sm:max-h-[60dvh] text-sm sm:text-base leading-relaxed">
         1. Double press to add a glyph block, or choose Glyph Zone numbers from top left panel to
         add to that zone, a zone can target multiple glyphs (depending on device). Chose the add all
         button to add all glyphs blcok to the current time in audio.
