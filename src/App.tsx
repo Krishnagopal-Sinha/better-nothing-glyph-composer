@@ -262,10 +262,7 @@ export default function App() {
       {isSaving && <SaveDialog isOpen={true} />}
 
       {/* Upper Section - W Fixed */}
-      <div
-        className={`p-0 mx-auto max-w-[2280px] overflow-auto`}
-        style={{ width: `${kWidthBound}%` }}
-      >
+      <div className={`p-0 mx-auto max-w-[2280px]`} style={{ width: `${kWidthBound}%` }}>
         {/* load audio */}
         {!isInputLoaded && (
           <div className="flex justify-center px-1 sm:px-3">

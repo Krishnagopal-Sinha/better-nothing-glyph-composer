@@ -82,10 +82,7 @@ export default function MoreMenuButton() {
                   }}
                   className="text-xs sm:text-sm"
                 >
-                  <div className="animate-pulse text-white">
-                    {' '}
-                    Auto Generate Glyphs (Beta)
-                  </div>
+                  <div className="animate-pulse text-white"> Auto Generate Glyphs (Beta)</div>
                 </MenubarItem>
 
                 <MenubarItem

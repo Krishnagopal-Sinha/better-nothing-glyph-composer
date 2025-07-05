@@ -9,7 +9,7 @@ export default function InstructionComponent() {
       <pre className="text-muted-foreground text-wrap overflow-auto max-h-[40dvh] sm:max-h-[60dvh] text-sm sm:text-base leading-relaxed">
         1. Double press to add a glyph block, or choose Glyph Zone numbers from top left panel to
         add to that zone, a zone can target multiple glyphs (depending on device). Chose the add all
-        button to add all glyphs blcok to the current time in audio.
+        button to add all glyphs block to the current time in audio.
         <br />
         2. Right-click and press on delete to remove, or select a glyph block and then click delete
         icon. Backspace or delete key press can also trigger delete for selected blocks!

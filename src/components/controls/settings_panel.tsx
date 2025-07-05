@@ -7,9 +7,12 @@ import useGlobalAppStore from '@/lib/timeline_state';
 import { showPopUp } from '@/lib/helpers';
 import { kMaxBrightness } from '@/lib/consts';
 import { useRef } from 'react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function SettingsPanel() {
   const spanRef = useRef<HTMLLegendElement>(null);
+  const fieldsetRef = useRef<HTMLFieldSetElement>(null);
 
   // get settings
   const isKeyboardGestureEnabled = useGlobalAppStore(
@@ -100,13 +103,30 @@ export default function SettingsPanel() {
       showPopUp('Invalid Value - Audio Speed', 'Should be between 0.1x to 16x');
     }
   };
+
+  // Scroll functions
+  const scrollUp = () => {
+    if (fieldsetRef.current) {
+      fieldsetRef.current.scrollBy({ top: -100, behavior: 'smooth' });
+    }
+  };
+
+  const scrollDown = () => {
+    if (fieldsetRef.current) {
+      fieldsetRef.current.scrollBy({ top: 100, behavior: 'smooth' });
+    }
+  };
+
   //  UI
   return (
     <>
       {/* Config panel */}
-      <form>
+      <form className="relative">
         {/* COntrol Grid - match height to left panel  */}
-        <fieldset className="grid grid-cols-1 sm:grid-cols-2 items-center gap-2 sm:gap-2 border rounded-lg px-3 sm:px-4 py-1 pb-3 hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111] max-h-[45dvh] p-1 pt-0 overflow-y-auto">
+        <fieldset
+          ref={fieldsetRef}
+          className="grid grid-cols-1 sm:grid-cols-2 items-center gap-2 sm:gap-2 border rounded-lg px-3 sm:px-4 py-1 pb-3 hover:shadow-[0px_0px_5px_1px_#aaaaaa] duration-500 bg-[#111111] max-h-[45dvh] p-1 overflow-y-auto"
+        >
           <legend
             className="-ml-1 px-1 font-medium font-[ndot] text-base sm:text-lg tracking-wide"
             ref={spanRef}
@@ -346,6 +366,30 @@ export default function SettingsPanel() {
             defaultValue={dataStore.get('overwriteBrightnessWithNewBlock')}
           />
         </fieldset>
+
+        {/* Floating Scroll Buttons */}
+        <div className="absolute bottom-2 right-2 flex flex-col gap-1">
+          <Button
+            type="button"
+            onClick={scrollUp}
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 p-0 bg-[#1a1a1a] border-[#333] hover:bg-[#2a2a2a] hover:border-[#555] transition-all duration-200"
+            title="Scroll Up"
+          >
+            <ChevronUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            onClick={scrollDown}
+            size="sm"
+            variant="outline"
+            className="h-8 w-8 p-0 bg-[#1a1a1a] border-[#333] hover:bg-[#2a2a2a] hover:border-[#555] transition-all duration-200"
+            title="Scroll Down"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </div>
       </form>
     </>
   );
