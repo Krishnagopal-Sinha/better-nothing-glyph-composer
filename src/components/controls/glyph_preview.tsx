@@ -129,7 +129,7 @@ export default function GlyphPreviewComponent({ isAudioLoaded }: { isAudioLoaded
       > */}
       <animated.div
         {...bind()}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
         style={{
           x,
           y,
