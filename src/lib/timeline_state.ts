@@ -33,6 +33,7 @@ type AppSettings = {
   snapSensitivity: number;
   showHeavyUi: boolean;
   showHoverGlyphPreview: boolean;
+  timelineRowHeight: number;
 };
 export type GlyphEditorState = {
   items: GlyphStore;
@@ -88,6 +89,7 @@ export type Action = {
   setSnapSensitivity: (value: number) => void;
   toggleShowShowHeavyUi: () => void;
   toggleShowHoverGlyphPreview: () => void;
+  setTimelineRowHeight: (value: number) => void;
 };
 
 export const useGlobalAppStore = create<GlyphEditorState & Action>()(
@@ -124,7 +126,8 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         alsoSnapDuration: false,
         snapSensitivity: 15,
         showHeavyUi: false,
-        showHoverGlyphPreview: true
+        showHoverGlyphPreview: true,
+        timelineRowHeight: 50
       },
 
       // Setting update functions
@@ -143,7 +146,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             showHoverGlyphPreview: !state.appSettings.showHoverGlyphPreview
           }
         })),
-        
+
       toggleShowAudioTimeStamp: () =>
         set((state) => ({
           appSettings: {
@@ -248,6 +251,23 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
           appSettings: {
             ...state.appSettings,
             snapSensitivity: value
+          }
+        }));
+      },
+
+      setTimelineRowHeight: (value: number) => {
+        if (value < 10) {
+          showPopUp(
+            'Invalid Value - Timeline Row Height',
+            'Timeline row height must be at least 10px.',
+            1500
+          );
+          return;
+        }
+        set((state) => ({
+          appSettings: {
+            ...state.appSettings,
+            timelineRowHeight: value
           }
         }));
       },
@@ -616,7 +636,7 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
             NP1_15: 15,
             NP2: 33,
             NP2a: 26,
-            NP3a: 36, //NP3a or 3a Pro
+            NP3a: 36 //NP3a or 3a Pro
           }[get().phoneModel] ?? 5;
 
         // Remember: calling zundo's clear method from here didn't work, so it is being called when device dropdown changes, from that ui

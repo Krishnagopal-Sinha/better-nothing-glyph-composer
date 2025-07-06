@@ -34,6 +34,7 @@ Props) {
   const numberOfRowsToGenerate = Object.keys(itemsSchema).length;
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
   const showHeavyUi = useGlobalAppStore((state) => state.appSettings.showHeavyUi);
+  const timelineRowHeight = useGlobalAppStore((state) => state.appSettings.timelineRowHeight);
   // Hover to see which glyph lights up feat
   const updateHoveredGlyphZone = useGlobalAppStore((state) => state.updateHoveredGlyphZone);
 
@@ -86,7 +87,8 @@ Props) {
         <div
           key={i}
           title="Double tap to add a new glyph block"
-          className={`relative select-none min-h-[50px] border-dotted border-[#333]  border-t-2 hover:border-[#939393] hover:border-y-2`}
+          className={`relative select-none border-dotted border-[#333] border-t-2 hover:border-[#939393] hover:border-y-2`}
+          style={{ minHeight: `${timelineRowHeight}px` }}
           // ^^ controls editor row track size
           onMouseEnter={() => updateHoveredGlyphZone(i)}
           onMouseLeave={() => updateHoveredGlyphZone(null)}
@@ -117,6 +119,7 @@ Props) {
             showHeavyUi={showHeavyUi}
             rowTimelineData={timelineData[i]}
             timelinePixelFactor={timelinePixelFactor}
+            timelineRowHeight={timelineRowHeight}
           />
         </div>
       );
@@ -129,20 +132,25 @@ Props) {
 const TimelineBlocks = ({
   rowTimelineData,
   timelinePixelFactor,
-  showHeavyUi
+  showHeavyUi,
+  timelineRowHeight
 }: {
   rowTimelineData: GlyphBlock[];
   timelinePixelFactor: number;
   showHeavyUi: boolean;
+  timelineRowHeight: number;
 }) => {
   const row: React.JSX.Element[] = [];
   for (let i = 0; i < rowTimelineData.length; i++) {
     row.push(
       <div
         key={rowTimelineData[i].id}
-        className="h-full w-[50px] absolute inset-0 py-[4px]"
+        className="w-[50px] absolute inset-0"
         style={{
-          marginLeft: `${(rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`
+          marginLeft: `${(rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`,
+          height: `${timelineRowHeight}px`,
+          paddingTop: '4px',
+          paddingBottom: '4px'
         }}
       >
         {!showHeavyUi ? (

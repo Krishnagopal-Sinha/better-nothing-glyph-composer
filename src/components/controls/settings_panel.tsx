@@ -44,6 +44,8 @@ export default function SettingsPanel() {
   const toggleShowHoverGlyphPreview = useGlobalAppStore(
     (state) => state.toggleShowHoverGlyphPreview
   );
+  const timelineRowHeight = useGlobalAppStore((state) => state.appSettings.timelineRowHeight);
+  const setTimelineRowHeight = useGlobalAppStore((state) => state.setTimelineRowHeight);
   const toggleDragSelect = () => {
     const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
     dataStore.set('isDragSelectActive', !isDragSelectActive);
@@ -101,6 +103,15 @@ export default function SettingsPanel() {
       }
     } else {
       showPopUp('Invalid Value - Audio Speed', 'Should be between 0.1x to 16x');
+    }
+  };
+
+  const onTimelineRowHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.currentTarget.value);
+    if (value >= 10 && value <= 200) {
+      setTimelineRowHeight(value);
+    } else {
+      showPopUp('Invalid Value - Timeline Row Height', 'Should be between 50px to 200px');
     }
   };
 
@@ -202,6 +213,27 @@ export default function SettingsPanel() {
             step={0.05}
             className="text-sm sm:text-base"
           />
+
+          {/* Timeline Row Height */}
+          <Label
+            htmlFor="timelineRowHeight"
+            className="text-base sm:text-lg font-light"
+            title="Set the height of each row in the timeline"
+          >
+            Timeline Row Height (px)
+            <br />
+          </Label>
+          <Input
+            onChange={onTimelineRowHeightChange}
+            id="timelineRowHeight"
+            type="number"
+            defaultValue={timelineRowHeight}
+            max={200}
+            min={10}
+            step={1}
+            className="text-sm sm:text-base"
+          />
+
           {/* MultiSelect */}
           <Label htmlFor="multiSelect" className="text-base sm:text-lg font-light">
             Enable Multi-Select
