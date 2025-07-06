@@ -19,7 +19,8 @@ import {
   UndoDot,
   RedoDot,
   Scissors,
-  TextCursorInput
+  TextCursorInput,
+  ExternalLink
 } from 'lucide-react';
 import useGlobalAppStore, { useTemporalStore } from '@/lib/timeline_state';
 import { kAppName, kAppVersion } from '@/lib/consts';
@@ -90,21 +91,33 @@ export default function MainTopPanel({
 
           {/*  Info content */}
           <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
-            This app is usable but is still being <span className="line-through">actively</span>{' '}
-            being worked upon!
+            Make ringtones with custom glyphs for your Nothing Phone, Supports auto generation of
+            glyph synced to audio too!
             <br />
             Supports: Nothing Phone (1), (2), (2a) / (2a) Plus, (3a) / (3a) Pro
             <br />
-            Use on fullscreen Desktop / Laptop
+            Use on fullscreen Desktop / Laptop for best experience
             <br />
-            <span
-              onDoubleClick={toggleEasterEgg}
-              className="cursor-pointer"
-              title="Double click to toggle easter egg"
-            >
-              {' '}
-              (v{kAppVersion})
-            </span>
+            <div className="flex items-center">
+              <span
+                onDoubleClick={toggleEasterEgg}
+                className="cursor-pointer"
+                title="Double click to toggle easter egg"
+              >
+                {' '}
+                (v{kAppVersion})
+              </span>
+              <Button
+                size="sm"
+                variant="link"
+                className='p-0 pl-2 pt-[2px] h-1/2 text-xs opacity-90'
+                onClick={() => {
+                  window.open('https://discord.com/channels/930878214237200394/1275717674634051661', '_blank');
+                }}
+              >
+                Contact Support <ExternalLink className="w-4 h-4 pl-1" />
+              </Button>
+            </div>
           </p>
         </div>
 

@@ -149,8 +149,8 @@ const TimelineBlocks = ({
         style={{
           marginLeft: `${(rowTimelineData[i].startTimeMilis / 1000) * timelinePixelFactor}px`,
           height: `${timelineRowHeight}px`,
-          paddingTop: '4px',
-          paddingBottom: '4px'
+          paddingTop: timelineRowHeight <= 30 ? '1px' : '2px',
+          paddingBottom: timelineRowHeight <= 30 ? '1px' : '2px'
         }}
       >
         {!showHeavyUi ? (
