@@ -79,7 +79,6 @@ export default function NP3Page() {
   });
 
   // Pre-processed frame data for efficient playback
-  const [preProcessedFrames, setPreProcessedFrames] = useState<boolean[][]>([]);
   const [isPreProcessing, setIsPreProcessing] = useState(false);
   const [preProcessingProgress, setPreProcessingProgress] = useState(0);
 
@@ -97,12 +96,6 @@ export default function NP3Page() {
         // Add a small delay to prevent blocking the UI
         await new Promise((resolve) => setTimeout(resolve, 10));
 
-        const processedFrames = await videoEditorService.preProcessFrames(
-          videoResult.frameAnalyses,
-          videoSettings
-        );
-
-        setPreProcessedFrames(processedFrames);
         setPreProcessingProgress(100);
       } catch (error) {
         console.error('Error pre-processing frames:', error);
@@ -165,19 +158,6 @@ export default function NP3Page() {
   const getPixelIndex = (row: number, col: number): number => {
     return row * 25 + col;
   };
-
-  // Memoized calculations for performance
-  const litPixelCount = useMemo(() => {
-    return pixelStates.filter((state) => state).length;
-  }, [pixelStates]);
-
-  const visiblePixelCount = useMemo(() => {
-    return Array.from({ length: 625 }, (_, i) => {
-      const row = Math.floor(i / 25);
-      const col = i % 25;
-      return isPixelInCircle(row, col);
-    }).filter(Boolean).length;
-  }, []);
 
   // Ref for the canvas to draw the processed video
   const processedVideoCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -504,7 +484,6 @@ export default function NP3Page() {
     });
 
     // Clear pre-processed frames
-    setPreProcessedFrames([]);
     setPreProcessingProgress(0);
     setIsPreProcessing(false);
 
@@ -675,35 +654,6 @@ export default function NP3Page() {
   };
 
   /**
-   * Ensure audio element is properly maintained
-   */
-  const ensureAudioElement = () => {
-    if (!videoResult) return;
-
-    // Only recreate audio element if it doesn't exist or is completely invalid
-    if (!audioElement || audioElement.readyState === 0) {
-      // Clean up old audio element if it exists
-      if (audioElement && audioElement.src.startsWith('blob:')) {
-        URL.revokeObjectURL(audioElement.src);
-      }
-
-      const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
-      newAudio.preload = 'metadata';
-      newAudio.volume = isMuted ? 0 : volume;
-
-      newAudio.addEventListener('ended', () => {
-        if (isComponentMounted) {
-          setIsVideoPlaying(false);
-          setCurrentDisplayFrame(0);
-          setVideoProgress(0);
-        }
-      });
-
-      setAudioElement(newAudio);
-    }
-  };
-
-  /**
    * Handle applying advanced video settings
    */
   const handleApplyVideoSettings = (settings: VideoSettings) => {
@@ -742,17 +692,6 @@ export default function NP3Page() {
     } else {
       toast.success('Video settings applied successfully');
     }
-  };
-
-  /**
-   * Apply frame brightness with custom video settings
-   */
-  const applyFrameBrightnessWithSettings = (
-    frameAnalysis: FrameAnalysis,
-    settings: VideoSettings
-  ) => {
-    const newPixelStates = videoEditorService.applyVideoSettingsToFrame(frameAnalysis, settings);
-    setPixelStates(newPixelStates);
   };
 
   /**
