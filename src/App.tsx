@@ -336,7 +336,6 @@ export default function App() {
     const processedEditData = encodeStuffTheWayNothingLikesIt(generateCSV(timelineData));
     if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {
       setIsSaving(true);
-      console.log('Save started...');
       await ffmpegService.saveOutput(plainFiles[0], processedEditData, currentDevice).then(() => {
         setIsSaving(false);
       });

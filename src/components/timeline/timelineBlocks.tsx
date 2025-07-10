@@ -87,7 +87,6 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
       if (glyphItem.isSelected) return;
       const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
       if (!isDragSelectActive) return;
-      console.log('sel: ', isSelected);
       toggleMultiSelect(true);
       selectItem(glyphItem, true);
       toggleMultiSelect(false);

@@ -10,7 +10,7 @@ export const kPhoneModelNames: { [key: string]: string } = {
   NP2: 'Phone (2)',
   NP2a: 'Phone (2a) / (2a) Plus',
   NP3a: 'Phone (3a) / (3a) Pro',
-  NP3: 'Phone (3) [PreAlpha]'
+  NP3: 'Phone (3) [Beta]'
 };
 export const kPhoneZones: { [key: number]: string } = {
   5: 'Phone (1)',
@@ -40,7 +40,7 @@ export const kEffectNames: { [key: number]: string } = {
 // TODO: Remember to update on releases
 export const kMajorVersion = 1;
 export const kMinorVersion = 3;
-export const kPatchVersion = 2;
+export const kPatchVersion = 3;
 export const kAppVersion = `${kMajorVersion}.${kMinorVersion}.${kPatchVersion}`;
 // 80px = 1sec
 

@@ -110,7 +110,6 @@ export default function AdvancedVideoEditor({
   // Initialize video settings if provided
   useEffect(() => {
     if (currentVideoSettings) {
-      console.log('AdvancedVideoEditor: Initializing with current settings:', currentVideoSettings);
       setVideoSettings(currentVideoSettings);
     }
   }, [currentVideoSettings]);
@@ -118,7 +117,6 @@ export default function AdvancedVideoEditor({
   // Update settings when dialog opens to ensure we have the latest settings
   useEffect(() => {
     if (isOpen && currentVideoSettings) {
-      console.log('AdvancedVideoEditor: Dialog opened, updating settings:', currentVideoSettings);
       setVideoSettings(currentVideoSettings);
     }
   }, [isOpen, currentVideoSettings]);
@@ -128,8 +126,6 @@ export default function AdvancedVideoEditor({
     if (!currentFrameAnalysis || !canvasRef.current) return;
 
     try {
-      console.log('Processing current frame for glyph matrix, inversion:', videoSettings.inversion);
-
       // Apply video settings to brightness map
       const newGlyphStates = new Array(625).fill(false);
       let litPixels = 0;
@@ -165,13 +161,6 @@ export default function AdvancedVideoEditor({
         }
       }
 
-      console.log(
-        'Glyph matrix processed:',
-        litPixels,
-        'lit pixels, inversion:',
-        videoSettings.inversion
-      );
-
       // Force state update with a new array reference
       setGlyphMatrixStates([...newGlyphStates]);
       setLastUpdateTime(Date.now());
@@ -190,64 +179,83 @@ export default function AdvancedVideoEditor({
   // Update canvas preview when settings change
   useEffect(() => {
     if (currentFrameAnalysis && canvasRef.current) {
-      updateCanvasPreview();
-    }
-  }, [videoSettings, currentFrameAnalysis]);
+      try {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
 
-  const updateCanvasPreview = () => {
-    if (!currentFrameAnalysis || !canvasRef.current) return;
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        // Create a temporary canvas for high-resolution processing
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
-    if (!ctx) return;
+        if (tempCtx) {
+          // Create a high-resolution grid representation of the frame
+          const gridSize = 25;
+          const cellSize = canvas.width / gridSize;
 
-    try {
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+          // Draw the brightness map as a high-resolution grid
+          for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+              const brightness = currentFrameAnalysis.brightnessMap[row][col];
+              const x = col * cellSize;
+              const y = row * cellSize;
 
-      // Create a 25x25 grid representation of the frame
-      const gridSize = 25;
-      const cellSize = canvas.width / gridSize;
+              // Apply video settings to brightness
+              let adjustedBrightness = brightness;
 
-      // Draw the brightness map as a grid with applied settings
-      for (let row = 0; row < gridSize; row++) {
-        for (let col = 0; col < gridSize; col++) {
-          let brightness = currentFrameAnalysis.brightnessMap[row][col];
+              // Brightness adjustment
+              adjustedBrightness = Math.max(
+                0,
+                Math.min(255, adjustedBrightness + videoSettings.brightness)
+              );
 
-          // Apply video settings to brightness
-          // Brightness adjustment
-          brightness = Math.max(0, Math.min(255, brightness + videoSettings.brightness));
+              // Contrast adjustment
+              const factor =
+                (259 * (videoSettings.contrast * 255 + 255)) /
+                (255 * (259 - videoSettings.contrast * 255));
+              adjustedBrightness = Math.max(
+                0,
+                Math.min(255, factor * (adjustedBrightness - 128) + 128)
+              );
 
-          // Contrast adjustment
-          const factor =
-            (259 * (videoSettings.contrast * 255 + 255)) /
-            (255 * (259 - videoSettings.contrast * 255));
-          brightness = Math.max(0, Math.min(255, factor * (brightness - 128) + 128));
+              // Gamma correction
+              adjustedBrightness =
+                Math.pow(adjustedBrightness / 255, 1 / videoSettings.gamma) * 255;
 
-          // Gamma correction
-          brightness = Math.pow(brightness / 255, 1 / videoSettings.gamma) * 255;
+              // Inversion
+              if (videoSettings.inversion) {
+                adjustedBrightness = 255 - adjustedBrightness;
+              }
 
-          // Inversion
-          if (videoSettings.inversion) {
-            brightness = 255 - brightness;
+              // Threshold for black & white
+              const isLit = adjustedBrightness > videoSettings.threshold;
+              const color = isLit ? 255 : 0;
+
+              // Use high-quality rendering with anti-aliasing
+              tempCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
+              tempCtx.fillRect(x, y, cellSize, cellSize);
+            }
           }
 
-          // Threshold for black & white
-          const isLit = brightness > videoSettings.threshold;
-          const color = isLit ? 255 : 0;
+          // Apply smoothing for better visual quality
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
 
-          ctx.fillStyle = `rgb(${color}, ${color}, ${color})`;
-          ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+          // Draw the processed frame to the main canvas
+          ctx.drawImage(tempCanvas, 0, 0);
         }
+      } catch (error) {
+        console.error('Error updating canvas preview:', error);
       }
-    } catch (error) {
-      console.error('Error updating canvas preview:', error);
     }
-  };
+  }, [currentFrameAnalysis, videoSettings]);
 
   const handleSettingChange = (setting: keyof VideoSettings, value: number | boolean) => {
-    console.log('Setting changed:', setting, 'to:', value);
     setVideoSettings((prev) => ({
       ...prev,
       [setting]: value
@@ -267,9 +275,6 @@ export default function AdvancedVideoEditor({
   };
 
   const handleApply = () => {
-    console.log('AdvancedVideoEditor: Apply button clicked');
-    console.log('AdvancedVideoEditor: Current video settings to apply:', videoSettings);
-    console.log('AdvancedVideoEditor: Current frame analysis available:', !!currentFrameAnalysis);
     onApplySettings(videoSettings);
   };
 
@@ -333,7 +338,7 @@ export default function AdvancedVideoEditor({
         {/* Playback Controls - Moved to top */}
         <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-lg">
           <h3 className="text-sm font-medium text-white text-center mb-3">Playback Controls</h3>
-          <div className="flex justify-center items-center space-x-3 mb-3">
+          <div className="flex justify-center items-center space-x-3">
             <Button
               variant="outline"
               size="sm"
@@ -387,12 +392,12 @@ export default function AdvancedVideoEditor({
           </div>
 
           {/* Progress Bar */}
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex justify-between text-xs text-white/70">
               <span>0:00</span>
-              <span>
+              {/* <span>
                 Frame: {currentFrameIndex + 1} / {totalFrames}
-              </span>
+              </span> */}
               <span>100%</span>
             </div>
             <input
@@ -408,9 +413,9 @@ export default function AdvancedVideoEditor({
                 background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
               }}
             />
-            <p className="text-xs text-white/50 text-center">
+            {/* <p className="text-xs text-white/50 text-center">
               {isVideoPlaying ? 'Playing' : 'Paused'} | Progress: {videoProgress.toFixed(1)}%
-            </p>
+            </p> */}
           </div>
         </div>
 
@@ -424,8 +429,8 @@ export default function AdvancedVideoEditor({
                   ref={canvasRef}
                   className="w-full h-auto"
                   style={{ maxHeight: '400px' }}
-                  width={400}
-                  height={400}
+                  width={800}
+                  height={800}
                 />
               ) : (
                 <div className="flex items-center justify-center h-64 text-white/50">

@@ -37,21 +37,17 @@ export default function DeviceChoiceComponent() {
   const handleDeviceChange = (selectedDevice: string) => {
     // Special handling for NP3 - navigate to custom page
     if (selectedDevice === 'NP3') {
-      setLocation('/np3');
-      return;
-    }
-
-    // Show warning for NP1_15
-    if (selectedDevice === 'NP1_15') {
-      toast.info('Caution: NP(1) in 15 Zone Mode', {
-        description:
-          'This is not well supported well by the Phone(1), premature pausing the track in the middle of the playback may cause Glyph to get stuck, toggle glyph torch On and Off to fix. This is Nothing OS issue, please ask Nothing to fix ;-;',
+      // TODO: Add a warning for NP3
+      toast.info('NP3 is in pre alpha, please be aware of potential issues', {
+        description: 'The performance of might be unstable, please be aware of potential issues',
         action: {
           label: 'Ok',
           onClick: () => {}
         },
         duration: 2500
       });
+      setLocation('/np3');
+      return;
     }
 
     changePhoneModel(selectedDevice);

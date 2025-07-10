@@ -72,8 +72,6 @@ export class VideoEditorService {
     }, 60000); // 60 second timeout
 
     try {
-      console.log('Starting video processing with crop settings:', cropSettings);
-
       // Create video element for processing
       const video = document.createElement('video');
       const canvas = document.createElement('canvas');
@@ -97,26 +95,25 @@ export class VideoEditorService {
       });
 
       const { videoWidth, videoHeight, duration } = video;
-      console.log('Video loaded:', { videoWidth, videoHeight, duration });
 
       // Set canvas size for processing
       canvas.width = videoWidth;
       canvas.height = videoHeight;
 
       // Calculate crop parameters
+      // Use the smaller dimension to ensure the circle fits within the video
+      const maxCircleDiameter = Math.min(videoWidth, videoHeight);
       const cropX = (cropSettings.x / 100) * videoWidth;
       const cropY = (cropSettings.y / 100) * videoHeight;
-      const cropRadius = (cropSettings.radius / 100) * Math.min(videoWidth, videoHeight);
+      const cropRadius = (cropSettings.radius / 100) * (maxCircleDiameter / 2);
       const cropScale = cropSettings.scale;
 
       // Process frames
       const frameAnalyses: FrameAnalysis[] = [];
       const displayFrames: NP3DisplayFrame[] = [];
-      const fps = 30; // Assume 30fps for processing
+      const fps = 60; // Changed from 30 to 60 to match playback rate
       const totalFrames = Math.floor(duration * fps);
       const frameInterval = duration / totalFrames;
-
-      console.log(`Processing ${totalFrames} frames...`);
 
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
         const currentTime = frameIndex * frameInterval;
@@ -131,10 +128,14 @@ export class VideoEditorService {
           video.addEventListener('seeked', handleSeeked);
         });
 
+        // Reset canvas to original video dimensions
+        canvas.width = videoWidth;
+        canvas.height = videoHeight;
+
         // Draw video frame
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        // Apply circular crop to each frame
+        // Apply circular crop to each frame BEFORE analyzing
         this.applyCircularCrop(ctx, cropX, cropY, cropRadius, cropScale);
 
         // Analyze frame for brightness (after cropping)
@@ -153,16 +154,7 @@ export class VideoEditorService {
 
         // Update progress
         this.processingProgress = ((frameIndex + 1) / totalFrames) * 100;
-        if (frameIndex % 10 === 0) {
-          console.log(
-            `Processed ${frameIndex + 1}/${totalFrames} frames (${this.processingProgress.toFixed(
-              1
-            )}%)`
-          );
-        }
       }
-
-      console.log('Frame processing complete, creating video files...');
 
       // Create processed video file with actual black and white cropped video
       const processedVideoFile = await this.createProcessedVideoBlob(
@@ -173,13 +165,9 @@ export class VideoEditorService {
         cropSettings
       );
 
-      console.log('Processed video file created:', processedVideoFile.size, 'bytes');
-
       // Create audio file (extract from original)
       const audioBlob = await this.extractAudioFromVideo(videoFile);
       const audioFile = new File([audioBlob], 'audio.mp3', { type: 'audio/mp3' });
-
-      console.log('Audio file created:', audioFile.size, 'bytes');
 
       const result: VideoProcessingResult = {
         audioFile,
@@ -189,10 +177,8 @@ export class VideoEditorService {
         totalFrames,
         duration,
         fps,
-        displayDuration: duration * 1000
+        displayDuration: duration * 1000 // Duration in milliseconds
       };
-
-      console.log('Video processing complete:', result);
 
       // Clear timeout since processing completed successfully
       clearTimeout(timeout);
@@ -220,8 +206,16 @@ export class VideoEditorService {
   ): void {
     const origWidth = ctx.canvas.width;
     const origHeight = ctx.canvas.height;
-    const outputSize = Math.min(origWidth, origHeight);
-    const scaledRadius = radius * scale;
+
+    // Calculate circle parameters to ensure it's always perfectly round
+    // Use the smaller dimension to ensure the circle fits within the video
+    const maxCircleDiameter = Math.min(origWidth, origHeight);
+    const adjustedRadius = Math.min(radius, maxCircleDiameter / 2);
+    const scaledRadius = adjustedRadius * scale;
+
+    // Ensure the circle stays within bounds
+    const boundedCenterX = Math.max(scaledRadius, Math.min(origWidth - scaledRadius, centerX));
+    const boundedCenterY = Math.max(scaledRadius, Math.min(origHeight - scaledRadius, centerY));
 
     // Create a temporary canvas to extract the circle
     const tempCanvas = document.createElement('canvas');
@@ -246,8 +240,8 @@ export class VideoEditorService {
     circleCtx.clip();
     circleCtx.drawImage(
       tempCanvas,
-      centerX - scaledRadius,
-      centerY - scaledRadius,
+      boundedCenterX - scaledRadius,
+      boundedCenterY - scaledRadius,
       2 * scaledRadius,
       2 * scaledRadius,
       0,
@@ -257,7 +251,8 @@ export class VideoEditorService {
     );
     circleCtx.restore();
 
-    // Clear the main canvas and resize to outputSize x outputSize
+    // Clear the main canvas and resize to a square output (1:1 aspect ratio)
+    const outputSize = Math.min(origWidth, origHeight);
     ctx.canvas.width = outputSize;
     ctx.canvas.height = outputSize;
     ctx.clearRect(0, 0, outputSize, outputSize);
@@ -290,26 +285,45 @@ export class VideoEditorService {
   }
 
   /**
-   * Create 25x25 brightness map from image data
+   * Create brightness map from image data
    */
   private createBrightnessMap(imageData: ImageData): number[][] {
-    const { data, width, height } = imageData;
-    const brightnessMap: number[][] = Array(25)
+    const brightnessMap = Array(25)
       .fill(null)
       .map(() => Array(25).fill(0));
+    const { width, height, data } = imageData;
+
+    // Use higher resolution sampling for better quality
+    const sampleSize = Math.min(width, height) / 25;
 
     for (let row = 0; row < 25; row++) {
       for (let col = 0; col < 25; col++) {
-        const x = Math.floor((col / 24) * (width - 1));
-        const y = Math.floor((row / 24) * (height - 1));
-        const index = (y * width + x) * 4;
+        // Sample multiple pixels in each grid cell for better accuracy
+        let totalBrightness = 0;
+        let sampleCount = 0;
 
-        if (index >= 0 && index < data.length - 3) {
-          const r = data[index];
-          const g = data[index + 1];
-          const b = data[index + 2];
-          brightnessMap[row][col] = (r + g + b) / 3;
+        const startX = Math.floor(col * sampleSize);
+        const endX = Math.floor((col + 1) * sampleSize);
+        const startY = Math.floor(row * sampleSize);
+        const endY = Math.floor((row + 1) * sampleSize);
+
+        // Sample multiple pixels in each grid cell
+        for (let y = startY; y < endY && y < height; y++) {
+          for (let x = startX; x < endX && x < width; x++) {
+            const index = (y * width + x) * 4;
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+
+            // Calculate brightness using luminance formula
+            const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+            totalBrightness += brightness;
+            sampleCount++;
+          }
         }
+
+        // Average the brightness values for this grid cell
+        brightnessMap[row][col] = sampleCount > 0 ? totalBrightness / sampleCount : 0;
       }
     }
 
@@ -354,66 +368,73 @@ export class VideoEditorService {
   ): Promise<File> {
     return new Promise((resolve, _reject) => {
       try {
-        console.log('Creating processed video blob...');
-        console.log('Crop settings:', cropSettings);
-        console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+        // Create a processed video by generating multiple frames with circular crop
+        const createProcessedFrames = async () => {
+          const frames: Blob[] = [];
+          const sampleFrames = Math.min(30, totalFrames); // Sample up to 30 frames for the preview
+          const sampleInterval = Math.max(1, Math.floor(totalFrames / sampleFrames));
 
-        // Create a simple processed video by generating a representative frame
-        // This is more reliable than MediaRecorder which can be problematic
-        const createProcessedFrame = async () => {
-          // Seek to middle frame for representative image
-          const middleTime = (totalFrames / 2) * frameInterval;
-          video.currentTime = middleTime;
+          for (let i = 0; i < sampleFrames; i++) {
+            const frameIndex = i * sampleInterval;
+            const currentTime = frameIndex * frameInterval;
 
-          await new Promise<void>((resolve) => {
-            const handleSeeked = () => {
-              video.removeEventListener('seeked', handleSeeked);
-              resolve();
-            };
-            video.addEventListener('seeked', handleSeeked);
-          });
+            video.currentTime = currentTime;
 
-          // Draw and process the frame
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            // Apply circular crop
-            const cropX = (cropSettings.x / 100) * canvas.width;
-            const cropY = (cropSettings.y / 100) * canvas.height;
-            const cropRadius = (cropSettings.radius / 100) * Math.min(canvas.width, canvas.height);
-            const cropScale = cropSettings.scale;
-
-            console.log('Calculated crop parameters:', {
-              cropX,
-              cropY,
-              cropRadius,
-              cropScale,
-              canvasWidth: canvas.width,
-              canvasHeight: canvas.height
+            await new Promise<void>((resolve) => {
+              const handleSeeked = () => {
+                video.removeEventListener('seeked', handleSeeked);
+                resolve();
+              };
+              video.addEventListener('seeked', handleSeeked);
             });
 
-            this.applyCircularCrop(ctx, cropX, cropY, cropRadius, cropScale);
+            // Draw and process the frame
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+              // Reset canvas to original video dimensions
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
 
-            // Apply black and white conversion
-            this.applyBlackAndWhiteFilter(ctx);
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Convert canvas to blob
-            canvas.toBlob((blob) => {
-              if (blob) {
-                const file = new File([blob], 'processed_video_frame.png', { type: 'image/png' });
-                console.log('Processed video frame created:', file.size, 'bytes');
-                resolve(file);
-              } else {
-                _reject(new Error('Failed to create processed video frame'));
-              }
-            }, 'image/png');
+              // Apply circular crop - this will resize canvas to square
+              const maxCircleDiameter = Math.min(canvas.width, canvas.height);
+              const cropX = (cropSettings.x / 100) * canvas.width;
+              const cropY = (cropSettings.y / 100) * canvas.height;
+              const cropRadius = (cropSettings.radius / 100) * (maxCircleDiameter / 2);
+              const cropScale = cropSettings.scale;
+
+              this.applyCircularCrop(ctx, cropX, cropY, cropRadius, cropScale);
+
+              // Apply black and white conversion
+              this.applyBlackAndWhiteFilter(ctx);
+
+              // Convert canvas to blob
+              const blob = await new Promise<Blob>((resolveBlob) => {
+                canvas.toBlob((blob) => {
+                  if (blob) {
+                    resolveBlob(blob);
+                  } else {
+                    resolveBlob(new Blob());
+                  }
+                }, 'image/png');
+              });
+
+              frames.push(blob);
+            }
+          }
+
+          // Create a simple video-like file from the frames
+          // For now, we'll use the first frame as a representative image
+          if (frames.length > 0) {
+            const file = new File([frames[0]], 'processed_video_frame.png', { type: 'image/png' });
+            resolve(file);
           } else {
-            _reject(new Error('Failed to get canvas context'));
+            _reject(new Error('Failed to create processed video frames'));
           }
         };
 
-        createProcessedFrame();
+        createProcessedFrames();
       } catch (error) {
         console.error('Error creating video blob:', error);
         _reject(error);
@@ -454,11 +475,8 @@ export class VideoEditorService {
   private async extractAudioFromVideo(videoFile: File): Promise<Blob> {
     return new Promise((resolve, _reject) => {
       try {
-        console.log('Extracting audio from video file...');
-
         // For now, use the original video file as audio
         // This ensures we have working audio for playback
-        console.log('Using original video file as audio source');
         resolve(videoFile);
       } catch (error) {
         console.error('Error extracting audio:', error);
@@ -513,10 +531,6 @@ export class VideoEditorService {
     for (let i = 0; i < frameAnalyses.length; i++) {
       const frameStates = this.applyVideoSettingsToFrame(frameAnalyses[i], settings);
       processedFrames.push(frameStates);
-
-      if (i % 100 === 0) {
-        console.log(`Pre-processed ${i + 1}/${frameAnalyses.length} frames`);
-      }
     }
 
     return processedFrames;

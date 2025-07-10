@@ -66,50 +66,72 @@ export default function CircleCropDialog({
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       const video = videoRef.current;
+      const container = containerRef.current;
 
-      if (!ctx) return;
+      if (!ctx || !container) return;
 
-      // Set canvas size to match video
-      canvas.width = videoDimensions.width;
-      canvas.height = videoDimensions.height;
+      const containerRect = container.getBoundingClientRect();
+      const videoRect = video.getBoundingClientRect();
 
-      // Draw video frame
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Set canvas size to match the container (800x800)
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
 
-      // Draw crop circle
-      const centerX = (cropSettings.x / 100) * canvas.width;
-      const centerY = (cropSettings.y / 100) * canvas.height;
-      const radius = (cropSettings.radius / 100) * Math.min(canvas.width, canvas.height);
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Create circular clipping path
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.clip();
+      // Calculate video position within the container (centered)
+      const videoX = (containerRect.width - videoRect.width) / 2;
+      const videoY = (containerRect.height - videoRect.height) / 2;
 
-      // Draw the video again (this will be the cropped area)
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Calculate circle parameters based on the actual video display area
+      // Always use the smaller dimension to ensure a perfect circle
+      const maxCircleDiameter = Math.min(videoRect.width, videoRect.height);
+      const circleRadius = (cropSettings.radius / 100) * (maxCircleDiameter / 2);
 
-      // Restore context
-      ctx.restore();
+      // Calculate center position relative to the video display area
+      const centerX = videoX + (cropSettings.x / 100) * videoRect.width;
+      const centerY = videoY + (cropSettings.y / 100) * videoRect.height;
+
+      // Ensure circle stays within video bounds
+      const boundedCenterX = Math.max(
+        videoX + circleRadius,
+        Math.min(videoX + videoRect.width - circleRadius, centerX)
+      );
+      const boundedCenterY = Math.max(
+        videoY + circleRadius,
+        Math.min(videoY + videoRect.height - circleRadius, centerY)
+      );
 
       // Draw circle outline
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.arc(boundedCenterX, boundedCenterY, circleRadius, 0, 2 * Math.PI);
       ctx.stroke();
 
       // Draw center crosshair
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(centerX - 10, centerY);
-      ctx.lineTo(centerX + 10, centerY);
-      ctx.moveTo(centerX, centerY - 10);
-      ctx.lineTo(centerX, centerY + 10);
+      ctx.moveTo(boundedCenterX - 10, boundedCenterY);
+      ctx.lineTo(boundedCenterX + 10, boundedCenterY);
+      ctx.moveTo(boundedCenterX, boundedCenterY - 10);
+      ctx.lineTo(boundedCenterX, boundedCenterY + 10);
       ctx.stroke();
+
+      // Draw crop preview (semi-transparent overlay)
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Clear the circle area to show the video
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(boundedCenterX, boundedCenterY, circleRadius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.restore();
     }
   }, [cropSettings, videoDimensions]);
 
@@ -165,23 +187,40 @@ export default function CircleCropDialog({
             <h3 className="text-lg font-medium text-white">Preview</h3>
             <div
               ref={containerRef}
-              className="relative border border-white/20 rounded-lg overflow-hidden bg-black"
-              style={{ maxHeight: '400px' }}
+              className="relative border border-white/20 rounded-lg overflow-hidden bg-black flex items-center justify-center"
+              style={{
+                width: '800px',
+                height: '800px',
+                maxWidth: '100%',
+                maxHeight: '100%'
+              }}
             >
               <video
                 ref={videoRef}
                 src={videoUrl}
-                className="w-full h-auto"
+                className="max-w-full max-h-full object-contain"
                 muted
                 loop
                 autoPlay
                 playsInline
+                style={{
+                  display: 'block'
+                }}
               />
               <canvas
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full"
                 style={{ pointerEvents: 'none' }}
               />
+            </div>
+            {/* Debug info */}
+            <div className="text-xs text-white/50 text-center">
+              <p>
+                Original dimensions: {videoDimensions.width} × {videoDimensions.height}
+              </p>
+              <p>Aspect ratio: {(videoDimensions.width / videoDimensions.height).toFixed(2)}</p>
+              <p>Container: 800×800px fixed size</p>
+              <p>Circle diameter: {Math.min(videoDimensions.width, videoDimensions.height)}px</p>
             </div>
           </div>
 
@@ -223,7 +262,7 @@ export default function CircleCropDialog({
                   <input
                     type="range"
                     min="10"
-                    max="80"
+                    max="100"
                     value={cropSettings.radius}
                     onChange={(e) => handleCropChange('radius', parseFloat(e.target.value))}
                     className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
