@@ -4,17 +4,12 @@
 
 @font-face {
   font-family: 'ndot';
-  src:
-    local('ndot'),
-    url(./fonts/ndot.otf) format('opentype');
+  src: local('ndot'), url(./fonts/ndot.otf) format('opentype');
 }
 
 .neon {
   color: #fff;
-  text-shadow:
-    0 0 5px #fff,
-    0 0 20px #fff,
-    0 0 50px rgb(203, 255, 255);
+  text-shadow: 0 0 5px #fff, 0 0 20px #fff, 0 0 50px rgb(203, 255, 255);
 }
 
 .flicker-slow {
@@ -126,6 +121,42 @@
   }
 }
 
+/* Custom 25-column grid for pixel state display */
+.grid-cols-25 {
+  grid-template-columns: repeat(25, minmax(0, 1fr));
+}
+
+/* Custom slider styling for video progress bar */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.slider::-webkit-slider-track {
+  background: transparent;
+  border: none;
+}
+
+.slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
 .checkbox-round {
   width: 15px;
   height: 15px;
@@ -166,7 +197,7 @@ html {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(85, 85, 85, 0.7)
+  background: rgba(85, 85, 85, 0.7);
 }
 
 ::-webkit-scrollbar-thumb:active {

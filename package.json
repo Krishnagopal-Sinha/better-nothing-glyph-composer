@@ -51,6 +51,7 @@
     "typescript": "^5.5.4",
     "use-file-picker": "^2.1.2",
     "wavesurfer.js": "^7.9.9",
+    "wouter": "^3.7.1",
     "zundo": "^2.1.0",
     "zustand": "^4.5.5"
   },

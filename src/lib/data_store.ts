@@ -72,6 +72,13 @@ class DataStore {
       album: `BNGC v${kMajorVersion}`,
       custom2: '36cols',
       custom1: `eNoDAAAAAAE=`
+    },
+     // Phone 3 Info
+    NP3: <PhoneSpecificInfo>{
+      composer: `v1-Metroid Glyph Composer`,
+      album: `BNGC v${kMajorVersion}`,
+      custom2: '625cols',
+      custom1: `eNoDAAAAAAE=`
     }
   };
   // Actual data store
