@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { X, RotateCcw, Check } from 'lucide-react';
 
 interface AdvancedVideoEditorProps {
@@ -176,6 +177,13 @@ export default function AdvancedVideoEditor({
     }
   }, [videoSettings, currentFrameAnalysis]);
 
+  // Update preview when current frame index changes
+  useEffect(() => {
+    if (currentFrameAnalysis) {
+      processCurrentFrameForGlyphMatrix();
+    }
+  }, [currentFrameIndex, currentFrameAnalysis]);
+
   // Update canvas preview when settings change
   useEffect(() => {
     if (currentFrameAnalysis && canvasRef.current) {
@@ -282,49 +290,11 @@ export default function AdvancedVideoEditor({
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      {/* Custom CSS for slider */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-          .slider::-webkit-slider-thumb {
-            appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-          }
-          
-          .slider::-moz-range-thumb {
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-          }
-          
-          .slider::-webkit-slider-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            height: 6px;
-          }
-          
-          .slider::-moz-range-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            height: 6px;
-            border: none;
-          }
-        `
-        }}
-      />
-
       <div className="bg-black border border-white/20 rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Advanced Video Editor</h2>
+          <h2 className="text-xl font-semibold text-white font-[ndot] tracking-wider uppercase">
+            Advanced Video Editor
+          </h2>
           <Button
             variant="ghost"
             size="sm"
@@ -394,59 +364,24 @@ export default function AdvancedVideoEditor({
           {/* Progress Bar */}
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-white/70">
-              <span>0:00</span>
-              {/* <span>
-                Frame: {currentFrameIndex + 1} / {totalFrames}
-              </span> */}
-              <span>100%</span>
+              <span>{Math.floor((videoProgress / 100) * (totalFrames / 60))}s</span>
+              <span>{videoProgress.toFixed(1)}%</span>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="0.1"
-              value={videoProgress}
-              onChange={(e) => onSeek?.(parseFloat(e.target.value))}
+            <Slider
+              value={[videoProgress]}
+              onValueChange={(value) => onSeek?.(value[0])}
+              max={100}
+              step={0.01}
               disabled={!onSeek}
-              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider hover:bg-white/20 transition-colors duration-200"
-              style={{
-                background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
-              }}
+              className="w-full"
             />
-            {/* <p className="text-xs text-white/50 text-center">
-              {isVideoPlaying ? 'Playing' : 'Paused'} | Progress: {videoProgress.toFixed(1)}%
-            </p> */}
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Preview Area */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-white">Live Preview</h3>
-            <div className="relative border border-white/20 rounded-lg overflow-hidden bg-black">
-              {currentFrameAnalysis ? (
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-auto"
-                  style={{ maxHeight: '400px' }}
-                  width={800}
-                  height={800}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-64 text-white/50">
-                  <div className="text-center">
-                    <p className="text-sm mb-2">No frame data available</p>
-                    <p className="text-xs">Please play the video to see preview</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-white/50 text-center">
-              Current frame: {currentFrameIndex + 1} / {totalFrames} | Adjust settings below to see
-              real-time preview
-            </p>
-
-            {/* Glyph Matrix Preview */}
+            {/* Glyph Matrix Preview - Moved to top */}
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-white text-center">Glyph Matrix Preview</h4>
               <div className="flex justify-center">
@@ -519,6 +454,35 @@ export default function AdvancedVideoEditor({
                 {glyphMatrixStates.filter((state) => state).length}
               </p>
             </div>
+
+            {/* Live Preview - Moved to bottom */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium text-white">Live Preview</h3>
+              <div className="relative border border-white/20 rounded-lg overflow-hidden bg-black flex justify-center">
+                {currentFrameAnalysis ? (
+                  <canvas
+                    ref={canvasRef}
+                    style={{
+                      width: `${SQUARE_SIZE}px`,
+                      height: `${SQUARE_SIZE}px`
+                    }}
+                    width={SQUARE_SIZE}
+                    height={SQUARE_SIZE}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-white/50">
+                    <div className="text-center">
+                      <p className="text-sm mb-2">No frame data available</p>
+                      <p className="text-xs">Please play the video to see preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-white/50 text-center">
+                Current frame: {currentFrameIndex + 1} / {totalFrames} | Adjust settings below to
+                see real-time preview
+              </p>
+            </div>
           </div>
 
           {/* Controls */}
@@ -548,14 +512,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Gamma</label>
                 <span className="text-xs text-white/50">{videoSettings.gamma.toFixed(2)}</span>
               </div>
-              <input
-                type="range"
-                min="0.1"
-                max="3.0"
-                step="0.1"
-                value={videoSettings.gamma}
-                onChange={(e) => handleSettingChange('gamma', parseFloat(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.gamma]}
+                onValueChange={(value) => handleSettingChange('gamma', value[0])}
+                min={0.1}
+                max={3.0}
+                step={0.1}
+                className="w-full"
               />
             </div>
 
@@ -565,14 +528,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Brightness</label>
                 <span className="text-xs text-white/50">{videoSettings.brightness}</span>
               </div>
-              <input
-                type="range"
-                min="-100"
-                max="100"
-                step="1"
-                value={videoSettings.brightness}
-                onChange={(e) => handleSettingChange('brightness', parseInt(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.brightness]}
+                onValueChange={(value) => handleSettingChange('brightness', value[0])}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
               />
             </div>
 
@@ -582,14 +544,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Contrast</label>
                 <span className="text-xs text-white/50">{videoSettings.contrast.toFixed(2)}</span>
               </div>
-              <input
-                type="range"
-                min="0.1"
-                max="3.0"
-                step="0.1"
-                value={videoSettings.contrast}
-                onChange={(e) => handleSettingChange('contrast', parseFloat(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.contrast]}
+                onValueChange={(value) => handleSettingChange('contrast', value[0])}
+                min={0.1}
+                max={3.0}
+                step={0.1}
+                className="w-full"
               />
             </div>
 
@@ -599,14 +560,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Saturation</label>
                 <span className="text-xs text-white/50">{videoSettings.saturation}</span>
               </div>
-              <input
-                type="range"
-                min="-100"
-                max="100"
-                step="1"
-                value={videoSettings.saturation}
-                onChange={(e) => handleSettingChange('saturation', parseInt(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.saturation]}
+                onValueChange={(value) => handleSettingChange('saturation', value[0])}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
               />
             </div>
 
@@ -616,14 +576,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Hue</label>
                 <span className="text-xs text-white/50">{videoSettings.hue}</span>
               </div>
-              <input
-                type="range"
-                min="-180"
-                max="180"
-                step="1"
-                value={videoSettings.hue}
-                onChange={(e) => handleSettingChange('hue', parseInt(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.hue]}
+                onValueChange={(value) => handleSettingChange('hue', value[0])}
+                min={-180}
+                max={180}
+                step={1}
+                className="w-full"
               />
             </div>
 
@@ -633,14 +592,13 @@ export default function AdvancedVideoEditor({
                 <label className="text-sm font-medium text-white">Threshold</label>
                 <span className="text-xs text-white/50">{videoSettings.threshold}</span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="255"
-                step="1"
-                value={videoSettings.threshold}
-                onChange={(e) => handleSettingChange('threshold', parseInt(e.target.value))}
-                className="slider w-full"
+              <Slider
+                value={[videoSettings.threshold]}
+                onValueChange={(value) => handleSettingChange('threshold', value[0])}
+                min={0}
+                max={255}
+                step={1}
+                className="w-full"
               />
             </div>
 

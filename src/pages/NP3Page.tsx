@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,8 +11,10 @@ import {
   Settings,
   X,
   Download,
-  Volume,
-  VolumeX
+  Undo2,
+  Redo2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { kAppName } from '@/lib/consts';
 import useGlobalAppStore from '@/lib/timeline_state';
@@ -27,6 +29,14 @@ import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
 import CircleCropDialog from '@/components/ui/circle-crop-dialog';
 import AdvancedVideoEditor from '@/components/ui/advanced-video-editor';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 
 // Remove duplicate interface declarations since they're imported from VideoEditorService
 interface NP3VideoProcessingResult extends VideoProcessingResult {}
@@ -55,11 +65,8 @@ export default function NP3Page() {
   const [currentDisplayFrame, setCurrentDisplayFrame] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0); // 0-100
-  const [playbackSpeed, setPlaybackSpeed] = useState(0.75); // Default to 1x speed
-  const [volume, setVolume] = useState(1); // 0-1
-  const [isMuted, setIsMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // Default to 1x speed
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [isComponentMounted, setIsComponentMounted] = useState(true);
 
   // Circle crop dialog states
   const [showCropDialog, setShowCropDialog] = useState(false);
@@ -82,94 +89,53 @@ export default function NP3Page() {
   const [isPreProcessing, setIsPreProcessing] = useState(false);
   const [preProcessingProgress, setPreProcessingProgress] = useState(0);
 
-  // Memoize preProcessAllFrames to prevent infinite re-renders
-  const preProcessAllFrames = useMemo(() => {
-    return async () => {
-      if (!videoResult || !videoResult.frameAnalyses.length) {
-        return;
-      }
-
-      setIsPreProcessing(true);
-      setPreProcessingProgress(0);
-
-      try {
-        // Add a small delay to prevent blocking the UI
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        setPreProcessingProgress(100);
-      } catch (error) {
-        console.error('Error pre-processing frames:', error);
-        toast.error('Failed to pre-process frames');
-        // Don't throw the error, just log it and continue
-      } finally {
-        setIsPreProcessing(false);
-        // Reset progress after a short delay
-        setTimeout(() => setPreProcessingProgress(0), 1000);
-      }
-    };
-  }, [videoResult, videoSettings, videoEditorService]);
-
-  // Helper functions - moved before useMemo to avoid initialization error
-  /**
-   * Calculate if a pixel should be visible in the circle based on specific pixel ranges
-   * @param row - Row index (0-24)
-   * @param col - Column index (0-24)
-   * @returns boolean indicating if pixel should be visible
-   */
-  const isPixelInCircle = (row: number, col: number): boolean => {
-    const index = getPixelIndex(row, col);
-
-    // Define the visible pixel ranges (0-based indexing)
-    // Only 489 of 625 pixels are visible due to the round Glyph Matrix
-    const visibleRanges = [
-      [9, 15], // top row
-      [32, 42],
-      [55, 69],
-      [79, 95],
-      [103, 121],
-      [127, 147],
-      [152, 172],
-      [176, 198],
-      [201, 223],
-      [225, 399], // fully filled rows in the middle
-      [401, 423],
-      [426, 448],
-      [452, 472],
-      [477, 497],
-      [503, 521],
-      [529, 545],
-      [555, 569],
-      [582, 592],
-      [609, 615] // bottom row
-    ];
-
-    // Check if the pixel index falls within any of the visible ranges
-    return visibleRanges.some(([start, end]) => {
-      return index >= start && index <= end;
-    });
-  };
-
-  /**
-   * Get the index in the 1D array from 2D coordinates
-   * @param row - Row index (0-24)
-   * @param col - Column index (0-24)
-   * @returns index in the 1D array
-   */
-  const getPixelIndex = (row: number, col: number): number => {
-    return row * 25 + col;
-  };
-
   // Ref for the canvas to draw the processed video
   const processedVideoCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Drag-to-paint states
+  const [isDragPaintingEnabled, setIsDragPaintingEnabled] = useState(true);
+  const [lastPaintedPixel, setLastPaintedPixel] = useState<number | null>(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
+
+  // Zoom state for dot matrix
+  const [dotMatrixZoom, setDotMatrixZoom] = useState(0.75);
+
+  // Ref for the dot matrix container
+  const dotMatrixContainerRef = useRef<HTMLDivElement>(null);
+
+  // Add state for settings dialog
+  const [showDotMatrixSettings, setShowDotMatrixSettings] = useState(false);
+
+  // Undo/Redo state for user modifications
+  const [undoStack, setUndoStack] = useState<
+    Array<{
+      frameIndex: number;
+      brightnessMap: number[][];
+      timestamp: number;
+    }>
+  >([]);
+  const [redoStack, setRedoStack] = useState<
+    Array<{
+      frameIndex: number;
+      brightnessMap: number[][];
+      timestamp: number;
+    }>
+  >([]);
+
+  // Helper: Get undo/redo stacks for the current frame only
+  const getCurrentFrameAnalysisIndex = () => {
+    if (!videoResult) return -1;
+    const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
+    return Math.floor(frameTime / (1000 / videoResult.fps));
+  };
+
+  const currentFrameAnalysisIndex = getCurrentFrameAnalysisIndex();
+  const currentFrameUndoStack = undoStack.filter((u) => u.frameIndex === currentFrameAnalysisIndex);
+  const currentFrameRedoStack = redoStack.filter((r) => r.frameIndex === currentFrameAnalysisIndex);
 
   // Set the phone model to NP3 when this page loads
   useEffect(() => {
     changePhoneModel('NP3');
-    setIsComponentMounted(true);
-
-    return () => {
-      setIsComponentMounted(false);
-    };
   }, [changePhoneModel]);
 
   // Initialize FFmpeg service for export only
@@ -177,6 +143,7 @@ export default function NP3Page() {
     const initFFmpeg = async () => {
       try {
         await FFmpegService.load();
+        console.log('FFmpeg service loaded for export');
       } catch (error) {
         console.error('Failed to load FFmpeg service:', error);
         toast.error('Failed to load export service');
@@ -214,78 +181,64 @@ export default function NP3Page() {
 
   // Synchronized video playback control (60Hz refresh rate)
   useEffect(() => {
-    if (isVideoPlaying && videoResult && audioElement && audioElement.readyState > 0) {
-      let animationFrameId: number;
-      let lastFrameUpdate = 0;
-      const frameInterval = 16.666; // 60Hz = 16.666ms per frame
-
-      const updateFrame = () => {
+    if (isVideoPlaying && videoResult && audioElement) {
+      const interval = setInterval(() => {
         try {
-          // Check if audio element is still valid and component is mounted
-          if (!audioElement || audioElement.readyState === 0 || !isComponentMounted) {
+          // Check if audio element is still valid
+          if (!audioElement || audioElement.readyState === 0) {
+            console.log('Audio element not ready, skipping frame update');
             return;
           }
 
-          const currentTime = Date.now();
+          const currentTime = audioElement.currentTime * 1000; // Convert to milliseconds
+          // Apply playback speed to frame calculation - this affects both audio and visual elements
+          const adjustedTime = currentTime / playbackSpeed;
+          const frameIndex = Math.floor(adjustedTime / 16.666); // 60Hz = 16.666ms per frame
 
-          // Frame rate limiting to prevent excessive updates
-          if (currentTime - lastFrameUpdate < frameInterval) {
-            if (isVideoPlaying && isComponentMounted) {
-              animationFrameId = requestAnimationFrame(updateFrame);
+          if (frameIndex < videoResult.displayFrames.length) {
+            setCurrentDisplayFrame(frameIndex);
+
+            // Draw the current frame to the canvas
+            drawCurrentFrameToCanvas(frameIndex);
+
+            // Get the current frame analysis and update pixel states from brightness map
+            const frameTime = frameIndex * 16.666; // Convert to milliseconds
+            const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+            if (analysisIndex < videoResult.frameAnalyses.length) {
+              const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+
+              // Use the existing helper function to update pixel states
+              updatePixelStatesFromFrameAnalysis(frameAnalysis);
+            } else {
+              // Fallback to original display frame if analysis not available
+              const displayFrame = videoResult.displayFrames[frameIndex];
+              if (displayFrame && displayFrame.pixelStates) {
+                setPixelStates([...displayFrame.pixelStates]);
+              } else {
+                setPixelStates(new Array(625).fill(false));
+              }
             }
-            return;
-          }
 
-          lastFrameUpdate = currentTime;
-
-          // Calculate frame index based on audio time
-          const audioTime = audioElement.currentTime;
-          const frameIndex = calculateFrameIndex(audioTime);
-
-          // Check if we've reached the end of the video
-          const isAtEnd = frameIndex >= videoResult.displayFrames.length - 1;
-          const isPastEnd = frameIndex >= videoResult.displayFrames.length;
-
-          if (!isPastEnd) {
-            // Update frame display (this will trigger the useEffect for synchronization)
-            updateFrameDisplay(frameIndex);
-
-            // Update progress based on frame index, not audio time
-            const progress = (frameIndex / (videoResult.displayFrames.length - 1)) * 100;
+            // Update progress - use actual audio time, not adjusted time
+            const progress = (currentTime / videoResult.displayDuration) * 100;
             setVideoProgress(Math.min(progress, 100));
-
-            // If we're at the last frame, prepare to end
-            if (isAtEnd) {
-              // Video ending logic
-            }
           } else {
-            // Video ended - stop audio and reset
-            stopVideoPlayback();
-            toast.info('Video playback completed');
-            return; // Stop the animation loop
-          }
-
-          // Continue the animation loop if still playing
-          if (isVideoPlaying && isComponentMounted) {
-            animationFrameId = requestAnimationFrame(updateFrame);
+            // Video ended
+            setIsVideoPlaying(false);
+            setCurrentDisplayFrame(0);
+            setVideoProgress(0);
           }
         } catch (error) {
           console.error('Error in playback loop:', error);
           // Stop playback on error to prevent getting stuck
-          stopVideoPlayback();
+          setIsVideoPlaying(false);
         }
-      };
+      }, 16.666); // 60Hz refresh rate
 
-      // Start the animation loop
-      animationFrameId = requestAnimationFrame(updateFrame);
-
-      return () => {
-        if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-        }
-      };
+      return () => clearInterval(interval);
     }
-  }, [isVideoPlaying, videoResult, audioElement, playbackSpeed, videoSettings, isComponentMounted]); // Removed preProcessedFrames from dependencies since we're not using it anymore
+  }, [isVideoPlaying, videoResult, audioElement, playbackSpeed, videoSettings]); // Added videoSettings to dependencies
 
   // Handle video settings changes and apply to current frame
   useEffect(() => {
@@ -296,53 +249,18 @@ export default function NP3Page() {
       // Draw the initial frame to the canvas
       drawCurrentFrameToCanvas(0);
     }
-  }, [videoSettings, videoResult, preProcessAllFrames]); // Added preProcessAllFrames to dependencies
-
-  // Synchronized frame updates - same pattern as advanced editor
-  useEffect(() => {
-    if (
-      !videoResult ||
-      currentDisplayFrame < 0 ||
-      currentDisplayFrame >= videoResult.displayFrames.length
-    ) {
-      return;
-    }
-
-    // Get the current frame analysis - since processing is now at 60fps, frameIndex directly corresponds
-    if (currentDisplayFrame < videoResult.frameAnalyses.length) {
-      const frameAnalysis = videoResult.frameAnalyses[currentDisplayFrame];
-
-      // Always use the same processing logic as the canvas for perfect synchronization
-      const newPixelStates = videoEditorService.applyVideoSettingsToFrame(
-        frameAnalysis,
-        videoSettings
-      );
-      setPixelStates(newPixelStates);
-
-      // Update canvas immediately for perfect synchronization
-      drawCurrentFrameToCanvas(currentDisplayFrame);
-    }
-  }, [currentDisplayFrame, videoResult, videoSettings, videoEditorService]);
+  }, [videoSettings, videoResult]); // Simplified dependencies
 
   // Audio element management
   useEffect(() => {
     if (videoResult && !audioElement) {
       const audio = new Audio(URL.createObjectURL(videoResult.audioFile));
       audio.preload = 'metadata';
-      audio.volume = isMuted ? 0 : volume;
 
       audio.addEventListener('ended', () => {
-        if (isComponentMounted) {
-          stopVideoPlayback();
-        }
-      });
-
-      audio.addEventListener('error', (error) => {
-        console.error('Audio element error:', error);
-        if (isComponentMounted) {
-          stopVideoPlayback();
-          toast.error('Audio playback error');
-        }
+        setIsVideoPlaying(false);
+        setCurrentDisplayFrame(0);
+        setVideoProgress(0);
       });
 
       setAudioElement(audio);
@@ -351,12 +269,10 @@ export default function NP3Page() {
     return () => {
       if (audioElement) {
         audioElement.pause();
-        if (audioElement.src.startsWith('blob:')) {
-          URL.revokeObjectURL(audioElement.src);
-        }
+        URL.revokeObjectURL(audioElement.src);
       }
     };
-  }, [videoResult, isComponentMounted]);
+  }, [videoResult]);
 
   // Cleanup effect for video elements
   useEffect(() => {
@@ -364,9 +280,7 @@ export default function NP3Page() {
       // Cleanup when component unmounts or video changes
       if (audioElement) {
         audioElement.pause();
-        if (audioElement.src.startsWith('blob:')) {
-          URL.revokeObjectURL(audioElement.src);
-        }
+        URL.revokeObjectURL(audioElement.src);
       }
       setIsVideoPlaying(false);
       setCurrentDisplayFrame(0);
@@ -374,7 +288,140 @@ export default function NP3Page() {
     };
   }, [audioElement]);
 
-  // Get current frame analysis for Advanced Video Editor
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Prevent default behavior for our shortcuts
+      const preventDefault = () => {
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      switch (event.code) {
+        case 'Space':
+          preventDefault();
+          // Only play/pause if video is loaded
+          if (videoResult) {
+            if (isVideoPlaying) {
+              pauseVideo();
+            } else {
+              playVideo();
+            }
+          } else {
+            toast.info('Upload a video first to use playback controls');
+          }
+          break;
+
+        case 'ArrowLeft':
+          preventDefault();
+          // Only navigate if video is loaded
+          if (videoResult) {
+            goToPreviousFrame();
+          } else {
+            toast.info('Upload a video first to navigate frames');
+          }
+          break;
+
+        case 'ArrowRight':
+          preventDefault();
+          // Only navigate if video is loaded
+          if (videoResult) {
+            goToNextFrame();
+          } else {
+            toast.info('Upload a video first to navigate frames');
+          }
+          break;
+
+        case 'KeyZ':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Only undo if video is loaded
+            if (videoResult) {
+              handleUndo();
+            } else {
+              toast.info('Upload a video first to use undo/redo');
+            }
+          }
+          break;
+
+        case 'KeyY':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Only redo if video is loaded
+            if (videoResult) {
+              handleRedo();
+            } else {
+              toast.info('Upload a video first to use undo/redo');
+            }
+          }
+          break;
+
+        case 'KeyR':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Only reset if video is loaded
+            if (videoResult) {
+              stopVideo();
+            } else {
+              toast.info('Upload a video first to use reset');
+            }
+          }
+          break;
+
+        case 'Escape':
+          preventDefault();
+          // Close advanced editor if open
+          if (showAdvancedEditor) {
+            setShowAdvancedEditor(false);
+          }
+          // Close dot matrix settings if open
+          if (showDotMatrixSettings) {
+            setShowDotMatrixSettings(false);
+          }
+          // Close crop dialog if open
+          if (showCropDialog) {
+            handleCropCancel();
+          }
+          break;
+
+        case 'KeyS':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Save video if available
+            if (videoResult) {
+              handleSaveVideo();
+            } else {
+              toast.info('Upload a video first to save');
+            }
+          }
+          break;
+
+        case 'KeyA':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Open advanced editor if video is loaded
+            if (videoResult) {
+              setShowAdvancedEditor(true);
+            } else {
+              toast.info('Upload a video first to open advanced editor');
+            }
+          }
+          break;
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [videoResult, isVideoPlaying, showAdvancedEditor, showDotMatrixSettings, showCropDialog]);
+
+  /**
+   * Get current frame analysis for Advanced Video Editor
+   */
   const getCurrentFrameAnalysis = (): FrameAnalysis | undefined => {
     if (!videoResult || !videoResult.frameAnalyses.length) return undefined;
 
@@ -388,6 +435,14 @@ export default function NP3Page() {
 
     // Fallback to first frame if current frame analysis not found
     return videoResult.frameAnalyses[0];
+  };
+
+  /**
+   * Handle crop dialog cancellation
+   */
+  const handleCropCancel = () => {
+    setShowCropDialog(false);
+    setSelectedVideoFile(null);
   };
 
   /**
@@ -427,9 +482,11 @@ export default function NP3Page() {
     setProcessingProgress(0);
 
     try {
+      console.log('Starting video processing with settings:', settings);
       toast.info('Processing video with crop settings... This may take a while.');
 
       const result = await videoEditorService.processVideoForNP3(videoFile, settings);
+      console.log('Video processing result:', result);
 
       setVideoResult(result);
 
@@ -445,25 +502,13 @@ export default function NP3Page() {
   };
 
   /**
-   * Handle crop dialog cancellation
-   */
-  const handleCropCancel = () => {
-    setShowCropDialog(false);
-    setSelectedVideoFile(null);
-  };
-
-  /**
    * Handle closing the current video and resetting to upload state
    */
   const handleCloseVideo = () => {
-    // Stop any playing video and reset audio
+    // Stop any playing video
     if (audioElement) {
       audioElement.pause();
       audioElement.currentTime = 0;
-      if (audioElement.src.startsWith('blob:')) {
-        URL.revokeObjectURL(audioElement.src);
-      }
-      setAudioElement(null); // Clear the audio element reference
     }
 
     // Reset all video-related states
@@ -483,9 +528,11 @@ export default function NP3Page() {
       inversion: false
     });
 
-    // Clear pre-processed frames
-    setPreProcessingProgress(0);
-    setIsPreProcessing(false);
+    // Clean up URLs
+    // if (processedVideoUrl) { // This line is removed
+    //   URL.revokeObjectURL(processedVideoUrl);
+    //   setProcessedVideoUrl(null);
+    // }
 
     toast.info('Video closed. You can upload a new video.');
   };
@@ -571,23 +618,10 @@ export default function NP3Page() {
    */
   const refreshVideoElements = () => {
     if (videoResult) {
-      // Only recreate audio element if it's invalid or doesn't exist
-      if (videoResult.audioFile && (!audioElement || audioElement.readyState === 0)) {
-        // Clean up old audio element if it exists
-        if (audioElement && audioElement.src.startsWith('blob:')) {
-          URL.revokeObjectURL(audioElement.src);
-        }
-
+      // Recreate audio element if needed
+      if (videoResult.audioFile) {
         const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
         newAudio.preload = 'metadata';
-        newAudio.volume = isMuted ? 0 : volume;
-
-        newAudio.addEventListener('ended', () => {
-          if (isComponentMounted) {
-            stopVideoPlayback();
-          }
-        });
-
         setAudioElement(newAudio);
       }
     }
@@ -624,6 +658,15 @@ export default function NP3Page() {
         return;
       }
 
+      // Debug: Print CSV data to console
+      console.log('=== CSV DATA FOR EXPORT ===');
+      console.log('CSV Length:', csvData.length);
+      console.log('Total frames:', videoResult.displayFrames.length);
+      console.log('Video duration:', videoResult.duration);
+      console.log('Current video settings:', videoSettings);
+      console.log('CSV Length:', csvData);
+      console.log('=== END CSV DATA ===');
+
       // Encode CSV data using the existing export logic
       const encodedData = encodeStuffTheWayNothingLikesIt(csvData);
 
@@ -631,6 +674,11 @@ export default function NP3Page() {
         toast.error('Failed to encode pixel data');
         return;
       }
+
+      console.log('=== ENCODED DATA ===');
+      console.log('Encoded data length:', encodedData.length);
+      console.log('Encoded data:', encodedData);
+      console.log('=== END ENCODED DATA ===');
 
       // Save using FFmpegService
       await FFmpegService.saveOutput(
@@ -654,9 +702,34 @@ export default function NP3Page() {
   };
 
   /**
+   * Ensure audio element is properly maintained
+   */
+  const ensureAudioElement = () => {
+    if (!videoResult) return;
+
+    // If audio element doesn't exist or is invalid, recreate it
+    if (!audioElement || audioElement.readyState === 0) {
+      console.log('Recreating audio element');
+      const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
+      newAudio.preload = 'metadata';
+
+      newAudio.addEventListener('ended', () => {
+        setIsVideoPlaying(false);
+        setCurrentDisplayFrame(0);
+        setVideoProgress(0);
+      });
+
+      setAudioElement(newAudio);
+    }
+  };
+
+  /**
    * Handle applying advanced video settings
    */
   const handleApplyVideoSettings = (settings: VideoSettings) => {
+    console.log('NP3Page: Applying video settings:', settings);
+    console.log('NP3Page: Previous settings:', videoSettings);
+
     // Store current playback state
     const wasPlaying = isVideoPlaying;
     const currentTime = audioElement?.currentTime || 0;
@@ -664,17 +737,23 @@ export default function NP3Page() {
     setVideoSettings(settings);
     setShowAdvancedEditor(false);
 
+    // Ensure audio element is properly maintained
+    ensureAudioElement();
+
     // Trigger pre-processing with new settings in the background
     if (videoResult && videoResult.frameAnalyses.length > 0) {
+      console.log('NP3Page: Triggering pre-processing with new settings');
       toast.info('Processing video settings for smooth playback...');
 
       // Pre-process in background without blocking the UI
       preProcessAllFrames()
         .then(() => {
+          console.log('NP3Page: Pre-processing completed successfully');
           toast.success('Video settings applied successfully!');
 
           // If video was playing, ensure it continues
-          if (wasPlaying && audioElement && audioElement.readyState > 0) {
+          if (wasPlaying && audioElement) {
+            console.log('NP3Page: Resuming playback after pre-processing');
             audioElement.currentTime = currentTime;
             setIsVideoPlaying(true);
           }
@@ -684,7 +763,7 @@ export default function NP3Page() {
           toast.error('Failed to pre-process frames, but settings were applied');
 
           // Still try to resume playback even if pre-processing failed
-          if (wasPlaying && audioElement && audioElement.readyState > 0) {
+          if (wasPlaying && audioElement) {
             audioElement.currentTime = currentTime;
             setIsVideoPlaying(true);
           }
@@ -695,16 +774,54 @@ export default function NP3Page() {
   };
 
   /**
+   * Pre-process all video frames with current settings for efficient playback
+   */
+  const preProcessAllFrames = async () => {
+    if (!videoResult || !videoResult.frameAnalyses.length) {
+      console.log('NP3Page: No video result or frame analyses available for pre-processing');
+      return;
+    }
+
+    setIsPreProcessing(true);
+    setPreProcessingProgress(0);
+    console.log('Starting pre-processing of all frames for efficient playback...');
+
+    try {
+      // Add a small delay to prevent blocking the UI
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const processedFrames = await videoEditorService.preProcessFrames(
+        videoResult.frameAnalyses,
+        videoSettings
+      );
+
+      setPreProcessingProgress(100);
+      console.log(`Pre-processing complete. ${processedFrames.length} frames ready for playback.`);
+    } catch (error) {
+      console.error('Error pre-processing frames:', error);
+      toast.error('Failed to pre-process frames');
+      // Don't throw the error, just log it and continue
+    } finally {
+      setIsPreProcessing(false);
+      // Reset progress after a short delay
+      setTimeout(() => setPreProcessingProgress(0), 1000);
+    }
+  };
+
+  /**
    * Play video with synchronized dot matrix display
    */
   const playVideo = () => {
     if (!audioElement || !videoResult) {
+      console.log('Cannot play: audio element or video result not available');
       return;
     }
 
     // Check if audio element is ready
     if (audioElement.readyState === 0) {
+      console.log('Audio element not ready, waiting...');
       audioElement.addEventListener('canplay', () => {
+        console.log('Audio element ready, starting playback');
         startPlayback();
       });
       return;
@@ -714,53 +831,26 @@ export default function NP3Page() {
   };
 
   const startPlayback = () => {
-    if (!audioElement || !isComponentMounted) return;
+    if (!audioElement) return;
 
-    // Check if component is still mounted and audio element is valid
-    if (!audioElement || audioElement.readyState === 0) {
-      console.warn('Audio element not ready for playback');
-      return;
-    }
-
-    // Set playing state first to ensure UI updates
-    setIsVideoPlaying(true);
+    console.log('Starting playback with synchronized dot matrix display');
 
     // Play audio only and update dot matrix
     audioElement.playbackRate = playbackSpeed;
-
-    // Add a small delay to ensure state is stable
-    setTimeout(() => {
-      // Check if component is still mounted
-      if (!isComponentMounted) return;
-
-      // Check again if audio element is still valid
-      if (!audioElement || audioElement.readyState === 0) {
-        console.warn('Audio element became invalid before playback');
+    audioElement
+      .play()
+      .then(() => {
+        setIsVideoPlaying(true);
+        console.log('Playback started successfully');
+        toast.info(
+          `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
+        );
+      })
+      .catch((error) => {
+        console.error('Failed to start audio playback:', error);
+        toast.error('Failed to start playback. Please try again.');
         setIsVideoPlaying(false);
-        return;
-      }
-
-      audioElement
-        .play()
-        .then(() => {
-          // Check if we're still supposed to be playing and component is mounted
-          if (isComponentMounted) {
-            toast.info(
-              `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
-            );
-          }
-        })
-        .catch((error) => {
-          // Only log error if it's not an abort error (which is expected when pausing)
-          if (error.name !== 'AbortError') {
-            console.error('Failed to start audio playback:', error);
-            toast.error('Failed to start playback. Please try again.');
-          }
-          if (isComponentMounted) {
-            setIsVideoPlaying(false);
-          }
-        });
-    }, 50); // Small delay to prevent race conditions
+      });
   };
 
   /**
@@ -770,15 +860,8 @@ export default function NP3Page() {
     if (!audioElement) return;
 
     try {
-      // Set playing state to false first to prevent race conditions
+      audioElement.pause();
       setIsVideoPlaying(false);
-
-      // Add a small delay before pausing to avoid interrupting play() calls
-      setTimeout(() => {
-        if (audioElement && !audioElement.paused) {
-          audioElement.pause();
-        }
-      }, 100);
     } catch (error) {
       console.error('Failed to pause video:', error);
       // Force stop even if pause fails
@@ -793,17 +876,19 @@ export default function NP3Page() {
     if (!audioElement) return;
 
     try {
-      // Set playing state to false first
+      audioElement.pause();
+      audioElement.currentTime = 0;
       setIsVideoPlaying(false);
-
-      // Add a small delay before stopping to avoid interrupting play() calls
-      setTimeout(() => {
-        stopVideoPlayback();
-      }, 100);
+      setCurrentDisplayFrame(0);
+      setVideoProgress(0);
+      setPixelStates(new Array(625).fill(false));
     } catch (error) {
       console.error('Failed to stop video:', error);
       // Force reset even if stop fails
-      stopVideoPlayback();
+      setIsVideoPlaying(false);
+      setCurrentDisplayFrame(0);
+      setVideoProgress(0);
+      setPixelStates(new Array(625).fill(false));
     }
   };
 
@@ -811,142 +896,55 @@ export default function NP3Page() {
    * Handle progress bar seeking
    */
   const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!audioElement || !videoResult || !isComponentMounted) return;
+    if (!audioElement || !videoResult) return;
 
     const progress = parseFloat(event.target.value);
+    // Account for playback speed when calculating time from progress
+    const newTime = (progress / 100) * (videoResult.displayDuration / 1000);
 
-    // Calculate frame index based on progress percentage
-    const frameIndex = Math.floor((progress / 100) * (videoResult.displayFrames.length - 1));
-
-    // Calculate the corresponding audio time using the helper function
-    const newTime = calculateTimeFromFrameIndex(frameIndex);
-
-    // Pause playback temporarily during seeking to prevent race conditions
+    // Pause playback temporarily during seeking
     const wasPlaying = isVideoPlaying;
     if (wasPlaying) {
       setIsVideoPlaying(false);
     }
 
-    // Add a small delay before seeking to avoid interrupting play() calls
-    setTimeout(() => {
-      // Check if component is still mounted
-      if (!isComponentMounted) return;
+    audioElement.currentTime = newTime;
+    setVideoProgress(progress);
 
-      // Set audio time first
-      if (audioElement && audioElement.readyState > 0) {
-        audioElement.currentTime = newTime;
-      }
-      setVideoProgress(progress);
-
-      // Update both dot matrix and canvas together for synchronization
-      updateFrameDisplay(frameIndex);
-
-      // Resume playback if it was playing before, with a longer delay to ensure seeking is complete
-      if (wasPlaying && isComponentMounted && audioElement && audioElement.readyState > 0) {
-        setTimeout(() => {
-          if (isComponentMounted) {
-            setIsVideoPlaying(true);
-          }
-        }, 150); // Increased delay to ensure seeking is complete
-      }
-    }, 100);
-  };
-
-  /**
-   * Calculate frame index from time using consistent logic
-   */
-  const calculateFrameIndex = (timeInSeconds: number): number => {
-    const timeInMs = timeInSeconds * 1000;
-    const frameIndex = Math.floor(timeInMs / 16.666); // 60Hz = 16.666ms per frame
-
-    // Add bounds checking
-    if (frameIndex < 0) {
-      return 0;
-    }
-
-    return frameIndex;
-  };
-
-  /**
-   * Calculate time from frame index using consistent logic
-   */
-  const calculateTimeFromFrameIndex = (frameIndex: number): number => {
-    const frameTimeMs = frameIndex * 16.666; // 60Hz = 16.666ms per frame
-    return frameTimeMs / 1000; // Convert to seconds
-  };
-
-  /**
-   * Handle volume change
-   */
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (audioElement) {
-      audioElement.volume = newVolume;
-    }
-    // If volume is set to 0, mute the audio
-    if (newVolume === 0) {
-      setIsMuted(true);
-    } else if (isMuted) {
-      setIsMuted(false);
-    }
-  };
-
-  /**
-   * Handle mute toggle
-   */
-  const handleMuteToggle = () => {
-    if (audioElement) {
-      if (isMuted) {
-        // Unmute
-        audioElement.volume = volume;
-        setIsMuted(false);
-      } else {
-        // Mute
-        audioElement.volume = 0;
-        setIsMuted(true);
-      }
-    }
-  };
-
-  /**
-   * Stop video playback and reset all states
-   */
-  const stopVideoPlayback = useCallback(() => {
-    if (audioElement) {
-      // Add a small delay to avoid interrupting play() calls
-      setTimeout(() => {
-        if (audioElement && !audioElement.paused) {
-          audioElement.pause();
-        }
-        if (audioElement) {
-          audioElement.currentTime = 0;
-        }
-      }, 50);
-    }
-
-    setIsVideoPlaying(false);
-    setCurrentDisplayFrame(0);
-    setVideoProgress(0);
-    setPixelStates(new Array(625).fill(false));
-  }, [audioElement]);
-
-  /**
-   * Update frame display with consistent logic
-   */
-  const updateFrameDisplay = (frameIndex: number) => {
-    if (!videoResult) {
-      return;
-    }
-
-    if (frameIndex < 0 || frameIndex >= videoResult.displayFrames.length) {
-      return;
-    }
-
-    try {
-      // Only update the current frame index - the useEffect will handle synchronization
+    // Update display frame immediately (accounting for playback speed)
+    const adjustedTime = (newTime * 1000) / playbackSpeed;
+    const frameIndex = Math.floor(adjustedTime / 16.666);
+    if (frameIndex < videoResult.displayFrames.length) {
       setCurrentDisplayFrame(frameIndex);
-    } catch (error) {
-      console.error('Error updating frame display:', error);
+
+      // Draw the current frame to the canvas
+      drawCurrentFrameToCanvas(frameIndex);
+
+      // Get the current frame analysis and update pixel states from brightness map
+      const frameTime = frameIndex * 16.666; // Convert to milliseconds
+      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+      if (analysisIndex < videoResult.frameAnalyses.length) {
+        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+
+        // Use the existing helper function to update pixel states
+        updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      } else {
+        // Fallback to original display frame if analysis not available
+        const displayFrame = videoResult.displayFrames[frameIndex];
+        if (displayFrame && displayFrame.pixelStates) {
+          setPixelStates([...displayFrame.pixelStates]);
+        } else {
+          setPixelStates(new Array(625).fill(false));
+        }
+      }
+    }
+
+    // Resume playback if it was playing before
+    if (wasPlaying) {
+      setTimeout(() => {
+        setIsVideoPlaying(true);
+      }, 50); // Small delay to ensure seeking is complete
     }
   };
 
@@ -955,11 +953,329 @@ export default function NP3Page() {
    * @param index - The index of the pixel to toggle
    */
   const handlePixelClick = (index: number) => {
-    setPixelStates((prev) => {
-      const newStates = [...prev];
-      newStates[index] = !newStates[index];
-      return newStates;
+    // For NP3, set brightness to 4095 (max brightness)
+    if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
+      const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
+      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+      if (analysisIndex < videoResult.frameAnalyses.length) {
+        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+        const row = Math.floor(index / 25);
+        const col = index % 25;
+
+        // Save current state for undo
+        const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+
+        // Set brightness to 4095 (max for NP3)
+        frameAnalysis.brightnessMap[row][col] = 4095;
+
+        // Add to undo stack
+        setUndoStack((prev) => [
+          ...prev,
+          {
+            frameIndex: analysisIndex,
+            brightnessMap: currentBrightnessMap,
+            timestamp: Date.now()
+          }
+        ]);
+
+        // Clear redo stack when new modification is made
+        setRedoStack([]);
+
+        // Update pixel states immediately to reflect the change
+        updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      }
+    } else {
+      // Fallback for when no video is loaded
+      setPixelStates((prev) => {
+        const newStates = [...prev];
+        newStates[index] = !newStates[index];
+        return newStates;
+      });
+    }
+  };
+
+  /**
+   * Undo the last modification for the current frame
+   */
+  const handleUndo = () => {
+    if (currentFrameUndoStack.length === 0) return;
+
+    // Only undo the last modification for the current frame
+    const lastModification = currentFrameUndoStack[currentFrameUndoStack.length - 1];
+    const frameAnalysis = videoResult?.frameAnalyses[lastModification.frameIndex];
+    if (frameAnalysis) {
+      // Save current state for redo
+      const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+      // Restore previous state
+      frameAnalysis.brightnessMap = lastModification.brightnessMap.map((row) => [...row]);
+      // Remove this undo entry for this frame
+      setUndoStack((prev) =>
+        prev.filter(
+          (u, i) =>
+            !(
+              u.frameIndex === lastModification.frameIndex &&
+              i === prev.lastIndexOf(lastModification)
+            )
+        )
+      );
+      // Add to redo stack
+      setRedoStack((prev) => [
+        ...prev,
+        {
+          frameIndex: lastModification.frameIndex,
+          brightnessMap: currentBrightnessMap,
+          timestamp: Date.now()
+        }
+      ]);
+      // Update pixel states to reflect the change
+      updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      toast.success('Undo completed');
+    }
+  };
+
+  /**
+   * Redo the last undone modification for the current frame
+   */
+  const handleRedo = () => {
+    if (currentFrameRedoStack.length === 0) return;
+
+    // Only redo the last modification for the current frame
+    const lastRedo = currentFrameRedoStack[currentFrameRedoStack.length - 1];
+    const frameAnalysis = videoResult?.frameAnalyses[lastRedo.frameIndex];
+    if (frameAnalysis) {
+      // Save current state for undo
+      const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+      // Apply the redo state
+      frameAnalysis.brightnessMap = lastRedo.brightnessMap.map((row) => [...row]);
+      // Remove this redo entry for this frame
+      setRedoStack((prev) =>
+        prev.filter(
+          (r, i) => !(r.frameIndex === lastRedo.frameIndex && i === prev.lastIndexOf(lastRedo))
+        )
+      );
+      // Add to undo stack
+      setUndoStack((prev) => [
+        ...prev,
+        {
+          frameIndex: lastRedo.frameIndex,
+          brightnessMap: currentBrightnessMap,
+          timestamp: Date.now()
+        }
+      ]);
+      // Update pixel states to reflect the change
+      updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      toast.success('Redo completed');
+    }
+  };
+
+  /**
+   * Update pixel states from frame analysis
+   */
+  const updatePixelStatesFromFrameAnalysis = (frameAnalysis: FrameAnalysis) => {
+    const newPixelStates = new Array(625).fill(false);
+
+    for (let row = 0; row < 25; row++) {
+      for (let col = 0; col < 25; col++) {
+        const index = getPixelIndex(row, col);
+        if (isPixelInCircle(row, col)) {
+          const brightness = frameAnalysis.brightnessMap[row][col];
+          // Apply video settings to brightness for display
+          let adjustedBrightness = brightness;
+
+          // Brightness adjustment
+          adjustedBrightness = Math.max(
+            0,
+            Math.min(255, adjustedBrightness + videoSettings.brightness)
+          );
+
+          // Contrast adjustment
+          const factor =
+            (259 * (videoSettings.contrast * 255 + 255)) /
+            (255 * (259 - videoSettings.contrast * 255));
+          adjustedBrightness = Math.max(
+            0,
+            Math.min(255, factor * (adjustedBrightness - 128) + 128)
+          );
+
+          // Gamma correction
+          adjustedBrightness = Math.pow(adjustedBrightness / 255, 1 / videoSettings.gamma) * 255;
+
+          // Inversion
+          if (videoSettings.inversion) {
+            adjustedBrightness = 255 - adjustedBrightness;
+          }
+
+          // Threshold for black & white
+          newPixelStates[index] = adjustedBrightness > videoSettings.threshold;
+        }
+      }
+    }
+
+    setPixelStates(newPixelStates);
+  };
+
+  /**
+   * Handle mouse move for drag painting
+   */
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isMouseDown || !isDragPaintingEnabled || !dotMatrixContainerRef.current) return;
+
+    const container = dotMatrixContainerRef.current;
+    const rect = container.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Calculate which pixel was clicked based on the container size
+    const containerSize = Math.min(rect.width, rect.height);
+    const pixelSize = containerSize / 25;
+
+    const col = Math.floor(x / pixelSize);
+    const row = Math.floor(y / pixelSize);
+
+    // Ensure we're within bounds
+    if (col >= 0 && col < 25 && row >= 0 && row < 25) {
+      const index = getPixelIndex(row, col);
+
+      // Only paint if this is a different pixel than the last one
+      if (index !== lastPaintedPixel && isPixelInCircle(row, col)) {
+        setLastPaintedPixel(index);
+
+        // Use the same modification tracking as handlePixelClick
+        if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
+          const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
+          const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+          if (analysisIndex < videoResult.frameAnalyses.length) {
+            const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+            const pixelRow = Math.floor(index / 25);
+            const pixelCol = index % 25;
+
+            // Save current state for undo
+            const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+
+            // Set brightness to 4095 (max for NP3)
+            frameAnalysis.brightnessMap[pixelRow][pixelCol] = 4095;
+
+            // Add to undo stack
+            setUndoStack((prev) => [
+              ...prev,
+              {
+                frameIndex: analysisIndex,
+                brightnessMap: currentBrightnessMap,
+                timestamp: Date.now()
+              }
+            ]);
+
+            // Clear redo stack when new modification is made
+            setRedoStack([]);
+
+            // Update pixel states immediately to reflect the change
+            updatePixelStatesFromFrameAnalysis(frameAnalysis);
+          }
+        }
+      }
+    }
+  };
+
+  /**
+   * Handle mouse down to start drag painting
+   */
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isDragPaintingEnabled) return;
+
+    setIsMouseDown(true);
+    setLastPaintedPixel(null);
+
+    // Determine paint mode based on current pixel state
+    const container = dotMatrixContainerRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const containerSize = Math.min(rect.width, rect.height);
+      const pixelSize = containerSize / 25;
+
+      const col = Math.floor(x / pixelSize);
+      const row = Math.floor(y / pixelSize);
+
+      if (col >= 0 && col < 25 && row >= 0 && row < 25) {
+        const index = getPixelIndex(row, col);
+        if (isPixelInCircle(row, col)) {
+          handlePixelClick(index);
+        }
+      }
+    }
+  };
+
+  /**
+   * Handle mouse up to stop drag painting
+   */
+  const handleMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsMouseDown(false);
+    setLastPaintedPixel(null);
+  };
+
+  /**
+   * Handle mouse leave to stop drag painting
+   */
+  const handleMouseLeave = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsMouseDown(false);
+    setLastPaintedPixel(null);
+  };
+
+  /**
+   * Calculate if a pixel should be visible in the circle based on specific pixel ranges
+   * @param row - Row index (0-24)
+   * @param col - Column index (0-24)
+   * @returns boolean indicating if pixel should be visible
+   */
+  const isPixelInCircle = (row: number, col: number): boolean => {
+    const index = getPixelIndex(row, col);
+
+    // Define the visible pixel ranges (0-based indexing)
+    // Only 489 of 625 pixels are visible due to the round Glyph Matrix
+    const visibleRanges = [
+      [9, 15], // top row
+      [32, 42],
+      [55, 69],
+      [79, 95],
+      [103, 121],
+      [127, 147],
+      [152, 172],
+      [176, 198],
+      [201, 223],
+      [225, 399], // fully filled rows in the middle
+      [401, 423],
+      [426, 448],
+      [452, 472],
+      [477, 497],
+      [503, 521],
+      [529, 545],
+      [555, 569],
+      [582, 592],
+      [609, 615] // bottom row
+    ];
+
+    // Check if the pixel index falls within any of the visible ranges
+    return visibleRanges.some(([start, end]) => {
+      return index >= start && index <= end;
     });
+  };
+
+  /**
+   * Get the index in the 1D array from 2D coordinates
+   * @param row - Row index (0-24)
+   * @param col - Column index (0-24)
+   * @returns index in the 1D array
+   */
+  const getPixelIndex = (row: number, col: number): number => {
+    return row * 25 + col;
   };
 
   /**
@@ -975,22 +1291,25 @@ export default function NP3Page() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Get the current frame analysis - since processing is now at 60fps, frameIndex directly corresponds
-    if (frameIndex < videoResult.frameAnalyses.length) {
-      const frameAnalysis = videoResult.frameAnalyses[frameIndex];
+    // Get the current frame analysis
+    const frameTime = frameIndex * 16.666; // Convert to milliseconds
+    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
 
-      // Create a temporary canvas for high-resolution processing
+    if (analysisIndex < videoResult.frameAnalyses.length) {
+      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+
+      // Create a temporary canvas to process the frame
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = canvas.width;
       tempCanvas.height = canvas.height;
       const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
       if (tempCtx) {
-        // Create a high-resolution grid representation of the frame
+        // Create a 25x25 grid representation of the frame
         const gridSize = 25;
         const cellSize = canvas.width / gridSize;
 
-        // Draw the brightness map as a high-resolution grid
+        // Draw the brightness map as a grid
         for (let row = 0; row < gridSize; row++) {
           for (let col = 0; col < gridSize; col++) {
             const brightness = frameAnalysis.brightnessMap[row][col];
@@ -1027,15 +1346,10 @@ export default function NP3Page() {
             const isLit = adjustedBrightness > videoSettings.threshold;
             const color = isLit ? 255 : 0;
 
-            // Use high-quality rendering with anti-aliasing
             tempCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
             tempCtx.fillRect(x, y, cellSize, cellSize);
           }
         }
-
-        // Apply smoothing for better visual quality
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
 
         // Draw the processed frame to the main canvas
         ctx.drawImage(tempCanvas, 0, 0);
@@ -1043,10 +1357,92 @@ export default function NP3Page() {
     }
   };
 
+  /**
+   * Navigate to previous frame
+   */
+  const goToPreviousFrame = () => {
+    if (!videoResult || currentDisplayFrame <= 0) return;
+
+    const newFrameIndex = currentDisplayFrame - 1;
+    setCurrentDisplayFrame(newFrameIndex);
+
+    // Update audio position to match the new frame
+    if (audioElement) {
+      const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
+      audioElement.currentTime = newTime;
+    }
+
+    // Update progress
+    const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+    setVideoProgress(newProgress);
+
+    // Draw the frame to canvas
+    drawCurrentFrameToCanvas(newFrameIndex);
+
+    // Update pixel states from brightness map for the new frame
+    const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
+    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+    if (analysisIndex < videoResult.frameAnalyses.length) {
+      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      // Use the existing helper function to update pixel states
+      updatePixelStatesFromFrameAnalysis(frameAnalysis);
+    } else {
+      // Fallback to original display frame if analysis not available
+      const displayFrame = videoResult.displayFrames[newFrameIndex];
+      if (displayFrame && displayFrame.pixelStates) {
+        setPixelStates([...displayFrame.pixelStates]);
+      } else {
+        setPixelStates(new Array(625).fill(false));
+      }
+    }
+  };
+
+  /**
+   * Navigate to next frame
+   */
+  const goToNextFrame = () => {
+    if (!videoResult || currentDisplayFrame >= videoResult.displayFrames.length - 1) return;
+
+    const newFrameIndex = currentDisplayFrame + 1;
+    setCurrentDisplayFrame(newFrameIndex);
+
+    // Update audio position to match the new frame
+    if (audioElement) {
+      const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
+      audioElement.currentTime = newTime;
+    }
+
+    // Update progress
+    const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+    setVideoProgress(newProgress);
+
+    // Draw the frame to canvas
+    drawCurrentFrameToCanvas(newFrameIndex);
+
+    // Update pixel states from brightness map for the new frame
+    const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
+    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+    if (analysisIndex < videoResult.frameAnalyses.length) {
+      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      // Use the existing helper function to update pixel states
+      updatePixelStatesFromFrameAnalysis(frameAnalysis);
+    } else {
+      // Fallback to original display frame if analysis not available
+      const displayFrame = videoResult.displayFrames[newFrameIndex];
+      if (displayFrame && displayFrame.pixelStates) {
+        setPixelStates([...displayFrame.pixelStates]);
+      } else {
+        setPixelStates(new Array(625).fill(false));
+      }
+    }
+  };
+
   // Constants for sizing
-  const UNIT_SIZE = 12; // Reduced from 20 to 12 for better performance
+  const UNIT_SIZE = 20; // Reduced unit size for better visibility
   const GRID_SIZE = 25; // 25x25 grid
-  const SQUARE_SIZE = GRID_SIZE * UNIT_SIZE; // 300px x 300px (reduced from 500px)
+  const SQUARE_SIZE = GRID_SIZE * UNIT_SIZE; // 500px x 500px
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -1128,10 +1524,9 @@ export default function NP3Page() {
         <div className="max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="text-center mb-8">
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 font-[ndot] tracking-wider uppercase transition-all duration-200">
-              NP(3) Video to Glyph Matrix (beta)
-            </p>
-
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 font-[ndot] tracking-wider uppercase">
+              Video to Glyph Matrix
+            </h2>
             {/* <p className="text-sm sm:text-base lg:text-lg text-white/70 font-[ndot] tracking-wide">
               625 LED dot glyph matrix display (25x25)
             </p> */}
@@ -1139,14 +1534,15 @@ export default function NP3Page() {
 
           {/* Video and Dot Matrix Display */}
           {videoResult && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8">
               {/* Processed Video (Cropped & Black & White) */}
               <div className="space-y-4">
                 <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase">
-                  Processed Video{' '}
-                  <span className="text-xs font-mono leading-none">(1:1, Cropped, B&W)</span>
+                  Processed Video
                 </h3>
-
+                <p className="text-xs sm:text-sm text-white/50 text-center">
+                  (Cropped & Black & White)
+                </p>
                 <div className="flex justify-center">
                   {videoResult ? (
                     <div className="relative">
@@ -1154,9 +1550,9 @@ export default function NP3Page() {
                       <canvas
                         ref={processedVideoCanvasRef}
                         className="max-w-full h-auto rounded-lg border border-white/20 hover:border-white/40 transition-colors duration-200"
-                        style={{ maxHeight: '400px', maxWidth: '100%' }}
-                        width={800}
-                        height={800}
+                        style={{ maxHeight: '300px', maxWidth: '100%' }}
+                        width={400}
+                        height={400}
                       />
                       {/* Placeholder message */}
                       <div
@@ -1190,20 +1586,45 @@ export default function NP3Page() {
 
               {/* Dot Matrix Display */}
               <div className="space-y-4">
-                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase">
-                  Phone (3) Glyph Display
-                </h3>
+                <div className="flex items-center justify-center space-x-2">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase">
+                    Phone (3) Glyph Display
+                  </h3>
+                  {/* Settings icon button opens the settings dialog */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDotMatrixSettings(true)}
+                    className="text-white hover:text-white hover:bg-white/10 transition-all duration-200"
+                    title="Open dot matrix settings"
+                    aria-label="Open dot matrix settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Dot Matrix Settings Dialog */}
+                <DotMatrixSettingsDialog
+                  open={showDotMatrixSettings}
+                  onOpenChange={setShowDotMatrixSettings}
+                  dragPaintingEnabled={isDragPaintingEnabled}
+                  onToggleDragPainting={setIsDragPaintingEnabled}
+                />
                 <div className="flex justify-center">
                   <div className="relative">
                     {/* Responsive sizing for dot matrix */}
                     <div
-                      className="relative"
+                      ref={dotMatrixContainerRef}
+                      className="relative transition-colors duration-200"
                       style={{
-                        width: `min(${SQUARE_SIZE}px, 80vw)`,
-                        height: `min(${SQUARE_SIZE}px, 80vw)`,
-                        maxWidth: `${SQUARE_SIZE}px`,
-                        maxHeight: `${SQUARE_SIZE}px`
+                        width: `min(${SQUARE_SIZE * dotMatrixZoom}px, 80vw)`,
+                        height: `min(${SQUARE_SIZE * dotMatrixZoom}px, 80vw)`,
+                        maxWidth: `${SQUARE_SIZE * dotMatrixZoom}px`,
+                        maxHeight: `${SQUARE_SIZE * dotMatrixZoom}px`
                       }}
+                      onMouseDown={handleMouseDown}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseLeave}
+                      onMouseMove={handleMouseMove}
                     >
                       {/* Circle overlay */}
                       <div
@@ -1226,7 +1647,6 @@ export default function NP3Page() {
                           gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
                           gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`
                         }}
-                        key={`matrix-${currentDisplayFrame}`}
                       >
                         {Array.from({ length: GRID_SIZE }, (_, row) =>
                           Array.from({ length: GRID_SIZE }, (_, col) => {
@@ -1263,24 +1683,106 @@ export default function NP3Page() {
                     </div>
                   </div>
                 </div>
+                {/* Debug info for dot matrix */}
+                <div className="text-center text-xs text-white/50">
+                  <p>Lit pixels: {pixelStates.filter((state) => state).length} / 625</p>
+                  <p>Current frame: {currentDisplayFrame}</p>
+                </div>
+
+                {/* Zoom Controls */}
+                <div
+                  className="flex justify-center items-center space-x-2"
+                  style={{ marginTop: '4px' }}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDotMatrixZoom(Math.max(0.5, dotMatrixZoom - 0.25))}
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                    title="Zoom out"
+                    aria-label="Zoom out"
+                  >
+                    -
+                  </Button>
+                  <span className="text-xs text-white/70 min-w-[3rem]">
+                    {' '}
+                    {(dotMatrixZoom * 100).toFixed(0)}%
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDotMatrixZoom(Math.min(3, dotMatrixZoom + 0.25))}
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                    title="Zoom in"
+                    aria-label="Zoom in"
+                  >
+                    +
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Video Controls - Moved to bottom */}
+          {/* Video Controls - Floating at bottom */}
           {videoResult && (
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 sm:p-6 mb-8">
-              <h3 className="text-base sm:text-lg lg:text-xl font-semibold mb-4 text-center font-[ndot] tracking-wider uppercase">
-                Video Controls
-              </h3>
+            <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-2xl space-y-2">
+              {/* Progress Bar */}
+              <div className="flex items-center space-x-2">
+                {/* Previous Frame Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToPreviousFrame}
+                  disabled={!videoResult || currentDisplayFrame <= 0}
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Previous frame"
+                  aria-label="Previous frame"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
 
-              {/* Synchronized Video Playback Controls */}
-              <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-4">
+                {/* Progress Bar */}
+                <div className="flex items-center space-x-2 flex-1 min-w-0">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={videoProgress}
+                    onChange={handleProgressChange}
+                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
+                    }}
+                  />
+                  <span className="text-xs text-white/70 min-w-[2rem] flex-shrink-0">
+                    {Math.floor((videoProgress / 100) * (videoResult?.duration || 0))}s
+                  </span>
+                </div>
+
+                {/* Next Frame Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextFrame}
+                  disabled={
+                    !videoResult ||
+                    currentDisplayFrame >= (videoResult?.displayFrames.length || 0) - 1
+                  }
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Next frame"
+                  aria-label="Next frame"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-1 items-center">
+                {/* Play/Pause Button */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // Unified play/pause toggle for better UX
                     if (isVideoPlaying) {
                       pauseVideo();
                     } else {
@@ -1291,12 +1793,7 @@ export default function NP3Page() {
                   title={isVideoPlaying ? 'Pause playback' : 'Play video'}
                   aria-label={isVideoPlaying ? 'Pause playback' : 'Play video'}
                 >
-                  {isVideoPlaying ? (
-                    <Pause className="h-4 w-4 mr-1" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-1" />
-                  )}
-                  {isVideoPlaying ? 'Pause' : 'Play'}
+                  {isVideoPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                 </Button>
 
                 {/* Stop Button */}
@@ -1308,8 +1805,7 @@ export default function NP3Page() {
                   title="Stop playback and reset to beginning"
                   aria-label="Stop playback"
                 >
-                  <Square className="h-4 w-4 mr-1" />
-                  Stop
+                  <Square className="h-3 w-3" />
                 </Button>
 
                 {/* Close Video Button */}
@@ -1321,8 +1817,7 @@ export default function NP3Page() {
                   title="Close current video and reset"
                   aria-label="Close video"
                 >
-                  <X className="h-4 w-4 mr-1" />
-                  Close
+                  <X className="h-3 w-3" />
                 </Button>
 
                 {/* Save Button */}
@@ -1334,8 +1829,7 @@ export default function NP3Page() {
                   title="Save as .ogg with pixel data"
                   aria-label="Save video"
                 >
-                  <Download className="h-4 w-4 mr-1" />
-                  Save
+                  <Download className="h-3 w-3" />
                 </Button>
 
                 {/* Advanced Editor Button */}
@@ -1347,102 +1841,83 @@ export default function NP3Page() {
                   title="Open advanced video editor"
                   aria-label="Advanced editor"
                 >
-                  <Settings className="h-4 w-4 mr-1" />
-                  Advanced Editor
+                  <Settings className="h-3 w-3" />
                 </Button>
-              </div>
 
-              {/* Playback Speed & Volume Controls */}
-              <div className="mb-4">
-                <div className="flex flex-wrap justify-center items-center gap-8">
-                  {/* Playback Speed */}
-                  <div className="flex flex-col items-center">
-                    <label className="block text-sm text-white/70 mb-2 text-center">
-                      Playback Speed
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="2.0"
-                        step="0.1"
-                        value={playbackSpeed}
-                        onChange={(e) => {
-                          const newSpeed = parseFloat(e.target.value);
-                          setPlaybackSpeed(newSpeed);
-                          if (audioElement) {
-                            audioElement.playbackRate = newSpeed;
-                          }
-                        }}
-                        className="w-32 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                      <span className="text-sm text-white/70 min-w-[3rem]">{playbackSpeed}x</span>
-                    </div>
-                  </div>
-                  {/* Volume */}
-                  <div className="flex flex-col items-center">
-                    <label className="block text-sm text-white/70 mb-2 text-center">Volume</label>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={handleMuteToggle}
-                        className="text-white hover:text-white/70 transition-colors duration-200"
-                        title={isMuted ? 'Unmute' : 'Mute'}
-                        aria-label={isMuted ? 'Unmute' : 'Mute'}
-                      >
-                        {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume className="h-4 w-4" />}
-                      </button>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={isMuted ? 0 : volume}
-                        onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                        className="w-32 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                      <span className="text-sm text-white/70 min-w-[3rem]">
-                        {isMuted ? '0.00' : volume.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+                {/* Undo Button - Always visible, disabled if no modifications */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUndo}
+                  disabled={currentFrameUndoStack.length === 0}
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    currentFrameUndoStack.length > 0
+                      ? `Undo last modification for frame ${currentDisplayFrame + 1} (${
+                          currentFrameUndoStack.length
+                        } changes available)`
+                      : 'No modifications to undo'
+                  }
+                  aria-label="Undo last modification"
+                >
+                  <Undo2 className="h-3 w-3" />
+                </Button>
+
+                {/* Redo Button - Always visible, disabled if no redo history */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRedo}
+                  disabled={currentFrameRedoStack.length === 0}
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    currentFrameRedoStack.length > 0
+                      ? `Redo last undone modification for frame ${currentDisplayFrame + 1} (${
+                          currentFrameRedoStack.length
+                        } changes available)`
+                      : 'No modifications to redo'
+                  }
+                  aria-label="Redo last undone modification"
+                >
+                  <Redo2 className="h-3 w-3" />
+                </Button>
+
+                {/* Playback Speed */}
+                <div className="flex items-center space-x-1 ml-2">
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="2.0"
+                    step="0.1"
+                    value={playbackSpeed}
+                    onChange={(e) => {
+                      const newSpeed = parseFloat(e.target.value);
+                      setPlaybackSpeed(newSpeed);
+                      if (audioElement) {
+                        audioElement.playbackRate = newSpeed;
+                      }
+                      if (videoResult && audioElement) {
+                        const currentTime = audioElement.currentTime * 1000;
+                        const adjustedTime = currentTime / newSpeed;
+                        const frameIndex = Math.floor(adjustedTime / 16.666);
+                        if (frameIndex < videoResult.displayFrames.length) {
+                          setCurrentDisplayFrame(frameIndex);
+                          drawCurrentFrameToCanvas(frameIndex);
+                        }
+                      }
+                    }}
+                    className="w-16 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <span className="text-xs text-white/70 min-w-[1.5rem]">{playbackSpeed}x</span>
                 </div>
               </div>
-
-              {/* Synchronized Progress Bar */}
-              <div className="w-full mb-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={videoProgress}
-                  onChange={handleProgressChange}
-                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider hover:bg-white/20 transition-colors duration-200"
-                  style={{
-                    background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
-                  }}
-                />
-                <div className="flex justify-between text-xs text-white/70 mt-1">
-                  <span>0:00</span>
-                  <span>
-                    {videoResult
-                      ? `${Math.floor(videoResult.duration / 60)}:${(videoResult.duration % 60)
-                          .toFixed(0)
-                          .padStart(2, '0')}`
-                      : '0:00'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Video Status */}
-              {videoResult && <div className="text-center"></div>}
             </div>
           )}
 
           {/* Video Upload Section */}
           <div className="mb-8 p-4 sm:p-6 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-white/20 transition-all duration-200">
             <h3 className="text-base sm:text-lg lg:text-xl font-semibold mb-4 text-center font-[ndot] tracking-wider uppercase">
-              Upload a Video
+              Select Video
             </h3>
 
             {!videoResult ? (
@@ -1482,6 +1957,12 @@ export default function NP3Page() {
             ) : (
               <div className="space-y-4">
                 <div className="text-center">
+                  <p className="text-xs sm:text-sm text-white/70">
+                    Video: {videoResult.totalFrames} frames, {videoResult.duration.toFixed(1)}s
+                  </p>
+                  <p className="text-xs sm:text-sm text-white/70">
+                    Display: {videoResult.displayFrames.length} frames at 60Hz
+                  </p>
                   {cropSettings && (
                     <p className="text-xs sm:text-sm text-white/50">
                       Crop: X{cropSettings.x.toFixed(0)}% Y{cropSettings.y.toFixed(0)}% R
@@ -1494,6 +1975,232 @@ export default function NP3Page() {
           </div>
         </div>
       </main>
+
+      {/* Usage Instructions */}
+      <div className="container mx-auto px-4 py-8 -mt-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-6 space-y-6">
+            <h3 className="text-xl font-semibold text-white font-[ndot] tracking-wider uppercase text-center">
+              How to Use
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Getting Started */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
+                  Getting Started
+                </h4>
+                <div className="space-y-3 text-sm text-white/80">
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      1
+                    </span>
+                    <p>Upload a video file using the "Upload Video" button</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      2
+                    </span>
+                    <p>Crop your video to a circle using the crop dialog</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      3
+                    </span>
+                    <p>
+                      Wait for processing to complete - your video will be converted to 60Hz frames
+                    </p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      4
+                    </span>
+                    <p>Use the playback controls to navigate through your video</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frame-by-Frame Drawing */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
+                  Frame-by-Frame Drawing
+                </h4>
+                <div className="space-y-3 text-sm text-white/80">
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      1
+                    </span>
+                    <p>Navigate to any frame using the progress bar or arrow buttons</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      2
+                    </span>
+                    <p>Click on any pixel in the Phone (3) Glyph Display to turn it on/off</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      3
+                    </span>
+                    <p>Enable drag-to-paint in settings for continuous drawing</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      4
+                    </span>
+                    <p>Use Undo/Redo buttons to correct mistakes on the current frame</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Keyboard Shortcuts */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
+                Keyboard Shortcuts
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-white/80">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Space
+                  </div>
+                  <p className="text-xs">Play/Pause</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    ← →
+                  </div>
+                  <p className="text-xs">Previous/Next Frame</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + Z
+                  </div>
+                  <p className="text-xs">Undo (Current Frame)</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + Y
+                  </div>
+                  <p className="text-xs">Redo (Current Frame)</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + R
+                  </div>
+                  <p className="text-xs">Reset to Beginning</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Escape
+                  </div>
+                  <p className="text-xs">Close Dialogs</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + S
+                  </div>
+                  <p className="text-xs">Save Video</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + A
+                  </div>
+                  <p className="text-xs">Open Advanced Editor</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tips and Tricks */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
+                Tips & Tricks
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-white/80">
+                <div className="space-y-3">
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <h5 className="font-medium text-white mb-2">Drawing Tips</h5>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Use zoom controls for precise pixel editing</li>
+                      <li>• Enable drag-to-paint for smooth line drawing</li>
+                      <li>• Only visible pixels (within circle) can be modified</li>
+                      <li>• Changes are saved per frame automatically</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <h5 className="font-medium text-white mb-2">Performance Tips</h5>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Use shorter videos for faster processing</li>
+                      <li>• Lower resolution videos process faster</li>
+                      <li>• Advanced settings are applied in real-time</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <h5 className="font-medium text-white mb-2">Best Practices</h5>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Start with simple shapes and patterns</li>
+                      <li>• Use frame-by-frame navigation for precise editing</li>
+                      <li>• Test your creation with different playback speeds</li>
+                      <li>• Save frequently to avoid losing work</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <h5 className="font-medium text-white mb-2">Phone (3) Specific</h5>
+                    <ul className="space-y-1 text-xs">
+                      <li>• 625 LED zones in 25x25 grid</li>
+                      <li>• Only 489 pixels are visible (circular display)</li>
+                      <li>• 60Hz refresh rate for smooth animation</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Troubleshooting */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
+                Troubleshooting
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-white/80">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <h5 className="font-medium text-white mb-2">Common Issues</h5>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      • <strong>Pixels not responding:</strong> Ensure you're clicking within the
+                      circle
+                    </li>
+                    <li>
+                      • <strong>Lag during playback:</strong> Try reducing video resolution
+                    </li>
+                    <li>
+                      • <strong>Settings not applying:</strong> Wait for pre-processing to complete
+                    </li>
+                  </ul>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <h5 className="font-medium text-white mb-2">Performance</h5>
+                  <ul className="space-y-1 text-xs">
+                    <li>
+                      • <strong>Slow processing:</strong> Use shorter videos
+                    </li>
+                    <li>
+                      • <strong>Memory issues:</strong> Close other browser tabs
+                    </li>
+                    <li>
+                      • <strong>Export fails:</strong> Check FFmpeg service is loaded
+                    </li>
+                    <li>
+                      • <strong>Preview lag:</strong> Reduce zoom level
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Circle Crop Dialog */}
       {selectedVideoFile && (
@@ -1515,6 +2222,7 @@ export default function NP3Page() {
           currentFrameIndex={currentDisplayFrame}
           totalFrames={videoResult.displayFrames.length}
           currentVideoSettings={videoSettings}
+          // Add playback control props
           isVideoPlaying={isVideoPlaying}
           videoProgress={videoProgress}
           onPlayPause={() => {
@@ -1525,10 +2233,55 @@ export default function NP3Page() {
             }
           }}
           onSeek={(progress) => {
-            const event = {
-              target: { value: progress.toString() }
-            } as React.ChangeEvent<HTMLInputElement>;
-            handleProgressChange(event);
+            if (!videoResult) return;
+            const newTime = (progress / 100) * (videoResult.displayDuration / 1000);
+
+            // Pause playback temporarily during seeking
+            const wasPlaying = isVideoPlaying;
+            if (wasPlaying) {
+              setIsVideoPlaying(false);
+            }
+
+            if (audioElement) {
+              audioElement.currentTime = newTime;
+            }
+            setVideoProgress(progress);
+
+            // Update display frame immediately (accounting for playback speed)
+            const adjustedTime = (newTime * 1000) / playbackSpeed;
+            const frameIndex = Math.floor(adjustedTime / 16.666);
+            if (frameIndex < videoResult.displayFrames.length) {
+              setCurrentDisplayFrame(frameIndex);
+
+              // Draw the current frame to the canvas
+              drawCurrentFrameToCanvas(frameIndex);
+
+              // Get the current frame analysis and update pixel states from brightness map
+              const frameTime = frameIndex * 16.666; // Convert to milliseconds
+              const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+              if (analysisIndex < videoResult.frameAnalyses.length) {
+                const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+
+                // Use the existing helper function to update pixel states
+                updatePixelStatesFromFrameAnalysis(frameAnalysis);
+              } else {
+                // Fallback to original display frame if analysis not available
+                const displayFrame = videoResult.displayFrames[frameIndex];
+                if (displayFrame && displayFrame.pixelStates) {
+                  setPixelStates([...displayFrame.pixelStates]);
+                } else {
+                  setPixelStates(new Array(625).fill(false));
+                }
+              }
+            }
+
+            // Resume playback if it was playing before
+            if (wasPlaying) {
+              setTimeout(() => {
+                setIsVideoPlaying(true);
+              }, 50); // Small delay to ensure seeking is complete
+            }
           }}
           onStop={stopVideo}
         />
@@ -1562,5 +2315,42 @@ export default function NP3Page() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * DotMatrixSettingsDialog - Settings popup for dot matrix controls (drag to paint, etc.)
+ * Uses shadcn/ui Dialog and Switch for accessibility and style.
+ */
+function DotMatrixSettingsDialog({
+  open,
+  onOpenChange,
+  dragPaintingEnabled,
+  onToggleDragPainting
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  dragPaintingEnabled: boolean;
+  onToggleDragPainting: (enabled: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dot Matrix Settings</DialogTitle>
+          <DialogDescription>
+            Configure dot matrix editor options for the Phone (3) Glyph Display.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center justify-between py-4">
+          <span className="text-sm font-medium">Enable Drag to Paint</span>
+          <Switch
+            checked={dragPaintingEnabled}
+            onCheckedChange={onToggleDragPainting}
+            aria-label="Enable drag to paint"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
