@@ -14,9 +14,14 @@ import {
   Undo2,
   Redo2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Pencil,
+  Eraser,
+  Palette,
+  Minus,
+  Plus
 } from 'lucide-react';
-import { kAppName } from '@/lib/consts';
+import { kAppName, kTimeStepMilis } from '@/lib/consts';
 import useGlobalAppStore from '@/lib/timeline_state';
 import VideoEditorService, {
   VideoSettings,
@@ -28,15 +33,11 @@ import FFmpegService from '@/logic/ffmpeg_service';
 import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
 import CircleCropDialog from '@/components/ui/circle-crop-dialog';
 import AdvancedVideoEditor from '@/components/ui/advanced-video-editor';
+import DotMatrixSettingsDialog, {
+  DotMatrixSettings
+} from '@/components/ui/dot-matrix-settings-dialog';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription
-} from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
+
 
 // Remove duplicate interface declarations since they're imported from VideoEditorService
 interface NP3VideoProcessingResult extends VideoProcessingResult {}
@@ -93,8 +94,7 @@ export default function NP3Page() {
   const processedVideoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Drag-to-paint states
-  const [isDragPaintingEnabled, setIsDragPaintingEnabled] = useState(true);
-  const [lastPaintedPixel, setLastPaintedPixel] = useState<number | null>(null);
+
   const [isMouseDown, setIsMouseDown] = useState(false);
 
   // Zoom state for dot matrix
@@ -105,6 +105,26 @@ export default function NP3Page() {
 
   // Add state for settings dialog
   const [showDotMatrixSettings, setShowDotMatrixSettings] = useState(false);
+
+  // Dot matrix settings state
+  const [dotMatrixSettings, setDotMatrixSettings] = useState<DotMatrixSettings>({
+    dragPaintingEnabled: true,
+    brightness: 0,
+    contrast: 1,
+    threshold: 128,
+    saturation: 1,
+    filter: 1,
+    hue: 0,
+    gamma: 1,
+    inversion: false
+  });
+
+  // Drawing tool states
+  const [drawingMode, setDrawingMode] = useState<'draw' | 'erase'>('draw');
+  const [strokeWidth, setStrokeWidth] = useState(1); // 1-5 pixels
+  const [brightnessValue, setBrightnessValue] = useState(255); // 0-255 to match processed video
+  const [showBrightnessSlider, setShowBrightnessSlider] = useState(false);
+  const [lastDrawnPixel, setLastDrawnPixel] = useState<number | null>(null);
 
   // Undo/Redo state for user modifications
   const [undoStack, setUndoStack] = useState<
@@ -121,6 +141,9 @@ export default function NP3Page() {
       timestamp: number;
     }>
   >([]);
+
+  // Track user-drawn pixels to preserve their brightness values
+  const [userDrawnPixels, setUserDrawnPixels] = useState<Set<string>>(new Set());
 
   // Helper: Get undo/redo stacks for the current frame only
   const getCurrentFrameAnalysisIndex = () => {
@@ -143,7 +166,7 @@ export default function NP3Page() {
     const initFFmpeg = async () => {
       try {
         await FFmpegService.load();
-        console.log('FFmpeg service loaded for export');
+        // console.log('FFmpeg service loaded for export');
       } catch (error) {
         console.error('Failed to load FFmpeg service:', error);
         toast.error('Failed to load export service');
@@ -186,7 +209,7 @@ export default function NP3Page() {
         try {
           // Check if audio element is still valid
           if (!audioElement || audioElement.readyState === 0) {
-            console.log('Audio element not ready, skipping frame update');
+            // console.log('Audio element not ready, skipping frame update');
             return;
           }
 
@@ -238,7 +261,16 @@ export default function NP3Page() {
 
       return () => clearInterval(interval);
     }
-  }, [isVideoPlaying, videoResult, audioElement, playbackSpeed, videoSettings]); // Added videoSettings to dependencies
+  }, [
+    videoResult,
+    isVideoPlaying,
+    showAdvancedEditor,
+    showDotMatrixSettings,
+    showCropDialog,
+    drawingMode,
+    strokeWidth,
+    showBrightnessSlider
+  ]); // Removed dotMatrixSettings from dependencies
 
   // Handle video settings changes and apply to current frame
   useEffect(() => {
@@ -407,6 +439,35 @@ export default function NP3Page() {
             }
           }
           break;
+
+        case 'KeyD':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Toggle drawing mode
+            setDrawingMode((prev) => (prev === 'draw' ? 'erase' : 'draw'));
+            toast.info(`Switched to ${drawingMode === 'draw' ? 'erase' : 'draw'} mode`);
+          }
+          break;
+
+        case 'KeyB':
+          if (event.ctrlKey || event.metaKey) {
+            preventDefault();
+            // Toggle brightness slider
+            setShowBrightnessSlider(!showBrightnessSlider);
+          }
+          break;
+
+        case 'BracketLeft':
+          preventDefault();
+          // Decrease stroke width
+          setStrokeWidth(Math.max(1, strokeWidth - 1));
+          break;
+
+        case 'BracketRight':
+          preventDefault();
+          // Increase stroke width
+          setStrokeWidth(Math.min(5, strokeWidth + 1));
+          break;
       }
     };
 
@@ -417,7 +478,16 @@ export default function NP3Page() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [videoResult, isVideoPlaying, showAdvancedEditor, showDotMatrixSettings, showCropDialog]);
+  }, [
+    videoResult,
+    isVideoPlaying,
+    showAdvancedEditor,
+    showDotMatrixSettings,
+    showCropDialog,
+    drawingMode,
+    strokeWidth,
+    showBrightnessSlider
+  ]); // Removed dotMatrixSettings from dependencies
 
   /**
    * Get current frame analysis for Advanced Video Editor
@@ -482,11 +552,11 @@ export default function NP3Page() {
     setProcessingProgress(0);
 
     try {
-      console.log('Starting video processing with settings:', settings);
+      // console.log('Starting video processing with settings:', settings);
       toast.info('Processing video with crop settings... This may take a while.');
 
       const result = await videoEditorService.processVideoForNP3(videoFile, settings);
-      console.log('Video processing result:', result);
+      // console.log('Video processing result:', result);
 
       setVideoResult(result);
 
@@ -547,64 +617,46 @@ export default function NP3Page() {
     const totalFrames = videoResult.displayFrames.length;
 
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-      const displayFrame = videoResult.displayFrames[frameIndex];
       const row: number[] = [];
 
-      // Apply video settings to the frame if they've been modified
-      let processedPixelStates = displayFrame.pixelStates;
+      // Find corresponding frame analysis
+      const frameTime = frameIndex * 16.666; // Convert to milliseconds
+      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
 
-      if (
-        videoSettings.gamma !== 1 ||
-        videoSettings.brightness !== 0 ||
-        videoSettings.contrast !== 1 ||
-        videoSettings.threshold !== 128 ||
-        videoSettings.inversion !== false
-      ) {
-        // Find corresponding frame analysis to apply settings
-        const frameTime = frameIndex * 16.666; // Convert to milliseconds
-        const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
-        if (analysisIndex < videoResult.frameAnalyses.length) {
-          const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-          processedPixelStates = new Array(625).fill(false);
+      if (analysisIndex < videoResult.frameAnalyses.length) {
+        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
 
-          // Apply brightness map to visible pixels with custom settings
-          for (let row = 0; row < 25; row++) {
-            for (let col = 0; col < 25; col++) {
-              const index = getPixelIndex(row, col);
-              let brightness = frameAnalysis.brightnessMap[row][col];
+        // Process each pixel with all applied effects
+        for (let rowIndex = 0; rowIndex < 25; rowIndex++) {
+          for (let colIndex = 0; colIndex < 25; colIndex++) {
+            let brightness = frameAnalysis.brightnessMap[rowIndex][colIndex];
 
-              // Apply video settings to brightness
-              // Brightness adjustment
-              brightness = Math.max(0, Math.min(255, brightness + videoSettings.brightness));
+            // Check if this pixel was user-drawn
+            const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${rowIndex}-${colIndex}`);
 
-              // Contrast adjustment
-              const factor =
-                (259 * (videoSettings.contrast * 255 + 255)) /
-                (255 * (259 - videoSettings.contrast * 255));
-              brightness = Math.max(0, Math.min(255, factor * (brightness - 128) + 128));
+            // Apply video settings first
+            brightness = applyVideoSettingsToBrightness(brightness, videoSettings);
 
-              // Gamma correction
-              brightness = Math.pow(brightness / 255, 1 / videoSettings.gamma) * 255;
+            // Apply dot matrix settings (but preserve user-drawn content)
+            if (!isUserDrawn) {
+              brightness = applyDotMatrixSettingsToBrightness(brightness, dotMatrixSettings);
+            }
 
-              // Inversion
-              if (videoSettings.inversion) {
-                brightness = 255 - brightness;
-              }
-
-              // Threshold for black & white conversion
-              if (isPixelInCircle(row, col) && brightness > videoSettings.threshold) {
-                processedPixelStates[index] = true;
-              }
+            // Convert to NP3 range (0-4095) for export
+            if (isPixelInCircle(rowIndex, colIndex)) {
+              const np3Brightness = (brightness / 255) * 4095;
+              row.push(Math.round(np3Brightness));
+            } else {
+              // Pixels outside circle are always 0
+              row.push(0);
             }
           }
         }
-      }
-
-      // Convert boolean pixel states to brightness values (0 or 4095 for NP3)
-      for (let pixelIndex = 0; pixelIndex < 625; pixelIndex++) {
-        const isLit = processedPixelStates[pixelIndex];
-        const brightnessValue = isLit ? 4095 : 0; // NP3 max brightness is 4095
-        row.push(brightnessValue);
+      } else {
+        // Fallback: fill with zeros if frame analysis not available
+        for (let pixelIndex = 0; pixelIndex < 625; pixelIndex++) {
+          row.push(0);
+        }
       }
 
       csvRows.push(row.join(','));
@@ -659,13 +711,13 @@ export default function NP3Page() {
       }
 
       // Debug: Print CSV data to console
-      console.log('=== CSV DATA FOR EXPORT ===');
-      console.log('CSV Length:', csvData.length);
-      console.log('Total frames:', videoResult.displayFrames.length);
-      console.log('Video duration:', videoResult.duration);
-      console.log('Current video settings:', videoSettings);
-      console.log('CSV Length:', csvData);
-      console.log('=== END CSV DATA ===');
+      // console.log('=== CSV DATA FOR EXPORT ===');
+      // console.log('CSV Length:', csvData.length);
+      // console.log('Total frames:', videoResult.displayFrames.length);
+      // console.log('Video duration:', videoResult.duration);
+      // console.log('Current video settings:', videoSettings);
+      // console.log('CSV Length:', csvData);
+      // console.log('=== END CSV DATA ===');
 
       // Encode CSV data using the existing export logic
       const encodedData = encodeStuffTheWayNothingLikesIt(csvData);
@@ -675,10 +727,10 @@ export default function NP3Page() {
         return;
       }
 
-      console.log('=== ENCODED DATA ===');
-      console.log('Encoded data length:', encodedData.length);
-      console.log('Encoded data:', encodedData);
-      console.log('=== END ENCODED DATA ===');
+      // console.log('=== ENCODED DATA ===');
+      // console.log('Encoded data length:', encodedData.length);
+      // console.log('Encoded data:', encodedData);
+      // console.log('=== END ENCODED DATA ===');
 
       // Save using FFmpegService
       await FFmpegService.saveOutput(
@@ -709,7 +761,7 @@ export default function NP3Page() {
 
     // If audio element doesn't exist or is invalid, recreate it
     if (!audioElement || audioElement.readyState === 0) {
-      console.log('Recreating audio element');
+      // console.log('Recreating audio element');
       const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
       newAudio.preload = 'metadata';
 
@@ -727,8 +779,8 @@ export default function NP3Page() {
    * Handle applying advanced video settings
    */
   const handleApplyVideoSettings = (settings: VideoSettings) => {
-    console.log('NP3Page: Applying video settings:', settings);
-    console.log('NP3Page: Previous settings:', videoSettings);
+    // console.log('NP3Page: Applying video settings:', settings);
+    // console.log('NP3Page: Previous settings:', videoSettings);
 
     // Store current playback state
     const wasPlaying = isVideoPlaying;
@@ -742,13 +794,13 @@ export default function NP3Page() {
 
     // Trigger pre-processing with new settings in the background
     if (videoResult && videoResult.frameAnalyses.length > 0) {
-      console.log('NP3Page: Triggering pre-processing with new settings');
+      // console.log('NP3Page: Triggering pre-processing with new settings');
       toast.info('Processing video settings for smooth playback...');
 
       // Pre-process in background without blocking the UI
       preProcessAllFrames()
         .then(() => {
-          console.log('NP3Page: Pre-processing completed successfully');
+          // console.log('NP3Page: Pre-processing completed successfully');
           toast.success('Video settings applied successfully!');
 
           // If video was playing, ensure it continues
@@ -784,7 +836,7 @@ export default function NP3Page() {
 
     setIsPreProcessing(true);
     setPreProcessingProgress(0);
-    console.log('Starting pre-processing of all frames for efficient playback...');
+    // console.log('Starting pre-processing of all frames for efficient playback...');
 
     try {
       // Add a small delay to prevent blocking the UI
@@ -817,40 +869,59 @@ export default function NP3Page() {
       return;
     }
 
+    // Prevent multiple play attempts
+    if (isVideoPlaying) {
+      console.log('Video is already playing');
+      return;
+    }
+
     // Check if audio element is ready
     if (audioElement.readyState === 0) {
       console.log('Audio element not ready, waiting...');
-      audioElement.addEventListener('canplay', () => {
-        console.log('Audio element ready, starting playback');
-        startPlayback();
-      });
+      audioElement.addEventListener(
+        'canplay',
+        () => {
+          // console.log('Audio element ready, starting playback');
+          startPlayback();
+        },
+        { once: true }
+      ); // Use once to prevent multiple listeners
       return;
     }
 
     startPlayback();
   };
 
-  const startPlayback = () => {
+  const startPlayback = async () => {
     if (!audioElement) return;
 
-    console.log('Starting playback with synchronized dot matrix display');
+    try {
+      // Set playback rate before playing
+      audioElement.playbackRate = playbackSpeed;
 
-    // Play audio only and update dot matrix
-    audioElement.playbackRate = playbackSpeed;
-    audioElement
-      .play()
-      .then(() => {
-        setIsVideoPlaying(true);
-        console.log('Playback started successfully');
-        toast.info(
-          `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
-        );
-      })
-      .catch((error) => {
-        console.error('Failed to start audio playback:', error);
-        toast.error('Failed to start playback. Please try again.');
-        setIsVideoPlaying(false);
-      });
+      // Use await to properly handle the promise
+      await audioElement.play();
+
+      setIsVideoPlaying(true);
+      console.log('Playback started successfully');
+      toast.info(
+        `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
+      );
+    } catch (error) {
+      console.error('Failed to start audio playback:', error);
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.log('Playback was interrupted, this is normal when seeking or stopping');
+          // Don't show error for interrupted playback
+          return;
+        }
+      }
+
+      toast.error('Failed to start playback. Please try again.');
+      setIsVideoPlaying(false);
+    }
   };
 
   /**
@@ -906,8 +977,10 @@ export default function NP3Page() {
     const wasPlaying = isVideoPlaying;
     if (wasPlaying) {
       setIsVideoPlaying(false);
+      audioElement.pause();
     }
 
+    // Set the new time
     audioElement.currentTime = newTime;
     setVideoProgress(progress);
 
@@ -942,9 +1015,22 @@ export default function NP3Page() {
 
     // Resume playback if it was playing before
     if (wasPlaying) {
-      setTimeout(() => {
-        setIsVideoPlaying(true);
-      }, 50); // Small delay to ensure seeking is complete
+      // Use a longer delay to ensure seeking is complete and prevent race conditions
+      setTimeout(async () => {
+        try {
+          if (audioElement && !isVideoPlaying) {
+            audioElement.playbackRate = playbackSpeed;
+            await audioElement.play();
+            setIsVideoPlaying(true);
+          }
+        } catch (error) {
+          console.error('Failed to resume playback after seeking:', error);
+          // Don't show error for interrupted playback
+          if (error instanceof Error && error.name !== 'AbortError') {
+            toast.error('Failed to resume playback after seeking');
+          }
+        }
+      }, 100); // Increased delay to ensure seeking is complete
     }
   };
 
@@ -953,7 +1039,7 @@ export default function NP3Page() {
    * @param index - The index of the pixel to toggle
    */
   const handlePixelClick = (index: number) => {
-    // For NP3, set brightness to 4095 (max brightness)
+    // For NP3, set brightness to match processed video range (0-255)
     if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
       const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
       const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
@@ -966,8 +1052,38 @@ export default function NP3Page() {
         // Save current state for undo
         const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
 
-        // Set brightness to 4095 (max for NP3)
-        frameAnalysis.brightnessMap[row][col] = 4095;
+        // Apply stroke width effect for single clicks too
+        const centerRow = row;
+        const centerCol = col;
+        const strokeRadius = Math.floor(strokeWidth / 2);
+
+        // Apply to center pixel and surrounding pixels based on stroke width
+        for (
+          let r = Math.max(0, centerRow - strokeRadius);
+          r <= Math.min(24, centerRow + strokeRadius);
+          r++
+        ) {
+          for (
+            let c = Math.max(0, centerCol - strokeRadius);
+            c <= Math.min(24, centerCol + strokeRadius);
+            c++
+          ) {
+            if (isPixelInCircle(r, c)) {
+              // Apply drawing tool based on mode
+              if (drawingMode === 'draw') {
+                // Draw mode - set brightness to current brightness value (0-255)
+                frameAnalysis.brightnessMap[r][c] = brightnessValue;
+                // Mark as user-drawn
+                setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+              } else {
+                // Erase mode - set brightness to 0
+                frameAnalysis.brightnessMap[r][c] = 0;
+                // Mark as user-drawn (erased)
+                setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+              }
+            }
+          }
+        }
 
         // Add to undo stack
         setUndoStack((prev) => [
@@ -1007,8 +1123,30 @@ export default function NP3Page() {
     if (frameAnalysis) {
       // Save current state for redo
       const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+
       // Restore previous state
       frameAnalysis.brightnessMap = lastModification.brightnessMap.map((row) => [...row]);
+
+      // Update user-drawn pixels tracking for this frame
+      setUserDrawnPixels((prev) => {
+        const newSet = new Set(prev);
+        // Remove all user-drawn pixels for this frame
+        for (let r = 0; r < 25; r++) {
+          for (let c = 0; c < 25; c++) {
+            newSet.delete(`${lastModification.frameIndex}-${r}-${c}`);
+          }
+        }
+        // Add back user-drawn pixels based on the restored state
+        for (let r = 0; r < 25; r++) {
+          for (let c = 0; c < 25; c++) {
+            if (lastModification.brightnessMap[r][c] > 0) {
+              newSet.add(`${lastModification.frameIndex}-${r}-${c}`);
+            }
+          }
+        }
+        return newSet;
+      });
+
       // Remove this undo entry for this frame
       setUndoStack((prev) =>
         prev.filter(
@@ -1046,8 +1184,30 @@ export default function NP3Page() {
     if (frameAnalysis) {
       // Save current state for undo
       const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+
       // Apply the redo state
       frameAnalysis.brightnessMap = lastRedo.brightnessMap.map((row) => [...row]);
+
+      // Update user-drawn pixels tracking for this frame
+      setUserDrawnPixels((prev) => {
+        const newSet = new Set(prev);
+        // Remove all user-drawn pixels for this frame
+        for (let r = 0; r < 25; r++) {
+          for (let c = 0; c < 25; c++) {
+            newSet.delete(`${lastRedo.frameIndex}-${r}-${c}`);
+          }
+        }
+        // Add back user-drawn pixels based on the restored state
+        for (let r = 0; r < 25; r++) {
+          for (let c = 0; c < 25; c++) {
+            if (lastRedo.brightnessMap[r][c] > 0) {
+              newSet.add(`${lastRedo.frameIndex}-${r}-${c}`);
+            }
+          }
+        }
+        return newSet;
+      });
+
       // Remove this redo entry for this frame
       setRedoStack((prev) =>
         prev.filter(
@@ -1080,34 +1240,19 @@ export default function NP3Page() {
         const index = getPixelIndex(row, col);
         if (isPixelInCircle(row, col)) {
           const brightness = frameAnalysis.brightnessMap[row][col];
-          // Apply video settings to brightness for display
-          let adjustedBrightness = brightness;
 
-          // Brightness adjustment
-          adjustedBrightness = Math.max(
-            0,
-            Math.min(255, adjustedBrightness + videoSettings.brightness)
+          // Check if this pixel was user-drawn
+          const isUserDrawn = userDrawnPixels.has(`${currentFrameAnalysisIndex}-${row}-${col}`);
+
+          // Get display brightness, preserving user drawing and applying dot matrix settings
+          const normalizedBrightness = getDisplayBrightnessWithDotMatrixSettings(
+            brightness,
+            dotMatrixSettings,
+            isUserDrawn
           );
 
-          // Contrast adjustment
-          const factor =
-            (259 * (videoSettings.contrast * 255 + 255)) /
-            (255 * (259 - videoSettings.contrast * 255));
-          adjustedBrightness = Math.max(
-            0,
-            Math.min(255, factor * (adjustedBrightness - 128) + 128)
-          );
-
-          // Gamma correction
-          adjustedBrightness = Math.pow(adjustedBrightness / 255, 1 / videoSettings.gamma) * 255;
-
-          // Inversion
-          if (videoSettings.inversion) {
-            adjustedBrightness = 255 - adjustedBrightness;
-          }
-
-          // Threshold for black & white
-          newPixelStates[index] = adjustedBrightness > videoSettings.threshold;
+          // Set pixel state based on whether there's any brightness (not threshold-based)
+          newPixelStates[index] = normalizedBrightness > 0;
         }
       }
     }
@@ -1120,7 +1265,8 @@ export default function NP3Page() {
    */
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (!isMouseDown || !isDragPaintingEnabled || !dotMatrixContainerRef.current) return;
+    if (!isMouseDown || !dotMatrixSettings.dragPaintingEnabled || !dotMatrixContainerRef.current)
+      return;
 
     const container = dotMatrixContainerRef.current;
     const rect = container.getBoundingClientRect();
@@ -1139,8 +1285,8 @@ export default function NP3Page() {
       const index = getPixelIndex(row, col);
 
       // Only paint if this is a different pixel than the last one
-      if (index !== lastPaintedPixel && isPixelInCircle(row, col)) {
-        setLastPaintedPixel(index);
+      if (index !== lastDrawnPixel && isPixelInCircle(row, col)) {
+        setLastDrawnPixel(index);
 
         // Use the same modification tracking as handlePixelClick
         if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
@@ -1155,8 +1301,38 @@ export default function NP3Page() {
             // Save current state for undo
             const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
 
-            // Set brightness to 4095 (max for NP3)
-            frameAnalysis.brightnessMap[pixelRow][pixelCol] = 4095;
+            // Apply stroke width effect during dragging
+            const centerRow = pixelRow;
+            const centerCol = pixelCol;
+            const strokeRadius = Math.floor(strokeWidth / 2);
+
+            // Apply to center pixel and surrounding pixels based on stroke width
+            for (
+              let r = Math.max(0, centerRow - strokeRadius);
+              r <= Math.min(24, centerRow + strokeRadius);
+              r++
+            ) {
+              for (
+                let c = Math.max(0, centerCol - strokeRadius);
+                c <= Math.min(24, centerCol + strokeRadius);
+                c++
+              ) {
+                if (isPixelInCircle(r, c)) {
+                  // Apply drawing tool based on mode
+                  if (drawingMode === 'draw') {
+                    // Draw mode - set brightness to current brightness value (0-255)
+                    frameAnalysis.brightnessMap[r][c] = brightnessValue;
+                    // Mark as user-drawn
+                    setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                  } else {
+                    // Erase mode - set brightness to 0
+                    frameAnalysis.brightnessMap[r][c] = 0;
+                    // Mark as user-drawn (erased)
+                    setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                  }
+                }
+              }
+            }
 
             // Add to undo stack
             setUndoStack((prev) => [
@@ -1184,10 +1360,10 @@ export default function NP3Page() {
    */
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (!isDragPaintingEnabled) return;
+    if (!dotMatrixSettings.dragPaintingEnabled) return;
 
     setIsMouseDown(true);
-    setLastPaintedPixel(null);
+    setLastDrawnPixel(null);
 
     // Determine paint mode based on current pixel state
     const container = dotMatrixContainerRef.current;
@@ -1205,6 +1381,7 @@ export default function NP3Page() {
       if (col >= 0 && col < 25 && row >= 0 && row < 25) {
         const index = getPixelIndex(row, col);
         if (isPixelInCircle(row, col)) {
+          // Apply the drawing action with stroke width effect
           handlePixelClick(index);
         }
       }
@@ -1217,7 +1394,7 @@ export default function NP3Page() {
   const handleMouseUp = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsMouseDown(false);
-    setLastPaintedPixel(null);
+    setLastDrawnPixel(null);
   };
 
   /**
@@ -1226,7 +1403,7 @@ export default function NP3Page() {
   const handleMouseLeave = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsMouseDown(false);
-    setLastPaintedPixel(null);
+    setLastDrawnPixel(null);
   };
 
   /**
@@ -1316,34 +1493,14 @@ export default function NP3Page() {
             const x = col * cellSize;
             const y = row * cellSize;
 
-            // Apply video settings to brightness
-            let adjustedBrightness = brightness;
-
-            // Brightness adjustment
-            adjustedBrightness = Math.max(
-              0,
-              Math.min(255, adjustedBrightness + videoSettings.brightness)
+            // Apply dot matrix settings using centralized function
+            const adjustedBrightness = applyDotMatrixSettingsToBrightness(
+              brightness,
+              dotMatrixSettings
             );
-
-            // Contrast adjustment
-            const factor =
-              (259 * (videoSettings.contrast * 255 + 255)) /
-              (255 * (259 - videoSettings.contrast * 255));
-            adjustedBrightness = Math.max(
-              0,
-              Math.min(255, factor * (adjustedBrightness - 128) + 128)
-            );
-
-            // Gamma correction
-            adjustedBrightness = Math.pow(adjustedBrightness / 255, 1 / videoSettings.gamma) * 255;
-
-            // Inversion
-            if (videoSettings.inversion) {
-              adjustedBrightness = 255 - adjustedBrightness;
-            }
 
             // Threshold for black & white
-            const isLit = adjustedBrightness > videoSettings.threshold;
+            const isLit = adjustedBrightness > dotMatrixSettings.threshold;
             const color = isLit ? 255 : 0;
 
             tempCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
@@ -1361,88 +1518,240 @@ export default function NP3Page() {
    * Navigate to previous frame
    */
   const goToPreviousFrame = () => {
-    if (!videoResult || currentDisplayFrame <= 0) return;
+    if (!videoResult) return;
 
-    const newFrameIndex = currentDisplayFrame - 1;
-    setCurrentDisplayFrame(newFrameIndex);
+    setCurrentDisplayFrame((prevFrame) => {
+      const newFrameIndex = Math.max(0, prevFrame - 1);
 
-    // Update audio position to match the new frame
-    if (audioElement) {
-      const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
-      audioElement.currentTime = newTime;
-    }
+      // Update audio position to match the new frame
+      if (audioElement) {
+        const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
 
-    // Update progress
-    const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
-    setVideoProgress(newProgress);
+        // Pause if currently playing to prevent race conditions
+        const wasPlaying = isVideoPlaying;
+        if (wasPlaying) {
+          audioElement.pause();
+          setIsVideoPlaying(false);
+        }
 
-    // Draw the frame to canvas
-    drawCurrentFrameToCanvas(newFrameIndex);
+        audioElement.currentTime = newTime;
 
-    // Update pixel states from brightness map for the new frame
-    const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
-    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
-
-    if (analysisIndex < videoResult.frameAnalyses.length) {
-      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-      // Use the existing helper function to update pixel states
-      updatePixelStatesFromFrameAnalysis(frameAnalysis);
-    } else {
-      // Fallback to original display frame if analysis not available
-      const displayFrame = videoResult.displayFrames[newFrameIndex];
-      if (displayFrame && displayFrame.pixelStates) {
-        setPixelStates([...displayFrame.pixelStates]);
-      } else {
-        setPixelStates(new Array(625).fill(false));
+        // Resume if it was playing
+        if (wasPlaying) {
+          setTimeout(async () => {
+            try {
+              if (audioElement && !isVideoPlaying) {
+                audioElement.playbackRate = playbackSpeed;
+                await audioElement.play();
+                setIsVideoPlaying(true);
+              }
+            } catch (error) {
+              console.error('Failed to resume playback after frame navigation:', error);
+            }
+          }, 50);
+        }
       }
-    }
+
+      // Update progress
+      const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+      setVideoProgress(newProgress);
+
+      // Draw the frame to canvas
+      drawCurrentFrameToCanvas(newFrameIndex);
+
+      // Update pixel states from brightness map for the new frame
+      const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
+      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+      if (analysisIndex < videoResult.frameAnalyses.length) {
+        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+        // Use the existing helper function to update pixel states
+        updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      } else {
+        // Fallback to original display frame if analysis not available
+        const displayFrame = videoResult.displayFrames[newFrameIndex];
+        if (displayFrame && displayFrame.pixelStates) {
+          setPixelStates([...displayFrame.pixelStates]);
+        } else {
+          setPixelStates(new Array(625).fill(false));
+        }
+      }
+
+      return newFrameIndex;
+    });
   };
 
   /**
    * Navigate to next frame
    */
   const goToNextFrame = () => {
-    if (!videoResult || currentDisplayFrame >= videoResult.displayFrames.length - 1) return;
+    if (!videoResult) return;
 
-    const newFrameIndex = currentDisplayFrame + 1;
-    setCurrentDisplayFrame(newFrameIndex);
+    setCurrentDisplayFrame((prevFrame) => {
+      const newFrameIndex = Math.min(videoResult.displayFrames.length - 1, prevFrame + 1);
 
-    // Update audio position to match the new frame
-    if (audioElement) {
-      const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
-      audioElement.currentTime = newTime;
-    }
+      // Update audio position to match the new frame
+      if (audioElement) {
+        const newTime = (newFrameIndex * 16.666) / 1000; // Convert to seconds
 
-    // Update progress
-    const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
-    setVideoProgress(newProgress);
+        // Pause if currently playing to prevent race conditions
+        const wasPlaying = isVideoPlaying;
+        if (wasPlaying) {
+          audioElement.pause();
+          setIsVideoPlaying(false);
+        }
 
-    // Draw the frame to canvas
-    drawCurrentFrameToCanvas(newFrameIndex);
+        audioElement.currentTime = newTime;
 
-    // Update pixel states from brightness map for the new frame
-    const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
-    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
-
-    if (analysisIndex < videoResult.frameAnalyses.length) {
-      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-      // Use the existing helper function to update pixel states
-      updatePixelStatesFromFrameAnalysis(frameAnalysis);
-    } else {
-      // Fallback to original display frame if analysis not available
-      const displayFrame = videoResult.displayFrames[newFrameIndex];
-      if (displayFrame && displayFrame.pixelStates) {
-        setPixelStates([...displayFrame.pixelStates]);
-      } else {
-        setPixelStates(new Array(625).fill(false));
+        // Resume if it was playing
+        if (wasPlaying) {
+          setTimeout(async () => {
+            try {
+              if (audioElement && !isVideoPlaying) {
+                audioElement.playbackRate = playbackSpeed;
+                await audioElement.play();
+                setIsVideoPlaying(true);
+              }
+            } catch (error) {
+              console.error('Failed to resume playback after frame navigation:', error);
+            }
+          }, 50);
+        }
       }
-    }
+
+      // Update progress
+      const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+      setVideoProgress(newProgress);
+
+      // Draw the frame to canvas
+      drawCurrentFrameToCanvas(newFrameIndex);
+
+      // Update pixel states from brightness map for the new frame
+      const frameTime = newFrameIndex * 16.666; // Convert to milliseconds
+      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+      if (analysisIndex < videoResult.frameAnalyses.length) {
+        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+        // Use the existing helper function to update pixel states
+        updatePixelStatesFromFrameAnalysis(frameAnalysis);
+      } else {
+        // Fallback to original display frame if analysis not available
+        const displayFrame = videoResult.displayFrames[newFrameIndex];
+        if (displayFrame && displayFrame.pixelStates) {
+          setPixelStates([...displayFrame.pixelStates]);
+        } else {
+          setPixelStates(new Array(625).fill(false));
+        }
+      }
+
+      return newFrameIndex;
+    });
   };
 
   // Constants for sizing
   const UNIT_SIZE = 20; // Reduced unit size for better visibility
   const GRID_SIZE = 25; // 25x25 grid
   const SQUARE_SIZE = GRID_SIZE * UNIT_SIZE; // 500px x 500px
+
+  /**
+   * Apply video settings to brightness value consistently across all components
+   * @param brightness - Input brightness value (0-255)
+   * @param settings - Video settings to apply
+   * @returns Processed brightness value (0-255)
+   */
+  const applyVideoSettingsToBrightness = (brightness: number, settings: VideoSettings): number => {
+    let processedBrightness = brightness;
+
+    // Brightness adjustment
+    processedBrightness = Math.max(0, Math.min(255, processedBrightness + settings.brightness));
+
+    // Contrast adjustment
+    const factor =
+      (259 * (settings.contrast * 255 + 255)) / (255 * (259 - settings.contrast * 255));
+    processedBrightness = Math.max(0, Math.min(255, factor * (processedBrightness - 128) + 128));
+
+    // Gamma correction
+    processedBrightness = Math.pow(processedBrightness / 255, 1 / settings.gamma) * 255;
+
+    // Inversion
+    if (settings.inversion) {
+      processedBrightness = 255 - processedBrightness;
+    }
+
+    return Math.max(0, Math.min(255, processedBrightness));
+  };
+
+  /**
+   * Apply dot matrix settings to brightness value
+   * @param brightness - Input brightness value (0-255)
+   * @param settings - Dot matrix settings to apply
+   * @returns Processed brightness value (0-255)
+   */
+  const applyDotMatrixSettingsToBrightness = (
+    brightness: number,
+    settings: DotMatrixSettings
+  ): number => {
+    let processedBrightness = brightness;
+
+    // Brightness adjustment
+    processedBrightness = Math.max(0, Math.min(255, processedBrightness + settings.brightness));
+
+    // Contrast adjustment
+    const factor =
+      (259 * (settings.contrast * 255 + 255)) / (255 * (259 - settings.contrast * 255));
+    processedBrightness = Math.max(0, Math.min(255, factor * (processedBrightness - 128) + 128));
+
+    // Gamma correction
+    processedBrightness = Math.pow(processedBrightness / 255, 1 / settings.gamma) * 255;
+
+    // Saturation adjustment (simplified)
+    if (settings.saturation !== 1) {
+      const gray =
+        processedBrightness * 0.299 + processedBrightness * 0.587 + processedBrightness * 0.114;
+      processedBrightness = gray + (processedBrightness - gray) * settings.saturation;
+    }
+
+    // Filter (black and white strength)
+    if (settings.filter !== 1) {
+      const gray =
+        processedBrightness * 0.299 + processedBrightness * 0.587 + processedBrightness * 0.114;
+      processedBrightness = gray + (processedBrightness - gray) * settings.filter;
+    }
+
+    // Hue adjustment (simplified)
+    if (settings.hue !== 0) {
+      // Simple hue shift - in a real implementation this would be more complex
+      processedBrightness = Math.max(0, Math.min(255, processedBrightness + settings.hue * 0.5));
+    }
+
+    // Inversion
+    if (settings.inversion) {
+      processedBrightness = 255 - processedBrightness;
+    }
+
+    return Math.max(0, Math.min(255, processedBrightness));
+  };
+
+  /**
+   * Get display brightness for a pixel, preserving user drawing and applying dot matrix settings
+   * @param brightness - Raw brightness value from brightness map
+   * @param settings - Dot matrix settings to apply
+   * @param isUserDrawn - Whether this pixel was drawn by the user
+   * @returns Display brightness value (0-255)
+   */
+  const getDisplayBrightnessWithDotMatrixSettings = (
+    brightness: number,
+    settings: DotMatrixSettings,
+    isUserDrawn: boolean = false
+  ): number => {
+    // If it's user-drawn content, don't apply dot matrix settings to preserve the user's intent
+    if (isUserDrawn) {
+      return Math.max(0, Math.min(255, brightness));
+    }
+
+    // For processed video content, apply dot matrix settings
+    return applyDotMatrixSettingsToBrightness(brightness, settings);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -1455,39 +1764,72 @@ export default function NP3Page() {
             height: 20px;
             width: 20px;
             border-radius: 50%;
-            background: white;
+            background: #fff;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
           }
-          
+          .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(255,255,255,0.2), 0 3px 6px rgba(255,255,255,0.1);
+          }
           .slider::-moz-range-thumb {
             height: 20px;
             width: 20px;
             border-radius: 50%;
-            background: white;
+            background: #fff;
             cursor: pointer;
             border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
           }
-          
           .slider::-webkit-slider-track {
-            background: rgba(255, 255, 255, 0.1);
+            background: #222;
             border-radius: 10px;
             height: 8px;
+            border: 1px solid #333;
           }
-          
           .slider::-moz-range-track {
-            background: rgba(255, 255, 255, 0.1);
+            background: #222;
             border-radius: 10px;
             height: 8px;
-            border: none;
+            border: 1px solid #333;
+          }
+          .dot-matrix-pixel {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+          }
+          .dot-matrix-pixel:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 4px 8px rgba(255, 255, 255, 0.3));
+          }
+          .floating-controls {
+            backdrop-filter: blur(20px);
+            background: #111;
+            border: 1px solid #222;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+          }
+          .glass-effect {
+            backdrop-filter: blur(16px);
+            background: #111;
+            border: 1px solid #222;
+          }
+          .button-hover {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .button-hover:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.08);
+          }
+          .button-hover:active {
+            transform: translateY(0);
           }
         `
         }}
       />
 
       {/* Header */}
-      <header className="border-b border-white/10 bg-black/50 backdrop-blur-sm">
+      <header className="border-b border-white/10 bg-gradient-to-r from-black/80 via-gray-900/80 to-black/80 backdrop-blur-xl sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -1495,12 +1837,12 @@ export default function NP3Page() {
                 variant="ghost"
                 size="sm"
                 onClick={handleBackToMain}
-                className="text-white hover:text-white hover:bg-white/10"
+                className="text-white hover:text-white hover:bg-white/10 button-hover rounded-xl"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <div className="h-6 w-px bg-white/20" />
+              <div className="h-6 w-px bg-gradient-to-b from-white/20 to-transparent" />
               <div className="flex items-center space-x-2">
                 <Smartphone className="h-5 w-5 text-white" />
                 <h1 className="text-lg font-semibold font-[ndot] tracking-wider uppercase">
@@ -1509,7 +1851,7 @@ export default function NP3Page() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="px-3 py-1 bg-white/10 border border-white/20 rounded-full hover:bg-white/20 hover:border-white/40 transition-all duration-200">
+              <div className="px-4 py-2 bg-gradient-to-r from-white/10 to-white/5 border border-white/20 rounded-full hover:bg-white/20 hover:border-white/40 transition-all duration-300 button-hover">
                 <span className="text-sm font-medium text-white font-[ndot] tracking-wider uppercase">
                   Phone (3)
                 </span>
@@ -1524,20 +1866,18 @@ export default function NP3Page() {
         <div className="max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 font-[ndot] tracking-wider uppercase">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-[ndot] tracking-wider uppercase bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent">
               Video to Glyph Matrix
             </h2>
-            {/* <p className="text-sm sm:text-base lg:text-lg text-white/70 font-[ndot] tracking-wide">
-              625 LED dot glyph matrix display (25x25)
-            </p> */}
+            <div className="w-24 h-1 bg-gradient-to-r from-white/20 to-white/40 mx-auto rounded-full"></div>
           </div>
 
           {/* Video and Dot Matrix Display */}
           {videoResult && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mb-8">
               {/* Processed Video (Cropped & Black & White) */}
               <div className="space-y-4">
-                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center font-[ndot] tracking-wider uppercase">
                   Processed Video
                 </h3>
                 <p className="text-xs sm:text-sm text-white/50 text-center">
@@ -1545,19 +1885,19 @@ export default function NP3Page() {
                 </p>
                 <div className="flex justify-center">
                   {videoResult ? (
-                    <div className="relative">
+                    <div className="relative group">
                       {/* Real-time canvas for processed video playback */}
                       <canvas
                         ref={processedVideoCanvasRef}
-                        className="max-w-full h-auto rounded-lg border border-white/20 hover:border-white/40 transition-colors duration-200"
-                        style={{ maxHeight: '300px', maxWidth: '100%' }}
+                        className="max-w-full h-auto rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl group-hover:shadow-white/10"
+                        style={{ maxHeight: '400px', maxWidth: '100%' }}
                         width={400}
                         height={400}
                       />
                       {/* Placeholder message */}
                       <div
-                        className="video-placeholder hidden bg-white/5 border border-white/20 rounded-lg p-8 text-center"
-                        style={{ maxHeight: '300px', maxWidth: '100%' }}
+                        className="video-placeholder hidden bg-white/5 border border-white/20 rounded-2xl p-8 text-center"
+                        style={{ maxHeight: '400px', maxWidth: '100%' }}
                       >
                         <div className="text-white/70 text-sm">
                           <p className="mb-2">Processed video preview not available</p>
@@ -1572,8 +1912,8 @@ export default function NP3Page() {
                     </div>
                   ) : (
                     <div
-                      className="bg-white/5 border border-white/20 rounded-lg p-8 text-center"
-                      style={{ maxHeight: '300px', maxWidth: '100%' }}
+                      className="bg-white/5 border border-white/20 rounded-2xl p-8 text-center"
+                      style={{ maxHeight: '400px', maxWidth: '100%' }}
                     >
                       <div className="text-white/70 text-sm">
                         <p className="mb-2">No processed video available</p>
@@ -1587,7 +1927,7 @@ export default function NP3Page() {
               {/* Dot Matrix Display */}
               <div className="space-y-4">
                 <div className="flex items-center justify-center space-x-2">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center font-[ndot] tracking-wider uppercase">
                     Phone (3) Glyph Display
                   </h3>
                   {/* Settings icon button opens the settings dialog */}
@@ -1595,7 +1935,7 @@ export default function NP3Page() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowDotMatrixSettings(true)}
-                    className="text-white hover:text-white hover:bg-white/10 transition-all duration-200"
+                    className="text-white hover:text-white hover:bg-white/10 transition-all duration-200 button-hover rounded-xl"
                     title="Open dot matrix settings"
                     aria-label="Open dot matrix settings"
                   >
@@ -1606,18 +1946,176 @@ export default function NP3Page() {
                 <DotMatrixSettingsDialog
                   open={showDotMatrixSettings}
                   onOpenChange={setShowDotMatrixSettings}
-                  dragPaintingEnabled={isDragPaintingEnabled}
-                  onToggleDragPainting={setIsDragPaintingEnabled}
+                  settings={dotMatrixSettings}
+                  onSettingsChange={(newSettings) => {
+                    setDotMatrixSettings(newSettings);
+                    // Apply settings immediately to the current frame
+                    if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
+                      const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
+                      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+
+                      if (analysisIndex < videoResult.frameAnalyses.length) {
+                        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+                        updatePixelStatesFromFrameAnalysis(frameAnalysis);
+                      }
+                    }
+                  }}
                 />
+
+                {/* Drawing Toolbar */}
+                <div className="flex justify-center">
+                  <div className="glass-effect rounded-2xl p-4 flex flex-wrap items-center justify-center gap-4 shadow-2xl">
+                    {/* Drawing Mode Toggle */}
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant={drawingMode === 'draw' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setDrawingMode('draw')}
+                        className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        title="Draw mode"
+                      >
+                        <Pencil className="h-4 w-4 text-red-500" />
+                      </Button>
+                      <Button
+                        variant={drawingMode === 'erase' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setDrawingMode('erase')}
+                        className="border-white/20  hover:text-black text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        title="Eraser mode"
+                      >
+                        <Eraser className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+
+                    {/* Stroke Width Control */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-white/70">Stroke:</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStrokeWidth(Math.max(1, strokeWidth - 1))}
+                        disabled={strokeWidth <= 1}
+                        className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        title="Decrease stroke width"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="text-xs text-white min-w-[1.5rem] text-center font-mono">
+                        {strokeWidth}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setStrokeWidth(Math.min(5, strokeWidth + 1))}
+                        disabled={strokeWidth >= 5}
+                        className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        title="Increase stroke width"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    {/* Brightness Control */}
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-white/70">Brightness:</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowBrightnessSlider(!showBrightnessSlider)}
+                        className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        title="Adjust brightness"
+                      >
+                        <Palette className="h-3 w-3" />
+                      </Button>
+                      <span className="text-xs text-white min-w-[3rem] text-center font-mono">
+                        {Math.round((brightnessValue / 255) * 100)}%
+                      </span>
+                    </div>
+
+                    {/* Current Mode Indicator */}
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs text-white/50">Mode:</span>
+                      <span className="text-xs text-white font-medium">
+                        {drawingMode === 'draw' ? 'Draw' : 'Erase'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Brightness Slider Popup */}
+                {showBrightnessSlider && (
+                  <div className="flex justify-center">
+                    <div className="glass-effect rounded-2xl p-6 max-w-xs w-full shadow-2xl">
+                      <div className="space-y-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-white font-medium">Brightness</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowBrightnessSlider(false)}
+                            className="text-white hover:text-white hover:bg-white/10 button-hover rounded-xl"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="space-y-0">
+                          <input
+                            type="range"
+                            min="0"
+                            max="255"
+                            step="1"
+                            value={brightnessValue}
+                            onChange={(e) => {
+                              const newValue = parseInt(e.target.value);
+                              setBrightnessValue(newValue);
+
+                              // Update the current frame's brightness map if we're in draw mode
+                              if (
+                                videoResult &&
+                                currentDisplayFrame < videoResult.frameAnalyses.length
+                              ) {
+                                const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
+                                const analysisIndex = Math.floor(
+                                  frameTime / (1000 / videoResult.fps)
+                                );
+
+                                if (analysisIndex < videoResult.frameAnalyses.length) {
+                                  const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+
+                                  // Update pixel states to reflect the new brightness value
+                                  updatePixelStatesFromFrameAnalysis(frameAnalysis);
+                                }
+                              }
+                            }}
+                            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                            style={{
+                              background: `linear-gradient(to right, white 0%, white ${
+                                (brightnessValue / 255) * 100
+                              }%, rgba(255,255,255,0.1) ${
+                                (brightnessValue / 255) * 100
+                              }%, rgba(255,255,255,0.1) 100%)`
+                            }}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <span className="text-xs text-white/50">
+                            {Math.round((brightnessValue / 255) * 100)}% brightness
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-center">
                   <div className="relative">
                     {/* Responsive sizing for dot matrix */}
                     <div
                       ref={dotMatrixContainerRef}
-                      className="relative transition-colors duration-200"
+                      className="relative transition-all duration-300 rounded-2xl overflow-hidden shadow-2xl"
                       style={{
-                        width: `min(${SQUARE_SIZE * dotMatrixZoom}px, 80vw)`,
-                        height: `min(${SQUARE_SIZE * dotMatrixZoom}px, 80vw)`,
+                        width: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
+                        height: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
                         maxWidth: `${SQUARE_SIZE * dotMatrixZoom}px`,
                         maxHeight: `${SQUARE_SIZE * dotMatrixZoom}px`
                       }}
@@ -1628,7 +2126,7 @@ export default function NP3Page() {
                     >
                       {/* Circle overlay */}
                       <div
-                        className="absolute inset-0 border-2 border-white/50 rounded-full pointer-events-none"
+                        className="absolute inset-0 border-2 border-white/50 rounded-full pointer-events-none shadow-inner"
                         style={{
                           width: '100%',
                           height: '100%',
@@ -1652,27 +2150,58 @@ export default function NP3Page() {
                           Array.from({ length: GRID_SIZE }, (_, col) => {
                             const index = getPixelIndex(row, col);
                             const isVisible = isPixelInCircle(row, col);
-                            const isLit = pixelStates[index];
+                            let brightnessLevel = 0;
+                            if (
+                              videoResult &&
+                              currentDisplayFrame < videoResult.frameAnalyses.length
+                            ) {
+                              const frameTime = currentDisplayFrame * 16.666; // ms
+                              const analysisIndex = Math.floor(
+                                frameTime / (1000 / videoResult.fps)
+                              );
+                              if (analysisIndex < videoResult.frameAnalyses.length) {
+                                const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+                                // Get brightness from map (0-255 range for both processed video and user drawing)
+                                brightnessLevel = frameAnalysis.brightnessMap[row][col];
+
+                                // Check if this pixel was user-drawn
+                                const isUserDrawn = userDrawnPixels.has(
+                                  `${analysisIndex}-${row}-${col}`
+                                );
+
+                                // Get display brightness, preserving user drawing and applying dot matrix settings
+                                brightnessLevel = getDisplayBrightnessWithDotMatrixSettings(
+                                  brightnessLevel,
+                                  dotMatrixSettings,
+                                  isUserDrawn
+                                );
+
+                                // Keep in 0-255 range for display (no conversion to NP3 range)
+                              }
+                            }
+                            // Map 0-255 to 0-1 opacity for display (simpler and more precise)
+                            const opacity = isVisible ? Math.min(1, brightnessLevel / 255) : 0;
 
                             return (
                               <div
                                 key={`${row}-${col}`}
-                                className={`cursor-pointer transition-all duration-150 ${
-                                  isVisible
-                                    ? isLit
-                                      ? 'bg-white shadow-lg shadow-white/50'
-                                      : 'bg-white/20 hover:bg-white/40'
-                                    : 'bg-transparent'
+                                className={`dot-matrix-pixel cursor-pointer transition-all duration-150 hover:border-red-400 hover:border-2 ${
+                                  isVisible ? 'bg-white' : 'bg-transparent'
                                 }`}
                                 style={{
-                                  borderRadius: '50%'
+                                  borderRadius: '50%',
+                                  opacity: opacity,
+                                  boxShadow:
+                                    brightnessLevel > 128 ? '0 0 8px rgba(255,255,255,0.6)' : 'none'
                                 }}
                                 onClick={() => isVisible && handlePixelClick(index)}
                                 title={
                                   isVisible
                                     ? `Pixel Index: ${index} | Grid: (${row + 1}, ${
                                         col + 1
-                                      }) | Position: ${row * 25 + col} | Lit: ${isLit}`
+                                      }) | Brightness: ${Math.round(
+                                        (brightnessLevel / 255) * 100
+                                      )}%`
                                     : 'Outside circle - not interactive'
                                 }
                               />
@@ -1691,20 +2220,20 @@ export default function NP3Page() {
 
                 {/* Zoom Controls */}
                 <div
-                  className="flex justify-center items-center space-x-2"
-                  style={{ marginTop: '4px' }}
+                  className="flex justify-center items-center space-x-3"
+                  style={{ marginTop: '8px' }}
                 >
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setDotMatrixZoom(Math.max(0.5, dotMatrixZoom - 0.25))}
-                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                     title="Zoom out"
                     aria-label="Zoom out"
                   >
                     -
                   </Button>
-                  <span className="text-xs text-white/70 min-w-[3rem]">
+                  <span className="text-xs text-white/70 min-w-[3rem] font-mono">
                     {' '}
                     {(dotMatrixZoom * 100).toFixed(0)}%
                   </span>
@@ -1712,7 +2241,7 @@ export default function NP3Page() {
                     variant="outline"
                     size="sm"
                     onClick={() => setDotMatrixZoom(Math.min(3, dotMatrixZoom + 0.25))}
-                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                     title="Zoom in"
                     aria-label="Zoom in"
                   >
@@ -1725,16 +2254,16 @@ export default function NP3Page() {
 
           {/* Video Controls - Floating at bottom */}
           {videoResult && (
-            <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-3 shadow-2xl space-y-2">
+            <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 floating-controls rounded-2xl p-4 shadow-2xl space-y-3 min-w-[90vw] max-w-4xl">
               {/* Progress Bar */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 {/* Previous Frame Button */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={goToPreviousFrame}
                   disabled={!videoResult || currentDisplayFrame <= 0}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title="Previous frame"
                   aria-label="Previous frame"
                 >
@@ -1742,7 +2271,7 @@ export default function NP3Page() {
                 </Button>
 
                 {/* Progress Bar */}
-                <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <input
                     type="range"
                     min="0"
@@ -1750,12 +2279,12 @@ export default function NP3Page() {
                     step="0.01"
                     value={videoProgress}
                     onChange={handleProgressChange}
-                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                     style={{
                       background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
                     }}
                   />
-                  <span className="text-xs text-white/70 min-w-[2rem] flex-shrink-0">
+                  <span className="text-xs text-white/70 min-w-[3rem] flex-shrink-0 font-mono">
                     {Math.floor((videoProgress / 100) * (videoResult?.duration || 0))}s
                   </span>
                 </div>
@@ -1769,7 +2298,7 @@ export default function NP3Page() {
                     !videoResult ||
                     currentDisplayFrame >= (videoResult?.displayFrames.length || 0) - 1
                   }
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title="Next frame"
                   aria-label="Next frame"
                 >
@@ -1777,7 +2306,7 @@ export default function NP3Page() {
                 </Button>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-1 items-center">
+              <div className="flex flex-wrap justify-center gap-2 items-center">
                 {/* Play/Pause Button */}
                 <Button
                   variant="outline"
@@ -1789,7 +2318,7 @@ export default function NP3Page() {
                       playVideo();
                     }
                   }}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                   title={isVideoPlaying ? 'Pause playback' : 'Play video'}
                   aria-label={isVideoPlaying ? 'Pause playback' : 'Play video'}
                 >
@@ -1801,7 +2330,7 @@ export default function NP3Page() {
                   variant="outline"
                   size="sm"
                   onClick={stopVideo}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                   title="Stop playback and reset to beginning"
                   aria-label="Stop playback"
                 >
@@ -1813,7 +2342,7 @@ export default function NP3Page() {
                   variant="outline"
                   size="sm"
                   onClick={handleCloseVideo}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                   title="Close current video and reset"
                   aria-label="Close video"
                 >
@@ -1825,22 +2354,11 @@ export default function NP3Page() {
                   variant="outline"
                   size="sm"
                   onClick={handleSaveVideo}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
                   title="Save as .ogg with pixel data"
                   aria-label="Save video"
                 >
                   <Download className="h-3 w-3" />
-                </Button>
-
-                {/* Advanced Editor Button */}
-                <Button
-                  size="sm"
-                  onClick={() => setShowAdvancedEditor(true)}
-
-                  title="Open advanced video editor"
-                  aria-label="Advanced editor"
-                >
-                  <Settings className="h-4 w-4" />
                 </Button>
 
                 {/* Undo Button - Always visible, disabled if no modifications */}
@@ -1849,7 +2367,7 @@ export default function NP3Page() {
                   size="sm"
                   onClick={handleUndo}
                   disabled={currentFrameUndoStack.length === 0}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title={
                     currentFrameUndoStack.length > 0
                       ? `Undo last modification for frame ${currentDisplayFrame + 1} (${
@@ -1868,7 +2386,7 @@ export default function NP3Page() {
                   size="sm"
                   onClick={handleRedo}
                   disabled={currentFrameRedoStack.length === 0}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title={
                     currentFrameRedoStack.length > 0
                       ? `Redo last undone modification for frame ${currentDisplayFrame + 1} (${
@@ -1882,7 +2400,7 @@ export default function NP3Page() {
                 </Button>
 
                 {/* Playback Speed */}
-                <div className="flex items-center space-x-1 ml-2">
+                <div className="flex items-center space-x-2 ml-2">
                   <input
                     type="range"
                     min="0.1"
@@ -1907,15 +2425,17 @@ export default function NP3Page() {
                     }}
                     className="w-16 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                   />
-                  <span className="text-xs text-white/70 min-w-[1.5rem]">{playbackSpeed}x</span>
+                  <span className="text-xs text-white/70 min-w-[2rem] font-mono">
+                    {playbackSpeed}x
+                  </span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Video Upload Section */}
-          <div className="mb-8 p-4 sm:p-6 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-white/20 transition-all duration-200">
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold mb-4 text-center font-[ndot] tracking-wider uppercase">
+          <div className="mb-8 p-6 sm:p-8 glass-effect rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 shadow-2xl">
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 text-center font-[ndot] tracking-wider uppercase">
               Select Video
             </h3>
 
@@ -1931,23 +2451,23 @@ export default function NP3Page() {
                 />
                 <label
                   htmlFor="video-upload"
-                  className={`inline-flex items-center px-4 py-2 border border-white/20 rounded-lg cursor-pointer hover:bg-white/10 hover:border-white/40 transition-all duration-200 ${
+                  className={`inline-flex items-center px-6 py-3 border border-white/20 rounded-xl cursor-pointer hover:bg-white/10 hover:border-white/40 transition-all duration-300 button-hover ${
                     isProcessing ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  <Upload className="h-5 w-5 mr-3" />
                   {isProcessing ? 'Processing...' : 'Upload Video'}
                 </label>
 
                 {isProcessing && (
-                  <div className="mt-4">
-                    <div className="w-full bg-white/10 rounded-full h-2">
+                  <div className="mt-6">
+                    <div className="w-full bg-white/10 rounded-full h-3">
                       <div
-                        className="bg-white h-2 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-white to-gray-300 h-3 rounded-full transition-all duration-300"
                         style={{ width: `${processingProgress}%` }}
                       />
                     </div>
-                    <p className="text-sm text-white/70 mt-2">
+                    <p className="text-sm text-white/70 mt-3 font-mono">
                       Processing: {processingProgress.toFixed(1)}%
                     </p>
                   </div>
@@ -1956,14 +2476,14 @@ export default function NP3Page() {
             ) : (
               <div className="space-y-4">
                 <div className="text-center">
-                  <p className="text-xs sm:text-sm text-white/70">
+                  <p className="text-sm sm:text-base text-white/70 font-mono">
                     Video: {videoResult.totalFrames} frames, {videoResult.duration.toFixed(1)}s
                   </p>
-                  <p className="text-xs sm:text-sm text-white/70">
+                  <p className="text-sm sm:text-base text-white/70 font-mono">
                     Display: {videoResult.displayFrames.length} frames at 60Hz
                   </p>
                   {cropSettings && (
-                    <p className="text-xs sm:text-sm text-white/50">
+                    <p className="text-sm sm:text-base text-white/50 font-mono">
                       Crop: X{cropSettings.x.toFixed(0)}% Y{cropSettings.y.toFixed(0)}% R
                       {cropSettings.radius.toFixed(0)}%
                     </p>
@@ -2035,17 +2555,23 @@ export default function NP3Page() {
                     <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
                       2
                     </span>
-                    <p>Click on any pixel in the Phone (3) Glyph Display to turn it on/off</p>
+                    <p>Select drawing mode: Draw (pencil) or Erase (eraser)</p>
                   </div>
                   <div className="flex items-start space-x-2">
                     <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
                       3
                     </span>
-                    <p>Enable drag-to-paint in settings for continuous drawing</p>
+                    <p>Adjust stroke width (1-5 pixels) and brightness (0-4095)</p>
                   </div>
                   <div className="flex items-start space-x-2">
                     <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
                       4
+                    </span>
+                    <p>Click or drag on pixels to draw/erase with your settings</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      5
                     </span>
                     <p>Use Undo/Redo buttons to correct mistakes on the current frame</p>
                   </div>
@@ -2107,6 +2633,30 @@ export default function NP3Page() {
                   </div>
                   <p className="text-xs">Open Advanced Editor</p>
                 </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + D
+                  </div>
+                  <p className="text-xs">Switch Drawing Mode</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    Ctrl/Cmd + B
+                  </div>
+                  <p className="text-xs">Toggle Brightness Slider</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    [
+                  </div>
+                  <p className="text-xs">Decrease Stroke Width</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
+                    ]
+                  </div>
+                  <p className="text-xs">Increase Stroke Width</p>
+                </div>
               </div>
             </div>
 
@@ -2121,7 +2671,9 @@ export default function NP3Page() {
                     <h5 className="font-medium text-white mb-2">Drawing Tips</h5>
                     <ul className="space-y-1 text-xs">
                       <li>• Use zoom controls for precise pixel editing</li>
-                      <li>• Enable drag-to-paint for smooth line drawing</li>
+                      <li>• Switch between Draw and Erase modes as needed</li>
+                      <li>• Adjust stroke width for different line thicknesses</li>
+                      <li>• Use brightness control for varying pixel intensities</li>
                       <li>• Only visible pixels (within circle) can be modified</li>
                       <li>• Changes are saved per frame automatically</li>
                     </ul>
@@ -2314,42 +2866,5 @@ export default function NP3Page() {
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * DotMatrixSettingsDialog - Settings popup for dot matrix controls (drag to paint, etc.)
- * Uses shadcn/ui Dialog and Switch for accessibility and style.
- */
-function DotMatrixSettingsDialog({
-  open,
-  onOpenChange,
-  dragPaintingEnabled,
-  onToggleDragPainting
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  dragPaintingEnabled: boolean;
-  onToggleDragPainting: (enabled: boolean) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Dot Matrix Settings</DialogTitle>
-          <DialogDescription>
-            Configure dot matrix editor options for the Phone (3) Glyph Display.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex items-center justify-between py-4">
-          <span className="text-sm font-medium">Enable Drag to Paint</span>
-          <Switch
-            checked={dragPaintingEnabled}
-            onCheckedChange={onToggleDragPainting}
-            aria-label="Enable drag to paint"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

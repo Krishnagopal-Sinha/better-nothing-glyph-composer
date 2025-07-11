@@ -233,7 +233,7 @@ export default function AudioControlComponent({
         const newOffset = window.innerHeight * 0.49 - e.clientY; // Fixed direction
         // Ensure the offset doesn't go off screen by applying bounds
         const minOffset = -window.innerHeight * 0.4; // Don't go too far down
-        const maxOffset = window.innerHeight * 0.4;  // Don't go too far up
+        const maxOffset = window.innerHeight * 0.4; // Don't go too far up
         const boundedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
         setCustomHeightOffset(boundedOffset);
       }
