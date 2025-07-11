@@ -1834,14 +1834,13 @@ export default function NP3Page() {
 
                 {/* Advanced Editor Button */}
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={() => setShowAdvancedEditor(true)}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200"
+
                   title="Open advanced video editor"
                   aria-label="Advanced editor"
                 >
-                  <Settings className="h-3 w-3" />
+                  <Settings className="h-4 w-4" />
                 </Button>
 
                 {/* Undo Button - Always visible, disabled if no modifications */}

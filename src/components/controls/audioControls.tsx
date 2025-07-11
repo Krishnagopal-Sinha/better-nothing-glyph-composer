@@ -40,6 +40,8 @@ export default function AudioControlComponent({
   const [scrollY, setScrollY] = useState(0);
   const [playin, setIsPlayin] = useState(false);
   const [widthToForce, setWidthToForce] = useState<number | null>(null);
+  const [customHeightOffset, setCustomHeightOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
   );
@@ -223,6 +225,44 @@ export default function AudioControlComponent({
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Handle mouse events for dragging
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        const newOffset = window.innerHeight * 0.49 - e.clientY; // Fixed direction
+        // Ensure the offset doesn't go off screen by applying bounds
+        const minOffset = -window.innerHeight * 0.4; // Don't go too far down
+        const maxOffset = window.innerHeight * 0.4;  // Don't go too far up
+        const boundedOffset = Math.max(minOffset, Math.min(maxOffset, newOffset));
+        setCustomHeightOffset(boundedOffset);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    // Don't start dragging if clicking on a button
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
   //  UI
 
   return (
@@ -292,11 +332,13 @@ export default function AudioControlComponent({
           animationDuration: '1.5s',
           width: `${kWidthBound - 0.5}%`,
           position: 'fixed',
-          top: scrollY > 390 ? `40px` : `calc(49dvh - ${scrollY - 5}px)`,
+          top: scrollY > 390 ? `40px` : `calc(49dvh - ${scrollY - 5 + customHeightOffset}px)`,
           left: '50%',
           transform: 'translateX(-50%)',
-          transition: 'top 0.3s ease'
+          transition: isDragging ? 'none' : 'top 0.3s ease',
+          cursor: isDragging ? 'grabbing' : 'grab'
         }}
+        onMouseDown={handleDragStart}
       >
         <button onClick={() => player.stop()} title={'Stop'} aria-label="Stop audio button">
           <Square />
@@ -365,6 +407,9 @@ export default function AudioControlComponent({
         >
           <X />
         </button>
+
+        {/* Drag handle for height adjustment */}
+        {/* Removed the drag button */}
       </div>
       //   </div>
     );
