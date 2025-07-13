@@ -2738,7 +2738,7 @@ export default function NP3Page() {
                       3
                     </span>
                     <p>
-                      For audio files: Select a preset to generate visual patterns from your audio
+                      For audio files: Select from BeatMonitor, Pulse, AliveThing, or Spinny presets
                     </p>
                   </div>
                   <div className="flex items-start space-x-2">
@@ -2755,6 +2755,12 @@ export default function NP3Page() {
                       5
                     </span>
                     <p>Use the playback controls to navigate through your video/audio</p>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full font-mono">
+                      6
+                    </span>
+                    <p>For audio: Switch presets anytime to see different visualizations</p>
                   </div>
                 </div>
               </div>
@@ -2929,11 +2935,25 @@ export default function NP3Page() {
                   <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <h5 className="font-medium text-white mb-2">Audio Presets</h5>
                     <ul className="space-y-1 text-xs">
-                      <li>• LineForm: Creates a single line that moves like a waveform</li>
-                      <li>• BeatMonitor: Heartbeat monitor with pulse visualization</li>
-                      <li>• Presets analyze audio features in real-time</li>
-                      <li>• Switch presets anytime to see different visualizations</li>
-                      <li>• All presets are synchronized with audio playback</li>
+                      <li>
+                        • <strong>BeatMonitor:</strong> A Beat Monitor - Waveform visualization
+                      </li>
+                      <li>
+                        • <strong>Pulse:</strong> Expanding circles with audio pulse effects
+                      </li>
+                      <li>
+                        • <strong>AliveThing:</strong> It's Alive! An alive thing in a petri dish that vibin'
+                      </li>
+                      <li>
+                        • <strong>Spinny:</strong> Rotating fan synced to audio
+                      </li>
+                      <li>
+                        • Switch presets anytime during playback to see different visualizations
+                      </li>
+                      <li>
+                        • All presets analyze audio features in real-time and respond to amplitude
+                      </li>
+                      <li>• Presets are synchronized with audio playback at 60Hz</li>
                     </ul>
                   </div>
                 </div>
@@ -2961,7 +2981,11 @@ export default function NP3Page() {
                     </li>
                     <li>
                       • <strong>Audio preset not working:</strong> Ensure audio file is properly
-                      loaded
+                      loaded and try switching presets
+                    </li>
+                    <li>
+                      • <strong>Old audio still playing:</strong> Use the Close button to properly
+                      clean up before uploading new audio
                     </li>
                   </ul>
                 </div>

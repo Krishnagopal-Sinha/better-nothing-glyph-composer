@@ -439,7 +439,6 @@ export class NP3AudioService {
 
   /**
    * Generate AliveThing preset frame data
-   * Creates psychedelic patterns with audio waves
    * @param audioData - The audio data to analyze
    * @param frameIndex - Current frame index
    * @param totalFrames - Total number of frames
@@ -490,7 +489,6 @@ export class NP3AudioService {
           const maxDistance = 12;
 
           if (distance <= maxDistance) {
-            // Create psychedelic patterns
             const wave1 = Math.sin((row + col) * 0.3 + timeOffset) * 0.5 + 0.5;
             const wave2 = Math.sin((row - col) * 0.4 + timeOffset * 0.7) * 0.5 + 0.5;
             const wave3 = Math.sin(distance * 0.5 + timeOffset * 1.2) * 0.5 + 0.5;
