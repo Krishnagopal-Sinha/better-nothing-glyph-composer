@@ -640,25 +640,42 @@ export default function NP3Page() {
       );
       setVideoResult(result);
 
-      // Reset audio playback to beginning
+      // Clean up old audio element and create a new one
       if (audioElement) {
-        audioElement.currentTime = 0;
+        audioElement.pause();
+        URL.revokeObjectURL(audioElement.src);
+      }
+
+      // Create new audio element with fresh object URL
+      const newAudio = new Audio(URL.createObjectURL(result.audioFile));
+      newAudio.preload = 'metadata';
+
+      newAudio.addEventListener('ended', () => {
+        setIsVideoPlaying(false);
         setCurrentDisplayFrame(0);
         setVideoProgress(0);
-        setLastProcessedFrame(-1);
-      }
+      });
+
+      setAudioElement(newAudio);
+
+      // Reset playback states
+      setCurrentDisplayFrame(0);
+      setVideoProgress(0);
+      setLastProcessedFrame(-1);
 
       toast.success(
         `${audioPresets.find((p) => p.id === presetId)?.name} preset applied successfully!`
       );
 
       // Resume playback if it was playing before
-      if (wasPlaying && audioElement) {
+      if (wasPlaying) {
         setTimeout(async () => {
           try {
-            audioElement.playbackRate = playbackSpeed;
-            await audioElement.play();
-            setIsVideoPlaying(true);
+            if (newAudio) {
+              newAudio.playbackRate = playbackSpeed;
+              await newAudio.play();
+              setIsVideoPlaying(true);
+            }
           } catch (error) {
             console.error('Failed to resume playback after preset change:', error);
             // Don't show error for interrupted playback
@@ -993,13 +1010,13 @@ export default function NP3Page() {
       // Add a small delay to prevent blocking the UI
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const processedFrames = await videoEditorService.preProcessFrames(
-        videoResult.frameAnalyses,
-        videoSettings
-      );
+      // const processedFrames = await videoEditorService.preProcessFrames(
+      //   videoResult.frameAnalyses,
+      //   videoSettings
+      // );
 
       setPreProcessingProgress(100);
-      console.log(`Pre-processing complete. ${processedFrames.length} frames ready for playback.`);
+      // console.log(`Pre-processing complete. ${processedFrames.length} frames ready for playback.`);
     } catch (error) {
       console.error('Error pre-processing frames:', error);
       toast.error('Failed to pre-process frames');
@@ -1057,7 +1074,7 @@ export default function NP3Page() {
       await audioElement.play();
 
       setIsVideoPlaying(true);
-      console.log('Playback started successfully');
+      // console.log('Playback started successfully');
       toast.info(
         `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
       );
@@ -1067,7 +1084,7 @@ export default function NP3Page() {
       // Handle specific error types
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          console.log('Playback was interrupted, this is normal when seeking or stopping');
+          // console.log('Playback was interrupted, this is normal when seeking or stopping');
           // Don't show error for interrupted playback
           return;
         }
@@ -2942,7 +2959,8 @@ export default function NP3Page() {
                         • <strong>Pulse:</strong> Expanding circles with audio pulse effects
                       </li>
                       <li>
-                        • <strong>AliveThing:</strong> It's Alive! An alive thing in a petri dish that vibin'
+                        • <strong>AliveThing:</strong> It's Alive! An alive thing in a petri dish
+                        that vibin'
                       </li>
                       <li>
                         • <strong>Spinny:</strong> Rotating fan synced to audio
