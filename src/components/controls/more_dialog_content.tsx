@@ -38,6 +38,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
     (state) => state.updateSelectedItemAbsolutely
   );
   const setIsSettingsDialogOpen = useGlobalAppStore((state) => state.setIsSettingsDialogOpen);
+  const isSettingsDialogOpen = useGlobalAppStore((state) => state.appSettings.isSettingsDialogOpen);
   // adv editing states
   // keep initial value as undefined, so that it can take up values from dataStore - settings
   const [blockDurationMilis, setBlockDurationMilis] = useState<number>();
@@ -230,12 +231,12 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
               Embed <span className="font-[ndot]">YOUR</span> Custom Watermark
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed">
-              You put in the efforts, you should get to sign it a&nbsp;
-              <span className="font-[ndot]">100%</span> <br />
+              You put in the efforts, you should get to sign it
+              <span className="font-[ndot]">!!</span> <br />
               [This can be seen in official composer's audio preview screen at the bottom]
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="pt-4">
             <WaterMarkerComponent
               cancelButton={
                 <Button
@@ -247,6 +248,7 @@ export default function SettingDialogContent({ dialogContentIdx }: { dialogConte
                 </Button>
               }
               applyAction={() => setIsSettingsDialogOpen(false)}
+              isDialogOpen={isSettingsDialogOpen}
             />
           </div>
         </DialogContent>

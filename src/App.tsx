@@ -12,6 +12,7 @@ import {
 import { Button } from './components/ui/button';
 import InstructionComponent from './components/timeline/instructions';
 import SaveDialog from './components/controls/save_dialog';
+import LegacyAudioEditPopup from './components/controls/legacyAudioEditPopup';
 import { Toaster } from './components/ui/sonner';
 import dataStore from './lib/data_store';
 import FullPageAppLoaderPage from './components/ui/fullScreenLoader';
@@ -20,6 +21,7 @@ import { EditorComponent } from './components/timeline/editor';
 import AudioControlComponent from './components/controls/audioControls';
 import { kWidthBound } from './lib/consts';
 import GlyphPreviewComponent from './components/controls/glyph_preview';
+
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
   useEffect(() => {
@@ -61,6 +63,10 @@ export default function App() {
   const editorRef = useRef<HTMLDivElement>(null);
   // Input file
   const [isInputLoaded, setIsInputLoaded] = useState<boolean>(false);
+  const [showAudioEditor, setShowAudioEditor] = useState<boolean>(false);
+  const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
+  const [processedAudioUrl, setProcessedAudioUrl] = useState<string>('');
+  const [processedAudioFile, setProcessedAudioFile] = useState<File | null>(null);
   const { openFilePicker, filesContent, errors, plainFiles, clear } = useFilePicker({
     readFilesContent: true,
     readAs: 'DataURL',
@@ -71,28 +77,11 @@ export default function App() {
 
   // On Input File Chosen
   useEffect(() => {
-    async function extractGlyphData(inputFile: File) {
-      const compressedGlyphData = await ffmpegService.getGlyphData(inputFile);
-      if (compressedGlyphData) {
-        const restoredGlyphData = restoreAppGlyphData(compressedGlyphData);
-        if (restoredGlyphData) {
-          importJsonData(JSON.stringify(restoredGlyphData));
-        }
-      }
-    }
     if (filesContent.length > 0 && filesContent[0]?.content) {
       try {
-        setIsInputLoaded(true);
-        if (plainFiles[0] && plainFiles[0].type === 'audio/ogg') {
-          showPopUp(
-            'Trying to Recover Glyph Data',
-            '.ogg file detected, Working in background to get data...',
-            2500
-          );
-          extractGlyphData(plainFiles[0]);
-        }
-        // clear undo and stuff
-        clearUndoRedo();
+        // Set the uploaded file and show audio editor
+        setUploadedAudioFile(plainFiles[0]);
+        setShowAudioEditor(true);
         return;
       } catch (e) {
         console.error('Error while loading audio file:', e);
@@ -108,6 +97,46 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filesContent, errors]);
+
+  // Handle trimmed audio save
+  const handleTrimmedAudioSave = async (trimmedAudioBlob: Blob) => {
+    try {
+      // Convert blob to file
+      const trimmedFile = new File([trimmedAudioBlob], 'trimmed_audio.wav', { type: 'audio/wav' });
+
+      // Store the processed audio file for saving
+      setProcessedAudioFile(trimmedFile);
+
+      // Create URL for the trimmed audio
+      const audioUrl = URL.createObjectURL(trimmedAudioBlob);
+      setProcessedAudioUrl(audioUrl);
+
+      // Extract glyph data from trimmed file
+      const compressedGlyphData = await ffmpegService.getGlyphData(trimmedFile);
+      if (compressedGlyphData) {
+        const restoredGlyphData = restoreAppGlyphData(compressedGlyphData);
+        if (restoredGlyphData) {
+          importJsonData(JSON.stringify(restoredGlyphData));
+        }
+      }
+
+      setIsInputLoaded(true);
+      clearUndoRedo();
+
+      showPopUp('Audio Loaded', 'Trimmed audio has been loaded successfully!', 1500);
+    } catch (error) {
+      console.error('Error processing trimmed audio:', error);
+      showPopUp('Error', 'Failed to process trimmed audio. Please try again.', 2000);
+    }
+  };
+
+  // Handle audio editor close
+  const handleAudioEditorClose = () => {
+    setShowAudioEditor(false);
+    setUploadedAudioFile(null);
+    // Clear the file picker
+    clear();
+  };
 
   if (errors.length) {
     console.error(`Failed to pick file: ${errors}`);
@@ -261,6 +290,16 @@ export default function App() {
       {/* Keep class here instead of main cuz otherwise grid would include toaster and that would ruin layout */}
       {isSaving && <SaveDialog isOpen={true} />}
 
+      {/* Audio Editor Dialog */}
+      {uploadedAudioFile && (
+        <LegacyAudioEditPopup
+          isOpen={showAudioEditor}
+          onClose={handleAudioEditorClose}
+          onSave={handleTrimmedAudioSave}
+          audioFile={uploadedAudioFile}
+        />
+      )}
+
       {/* Upper Section - W Fixed */}
       <div className={`p-0 mx-auto max-w-[2280px]`} style={{ width: `${kWidthBound}%` }}>
         {/* load audio */}
@@ -301,7 +340,7 @@ export default function App() {
             isSaving={isSaving}
             onSaveButtonClicked={onSaveButtonClick}
             editorRef={editorRef}
-            audioUrl={filesContent[0].content}
+            audioUrl={processedAudioUrl || filesContent[0]?.content || ''}
           />
         </EditorComponent>
       )}
@@ -316,15 +355,14 @@ export default function App() {
     openFilePicker();
   }
 
-  function stopAudio() {
-    stop();
-  }
-
   function onCloseButtonClick() {
     // Reset All Possible States - cleanup
-    stopAudio();
     clear();
     setIsInputLoaded(false);
+    setShowAudioEditor(false);
+    setUploadedAudioFile(null);
+    setProcessedAudioUrl('');
+    setProcessedAudioFile(null);
     // clear up loop data
     dataStore.set('loopAPositionInMilis', undefined);
     dataStore.set('loopAPositionInMilis', undefined);
@@ -332,11 +370,12 @@ export default function App() {
   }
 
   async function onSaveButtonClick() {
-    const inputFile = plainFiles[0];
+    // Use processed audio file if available, otherwise use original file
+    const inputFile = processedAudioFile || plainFiles[0];
     const processedEditData = encodeStuffTheWayNothingLikesIt(generateCSV(timelineData));
     if (inputFile && processedEditData && validateCSV(processedEditData) && !isSaving) {
       setIsSaving(true);
-      await ffmpegService.saveOutput(plainFiles[0], processedEditData, currentDevice).then(() => {
+      await ffmpegService.saveOutput(inputFile, processedEditData, currentDevice).then(() => {
         setIsSaving(false);
       });
     } else {

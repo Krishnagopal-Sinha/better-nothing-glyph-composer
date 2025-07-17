@@ -90,7 +90,7 @@ export default function MainTopPanel({
           </h2>
 
           {/*  Info content */}
-          <p className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
+          <div className="text-xs sm:text-sm lg:text-base text-muted-foreground leading-relaxed">
             Make ringtones with custom glyphs for your Nothing Phone, Supports auto generation of
             glyph synced to audio too!
             <br />
@@ -110,15 +110,18 @@ export default function MainTopPanel({
               <Button
                 size="sm"
                 variant="link"
-                className='p-0 pl-2 pt-[2px] h-1/2 text-xs opacity-90'
+                className="p-0 pl-2 pt-[2px] h-1/2 text-xs opacity-90"
                 onClick={() => {
-                  window.open('https://discord.com/channels/930878214237200394/1275717674634051661', '_blank');
+                  window.open(
+                    'https://discord.com/channels/930878214237200394/1275717674634051661',
+                    '_blank'
+                  );
                 }}
               >
                 Contact Support <ExternalLink className="w-4 h-4 pl-1" />
               </Button>
             </div>
-          </p>
+          </div>
         </div>
 
         <OpenInstructionButton />

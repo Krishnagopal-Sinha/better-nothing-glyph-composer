@@ -3,34 +3,48 @@ import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 // https://vitejs.dev/config/
-const _plugins = [react()];
 
 export default defineConfig({
-  plugins: _plugins,
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
     }
   },
   optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg']
+    exclude: ['@ffmpeg/ffmpeg'],
+    include: ['react', 'react-dom', 'lucide-react']
   },
   build: {
+    target: 'es2020',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: [
+          'react-vendor': ['react', 'react-dom'],
+          'ui-components': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-popover',
             '@radix-ui/react-select',
             '@radix-ui/react-slider',
-            '@radix-ui/react-switch'
+            '@radix-ui/react-switch',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-label',
+            '@radix-ui/react-slot'
           ],
-          audio: ['@wavesurfer/react', 'meyda'],
-          ffmpeg: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
+          'audio-processing': ['@wavesurfer/react', 'wavesurfer.js', 'meyda'],
+          'ffmpeg-core': ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+          utils: ['clsx', 'tailwind-merge', 'class-variance-authority'],
+          icons: ['lucide-react']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000
   }
 });
