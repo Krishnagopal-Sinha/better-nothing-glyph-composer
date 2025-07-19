@@ -10,7 +10,10 @@ import {
   ChevronsRight,
   Square,
   Save,
-  X
+  X,
+  ZoomIn,
+  ZoomOut,
+  GripVertical
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
@@ -42,20 +45,59 @@ export default function AudioControlComponent({
   const [widthToForce, setWidthToForce] = useState<number | null>(null);
   const [customHeightOffset, setCustomHeightOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const isKeyboardGestureEnabled = useGlobalAppStore(
     (state) => state.appSettings.isKeyboardGestureEnabled
   );
   const updateDuration = useGlobalAppStore((state) => state.updateAudioDuration);
-  // const decreasePixelFactor = useGlobalAppStore(
-  //   (state) => state.decreasePixelFactor
-  // );
-  // const increasePixelFactor = useGlobalAppStore(
-  //   (state) => state.increasePixelFactor
-  // );
+  const decreasePixelFactor = useGlobalAppStore((state) => state.decreasePixelFactor);
+  const increasePixelFactor = useGlobalAppStore((state) => state.increasePixelFactor);
 
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+  const durationInMilis = useGlobalAppStore((state) => state.audioInformation.durationInMilis);
 
   const regionsRef = useRef(RegionsPlugin.create());
+
+  // Effect to update waveform width when timeline pixel factor changes
+  useEffect(() => {
+    if (waveSurferRef.current && !isNotLoaded) {
+      const audioDurationInSecs = waveSurferRef.current.getDuration();
+      const newWidth = audioDurationInSecs * timelinePixelFactor;
+      setWidthToForce(newWidth);
+
+      // Update the waveform container width
+      if (containerRef.current) {
+        containerRef.current.style.width = `${newWidth}px`;
+      }
+    }
+  }, [timelinePixelFactor, isNotLoaded]);
+
+  // Effect to update waveform width when audio duration changes
+  useEffect(() => {
+    if (waveSurferRef.current && !isNotLoaded) {
+      const audioDurationInSecs = waveSurferRef.current.getDuration();
+      const newWidth = audioDurationInSecs * timelinePixelFactor;
+      setWidthToForce(newWidth);
+
+      // Update the waveform container width
+      if (containerRef.current) {
+        containerRef.current.style.width = `${newWidth}px`;
+      }
+    }
+  }, [durationInMilis, timelinePixelFactor, isNotLoaded]);
+
+  // Effect to update playing indicator position when zoom changes
+  useEffect(() => {
+    if (waveSurferRef.current && !isNotLoaded) {
+      const currentTimeInMilis = waveSurferRef.current.getCurrentTime() * 1000;
+      const playingIndicator = document.querySelector('#playing_indicator');
+      playingIndicator?.setAttribute(
+        'style',
+        `margin-left: ${(currentTimeInMilis / 1000) * timelinePixelFactor}px`
+      );
+    }
+  }, [timelinePixelFactor, isNotLoaded]);
+
   useEffect(() => {
     if (containerRef.current) {
       waveSurferRef.current = WaveSurfer.create({
@@ -255,8 +297,8 @@ export default function AudioControlComponent({
   }, [isDragging]);
 
   const handleDragStart = (e: React.MouseEvent) => {
-    // Don't start dragging if clicking on a button
-    if ((e.target as HTMLElement).closest('button')) {
+    // Only start dragging if clicking on the drag handle
+    if (!(e.target as HTMLElement).closest('[data-drag-handle]')) {
       return;
     }
     e.preventDefault();
@@ -320,12 +362,39 @@ export default function AudioControlComponent({
       player!.playPause();
     }
 
+    // Zoom handlers that maintain audio playback state
+    const handleZoomIn = () => {
+      const wasPlaying = player.isPlaying();
+      increasePixelFactor();
+
+      // Ensure audio continues playing if it was playing before
+      if (wasPlaying && !player.isPlaying()) {
+        // Resume playback if it was playing before zoom
+        setTimeout(() => {
+          player.play();
+        }, 50);
+      }
+    };
+
+    const handleZoomOut = () => {
+      const wasPlaying = player.isPlaying();
+      decreasePixelFactor();
+
+      // Ensure audio continues playing if it was playing before
+      if (wasPlaying && !player.isPlaying()) {
+        // Resume playback if it was playing before zoom
+        setTimeout(() => {
+          player.play();
+        }, 50);
+      }
+    };
+
     return (
       //   <div className="relative">
       <div
         ref={playControlsBarRef}
         // putting same width contraints for main upper UI but as max width!
-        className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] max-w-[2280px] ${
+        className={`flex justify-evenly items-center border rounded-lg border-white p-4 bg-[#111111] z-[15] max-w-[2280px] relative ${
           playin ? 'animate-pulse' : ''
         }  hover:shadow-[0px_0px_10px_1px_#777777]`}
         style={{
@@ -336,33 +405,31 @@ export default function AudioControlComponent({
           left: '50%',
           transform: 'translateX(-50%)',
           transition: isDragging ? 'none' : 'top 0.3s ease',
-          cursor: isDragging ? 'grabbing' : 'grab'
+          cursor: isDragging ? 'grabbing' : 'default'
         }}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
         onMouseDown={handleDragStart}
       >
+        {/* Drag handle - only visible on hover */}
+        {isHovering && (
+          <div
+            data-drag-handle
+            className="absolute top-2 right-2 p-1 rounded cursor-grab hover:bg-white/10 transition-colors duration-200"
+            title="Drag to reposition control bar"
+          >
+            <GripVertical className="w-4 h-4 text-white/70" />
+          </div>
+        )}
+
         <button onClick={() => player.stop()} title={'Stop'} aria-label="Stop audio button">
           <Square />
         </button>
-        {/* <button
-          onClick={() => {
-            decreasePixelFactor();
-            player.zoom(player.options.minPxPerSec - 50);
-          }}
-          title={"Zoom out timeline"}
-          aria-label="Zoom out timeline"
-        >
+
+        {/* Zoom out button */}
+        <button onClick={handleZoomOut} title="Zoom out timeline" aria-label="Zoom out timeline">
           <ZoomOut />
         </button>
-        <button
-          onClick={() => {
-            increasePixelFactor();
-            player.zoom(player.options.minPxPerSec + 50);
-          }}
-          title={"Zoom out timeline"}
-          aria-label="Zoom out timeline"
-        >
-          <ZoomIn />
-        </button> */}
 
         {/* scroll to middle scroll middle */}
 
@@ -396,6 +463,12 @@ export default function AudioControlComponent({
         >
           <Save />
         </button>
+
+        {/* Zoom in button */}
+        <button onClick={handleZoomIn} title="Zoom in timeline" aria-label="Zoom in timeline">
+          <ZoomIn />
+        </button>
+
         <button
           onClick={() => {
             onCloseButtonClicked();

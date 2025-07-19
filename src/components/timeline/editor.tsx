@@ -58,7 +58,13 @@ Props) {
   return (
     // added to for scroll
     <div className="overflow-auto" ref={editorRef} onScroll={handleScroll}>
-      <div className="flex flex-col flex-grow min-w-max relative bg-black">
+      <div
+        className="flex flex-col flex-grow min-w-max relative bg-black"
+        style={{
+          minWidth: `${(durationInMilis / 1000) * timelinePixelFactor}px`
+        }}
+        key={`timeline-${timelinePixelFactor}`} // Force re-render when zoom changes
+      >
         {/* AudioControls and timebar */}
         {children}
 

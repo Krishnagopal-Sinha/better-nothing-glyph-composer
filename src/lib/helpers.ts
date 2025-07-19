@@ -162,7 +162,7 @@ export function getDateTime(): string {
   return formattedDate;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 // function throttle(func: (...args: any[]) => void, limit: number) {
 //   let lastFunc: ReturnType<typeof setTimeout>;
 //   let lastRan: number | undefined;
@@ -186,7 +186,7 @@ export function getDateTime(): string {
 //   };
 // }
 
-// eslint-disable-next-line react-refresh/only-export-components, @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function throttle(func: (...args: any[]) => void, limit: number) {
   let lastFunc: ReturnType<typeof setTimeout>;
   let lastRan: number | undefined;

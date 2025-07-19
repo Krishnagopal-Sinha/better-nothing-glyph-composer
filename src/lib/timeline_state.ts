@@ -277,6 +277,12 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         const newValue = oldValue / 1.5;
         // console.log(`Dec--: ${oldValue} => ${newValue}`);
 
+        // Add minimum bound to prevent extremely small zoom levels
+        const minValue = 20; // Minimum 20px per second
+        if (newValue < minValue) {
+          return; // Don't zoom out further
+        }
+
         const newSettings: AppSettings = {
           ...get().appSettings,
           timelinePixelFactor: newValue
@@ -288,6 +294,13 @@ export const useGlobalAppStore = create<GlyphEditorState & Action>()(
         const oldValue = get().appSettings.timelinePixelFactor;
         const newValue = oldValue * 1.5;
         // console.log(`Inc++: ${oldValue} => ${newValue}`);
+
+        // Add maximum bound to prevent extremely large zoom levels
+        const maxValue = 2000; // Maximum 2000px per second
+        if (newValue > maxValue) {
+          return; // Don't zoom in further
+        }
+
         const newSettings: AppSettings = {
           ...get().appSettings,
           timelinePixelFactor: newValue

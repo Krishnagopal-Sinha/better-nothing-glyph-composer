@@ -16,7 +16,7 @@ import { showPopUp } from '@/lib/helpers';
 interface LegacyAudioEditPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (trimmedAudioBlob: Blob) => void;
+  onSave: (trimmedAudioBlob: Blob, originalFile: File) => void;
   audioFile: File;
 }
 
@@ -337,7 +337,8 @@ export default function LegacyAudioEditPopup({
 
       // Convert to blob and save
       const wavBlob = await audioBufferToWav(trimmedBuffer);
-      onSave(wavBlob);
+      // Pass both trimmed audio and original file to preserve embedded glyph data
+      onSave(wavBlob, audioFile);
       onClose();
     } catch (error) {
       console.error('Error trimming audio:', error);

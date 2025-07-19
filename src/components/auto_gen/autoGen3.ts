@@ -374,13 +374,13 @@ const generatePatternBasedLighting = (
   let frameCounter = 0;
   let patternChangeCounter = 0;
   let currentPatternType = patternConfig.patternType;
-  let patternVariety = ['wave', 'spiral', 'bounce', 'pulse', 'chase', 'ripple'];
+  const patternVariety = ['wave', 'spiral', 'bounce', 'pulse', 'chase', 'ripple'];
   const { antiFlicker, sustainDuration, maxActiveLEDs } = patternConfig;
 
   // Audio reactivity tracking
-  let energyHistory: number[] = [];
-  let bassEnergyHistory: number[] = [];
-  let highEnergyHistory: number[] = [];
+  const energyHistory: number[] = [];
+  const bassEnergyHistory: number[] = [];
+  const highEnergyHistory: number[] = [];
   const historyLength = 10;
 
   for (let frame = 0; frame < totalFrames; frame++) {

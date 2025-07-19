@@ -24,17 +24,17 @@ import GlyphPreviewComponent from './components/controls/glyph_preview';
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-  useEffect(() => {
-    function beforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      return '';
-    }
+  // useEffect(() => {
+  //   function beforeUnload(e: BeforeUnloadEvent) {
+  //     e.preventDefault();
+  //     return '';
+  //   }
 
-    window.addEventListener('beforeunload', beforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', beforeUnload);
-    };
-  }, []);
+  //   window.addEventListener('beforeunload', beforeUnload);
+  //   return () => {
+  //     window.removeEventListener('beforeunload', beforeUnload);
+  //   };
+  // }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
@@ -99,7 +99,7 @@ export default function App() {
   }, [filesContent, errors]);
 
   // Handle trimmed audio save
-  const handleTrimmedAudioSave = async (trimmedAudioBlob: Blob) => {
+  const handleTrimmedAudioSave = async (trimmedAudioBlob: Blob, originalFile: File) => {
     try {
       // Convert blob to file
       const trimmedFile = new File([trimmedAudioBlob], 'trimmed_audio.wav', { type: 'audio/wav' });
@@ -111,19 +111,55 @@ export default function App() {
       const audioUrl = URL.createObjectURL(trimmedAudioBlob);
       setProcessedAudioUrl(audioUrl);
 
-      // Extract glyph data from trimmed file
-      const compressedGlyphData = await ffmpegService.getGlyphData(trimmedFile);
-      if (compressedGlyphData) {
-        const restoredGlyphData = restoreAppGlyphData(compressedGlyphData);
-        if (restoredGlyphData) {
-          importJsonData(JSON.stringify(restoredGlyphData));
+      // Extract glyph data from the ORIGINAL file to preserve embedded data
+      // This is especially important for .ogg files where glyph data might be embedded
+      let glyphDataRestored = false;
+      if (originalFile) {
+        try {
+          console.log(
+            `Extracting glyph data from original file: ${originalFile.name} (${originalFile.type})`
+          );
+          const compressedGlyphData = await ffmpegService.getGlyphData(originalFile);
+          if (compressedGlyphData) {
+            console.log('Glyph data found in original file, restoring...');
+            const restoredGlyphData = restoreAppGlyphData(compressedGlyphData);
+            if (restoredGlyphData) {
+              // Check device compatibility before importing
+              const zonesInImportedData = Object.keys(restoredGlyphData).length;
+              const currentZones = Object.keys(useGlobalAppStore.getState().items).length;
+
+              if (zonesInImportedData === currentZones) {
+                importJsonData(JSON.stringify(restoredGlyphData));
+                glyphDataRestored = true;
+                console.log('Glyph data successfully restored from original file');
+              } else {
+                console.log(
+                  `Device mismatch: imported data has ${zonesInImportedData} zones, current device has ${currentZones} zones`
+                );
+                // Don't set glyphDataRestored = true since the data wasn't actually imported
+              }
+            } else {
+              console.warn('Failed to restore glyph data from original file');
+            }
+          } else {
+            console.log('No glyph data found in original file');
+          }
+        } catch (glyphError) {
+          console.error('Error extracting glyph data from original file:', glyphError);
+          // Don't fail the entire process if glyph extraction fails
+          // The trimmed audio will still be loaded without glyph data
         }
       }
 
       setIsInputLoaded(true);
       clearUndoRedo();
 
-      showPopUp('Audio Loaded', 'Trimmed audio has been loaded successfully!', 1500);
+      // Show appropriate success message based on whether glyph data was restored
+      const successMessage = glyphDataRestored
+        ? 'Trimmed audio loaded successfully with preserved glyph data!'
+        : 'Trimmed audio loaded successfully!';
+
+      showPopUp('Audio Loaded', successMessage, 1500);
     } catch (error) {
       console.error('Error processing trimmed audio:', error);
       showPopUp('Error', 'Failed to process trimmed audio. Please try again.', 2000);
