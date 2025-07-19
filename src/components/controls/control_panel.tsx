@@ -113,7 +113,7 @@ export default function MainTopPanel({
                 className="p-0 pl-2 pt-[2px] h-1/2 text-xs opacity-90"
                 onClick={() => {
                   window.open(
-                    'https://discord.com/channels/930878214237200394/1275717674634051661',
+                    'https://discord.gg/EmcnHqDxZt',
                     '_blank'
                   );
                 }}
