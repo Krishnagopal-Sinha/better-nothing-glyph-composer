@@ -24,17 +24,17 @@ import GlyphPreviewComponent from './components/controls/glyph_preview';
 
 export default function App() {
   // Promot user for exit confimation - leave it upto browser
-  // useEffect(() => {
-  //   function beforeUnload(e: BeforeUnloadEvent) {
-  //     e.preventDefault();
-  //     return '';
-  //   }
+  useEffect(() => {
+    function beforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      return '';
+    }
 
-  //   window.addEventListener('beforeunload', beforeUnload);
-  //   return () => {
-  //     window.removeEventListener('beforeunload', beforeUnload);
-  //   };
-  // }, []);
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, []);
 
   // App state
   const timelineData = useGlobalAppStore((state) => state.items);
