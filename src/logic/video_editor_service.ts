@@ -1,5 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
+import ffmpegService from './ffmpeg_service';
 
 export interface VideoSettings {
   gamma: number;
@@ -51,8 +52,6 @@ export class VideoEditorService {
   private static instance: VideoEditorService;
   private isProcessing = false;
   private processingProgress = 0;
-  private ffmpeg: FFmpeg | null = null;
-  private ffmpegReadyPromise: Promise<void> | null = null;
 
   static getInstance(): VideoEditorService {
     if (!VideoEditorService.instance) {
@@ -65,35 +64,20 @@ export class VideoEditorService {
    * Ensure FFmpeg is loaded and ready
    */
   async ensureFFmpegLoaded(): Promise<void> {
-    if (this.ffmpegReadyPromise) {
-      return this.ffmpegReadyPromise;
+    try {
+      await ffmpegService.load();
+      console.log('VideoEditorService: FFmpeg loaded successfully via shared service');
+    } catch (error) {
+      console.error('VideoEditorService: Failed to load FFmpeg via shared service:', error);
+      throw new Error('Failed to load FFmpeg via shared service');
     }
-
-    this.ffmpegReadyPromise = this.loadFFmpeg();
-    return this.ffmpegReadyPromise;
   }
 
   /**
-   * Load FFmpeg instance
+   * Get the shared FFmpeg instance
    */
-  private async loadFFmpeg(): Promise<void> {
-    try {
-      console.log('Creating FFmpeg instance...');
-      this.ffmpeg = new FFmpeg();
-      console.log('FFmpeg instance created');
-
-      console.log('Loading FFmpeg...');
-      // Load FFmpeg with default configuration
-      await this.ffmpeg.load();
-      console.log('FFmpeg loaded successfully');
-    } catch (error) {
-      console.error('Failed to load FFmpeg:', error);
-      console.error('FFmpeg load error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      throw new Error('Failed to load FFmpeg');
-    }
+  private getFFmpegInstance(): FFmpeg {
+    return ffmpegService.getFFmpegInstance();
   }
 
   /**
@@ -117,14 +101,14 @@ export class VideoEditorService {
       // Ensure FFmpeg is loaded
       await this.ensureFFmpegLoaded();
 
-      if (!this.ffmpeg) {
+      if (!this.getFFmpegInstance()) {
         throw new Error('FFmpeg not loaded');
       }
 
       // Write input file to FFmpeg FS
       try {
         const fileData = await fetchFile(videoFile);
-        await this.ffmpeg.writeFile('input.mp4', fileData);
+        await this.getFFmpegInstance().writeFile('input.mp4', fileData);
         this.processingProgress = 5;
       } catch (error) {
         console.error('Error writing input file:', error);
@@ -134,10 +118,9 @@ export class VideoEditorService {
       }
 
       // Get video info
-      let duration = 0;
       try {
-        await this.ffmpeg.exec(['-i', 'input.mp4', '-f', 'null', '-']);
-        duration = await this.getVideoDuration();
+        await this.getFFmpegInstance().exec(['-i', 'input.mp4', '-f', 'null', '-']);
+        // Video duration is handled via frame counting instead
         this.processingProgress = 10;
       } catch (error) {
         console.error('Error getting video info:', error);
@@ -148,7 +131,7 @@ export class VideoEditorService {
 
       // Extract frames with circular crop and 60fps
       // Add progress callback for frame processing
-      this.ffmpeg.on('progress', ({ progress }) => {
+      this.getFFmpegInstance().on('progress', ({ progress }) => {
         this.processingProgress = 10 + progress * 40; // 10% to 50%
       });
 
@@ -173,7 +156,7 @@ export class VideoEditorService {
         );
 
         // Simplified approach: Just crop to square and extract frames at 60fps
-        await this.ffmpeg.exec([
+        await this.getFFmpegInstance().exec([
           '-i',
           'input.mp4',
           '-vf',
@@ -187,7 +170,14 @@ export class VideoEditorService {
 
         // If crop fails, try without cropping to test basic frame extraction
         try {
-          await this.ffmpeg.exec(['-i', 'input.mp4', '-vf', 'fps=60', '-y', 'frame_%04d.png']);
+          await this.getFFmpegInstance().exec([
+            '-i',
+            'input.mp4',
+            '-vf',
+            'fps=60',
+            '-y',
+            'frame_%04d.png'
+          ]);
           this.processingProgress = 50;
         } catch (basicError) {
           console.error('Basic frame extraction also failed:', basicError);
@@ -203,7 +193,7 @@ export class VideoEditorService {
 
       try {
         // Extract audio as WAV format for maximum browser compatibility
-        await this.ffmpeg.exec([
+        await this.getFFmpegInstance().exec([
           '-i',
           'input.mp4',
           '-vn', // No video
@@ -230,7 +220,7 @@ export class VideoEditorService {
       let frameFiles: any[] = [];
       let pngFrames: any[] = [];
       try {
-        frameFiles = await this.ffmpeg.listDir('/');
+        frameFiles = await this.getFFmpegInstance().listDir('/');
         pngFrames = frameFiles.filter(
           (f) => f.name.startsWith('frame_') && f.name.endsWith('.png')
         );
@@ -238,10 +228,16 @@ export class VideoEditorService {
         if (pngFrames.length === 0) {
           // Try a very basic frame extraction as last resort
           try {
-            await this.ffmpeg.exec(['-i', 'input.mp4', '-vf', 'fps=60', 'frame_%04d.png']);
+            await this.getFFmpegInstance().exec([
+              '-i',
+              'input.mp4',
+              '-vf',
+              'fps=60',
+              'frame_%04d.png'
+            ]);
 
             // Check again
-            const newFrameFiles = await this.ffmpeg.listDir('/');
+            const newFrameFiles = await this.getFFmpegInstance().listDir('/');
             const newPngFrames = newFrameFiles.filter(
               (f) => f.name.startsWith('frame_') && f.name.endsWith('.png')
             );
@@ -280,7 +276,7 @@ export class VideoEditorService {
         // Calculate duration from frame count
         const actualVideoDurationSeconds = (pngFrames.length * frameInterval) / 1000; // Convert ms to seconds
         const silentWavData = this.createMinimalSilentAudio(actualVideoDurationSeconds);
-        await this.ffmpeg.writeFile('audio.wav', silentWavData);
+        await this.getFFmpegInstance().writeFile('audio.wav', silentWavData);
         audioFileName = 'audio.wav';
         audioExtracted = true;
       }
@@ -291,7 +287,7 @@ export class VideoEditorService {
 
       for (let i = 0; i < pngFrames.length; i++) {
         try {
-          const frameData = await this.ffmpeg.readFile(pngFrames[i].name);
+          const frameData = await this.getFFmpegInstance().readFile(pngFrames[i].name);
 
           // Convert to Uint8Array if needed
           let imageDataArray: Uint8Array;
@@ -345,7 +341,7 @@ export class VideoEditorService {
       let audioFile: File;
       try {
         // Read the audio file we created
-        audioData = await this.ffmpeg.readFile(audioFileName);
+        audioData = await this.getFFmpegInstance().readFile(audioFileName);
         const audioFileLength =
           audioData instanceof Uint8Array ? audioData.byteLength : audioData.length;
         console.log(`Audio file read successfully: ${audioFileName}, size:`, audioFileLength);
@@ -370,7 +366,7 @@ export class VideoEditorService {
       console.log('Reading first frame for processed video file...');
       let firstFrameData: any;
       try {
-        firstFrameData = await this.ffmpeg.readFile(pngFrames[0].name);
+        firstFrameData = await this.getFFmpegInstance().readFile(pngFrames[0].name);
         console.log('First frame read successfully, size:', firstFrameData.byteLength);
       } catch (error) {
         console.error('Error reading first frame:', error);
@@ -385,7 +381,7 @@ export class VideoEditorService {
       // Clean up FFmpeg filesystem
       console.log('Cleaning up FFmpeg filesystem...');
       try {
-        await this.ffmpeg.deleteFile('input.mp4');
+        await this.getFFmpegInstance().deleteFile('input.mp4');
         // console.log('Deleted input.mp4');
       } catch (error) {
         console.warn('Could not delete input.mp4:', error);
@@ -393,7 +389,7 @@ export class VideoEditorService {
 
       // Clean up audio file
       try {
-        await this.ffmpeg.deleteFile(audioFileName);
+        await this.getFFmpegInstance().deleteFile(audioFileName);
         // console.log(`Deleted ${audioFileName}`);
       } catch (error) {
         console.warn(`Could not delete ${audioFileName}:`, error);
@@ -401,7 +397,7 @@ export class VideoEditorService {
 
       // Clean up all frame files
       try {
-        const remainingFiles = await this.ffmpeg.listDir('/');
+        const remainingFiles = await this.getFFmpegInstance().listDir('/');
         const allFrameFiles = remainingFiles.filter(
           (f) =>
             (f.name.startsWith('frame_') || f.name.startsWith('cropped_frame_')) &&
@@ -410,7 +406,7 @@ export class VideoEditorService {
 
         for (const frame of allFrameFiles) {
           try {
-            await this.ffmpeg.deleteFile(frame.name);
+            await this.getFFmpegInstance().deleteFile(frame.name);
             //  For Debug
 
             //     console.log(`Deleted ${frame.name}`);
@@ -424,7 +420,7 @@ export class VideoEditorService {
         // Fallback: try to delete frame files by name pattern
         for (const frame of pngFrames) {
           try {
-            await this.ffmpeg.deleteFile(frame.name);
+            await this.getFFmpegInstance().deleteFile(frame.name);
             // console.log(`Deleted ${frame.name}`);
           } catch (error) {
             console.warn(`Could not delete ${frame.name}:`, error);
@@ -466,26 +462,6 @@ export class VideoEditorService {
   }
 
   /**
-   * Get video duration from FFmpeg
-   */
-  private async getVideoDuration(): Promise<number> {
-    if (!this.ffmpeg) return 0;
-
-    try {
-      // Get video info to extract duration
-      await this.ffmpeg.exec(['-i', 'input.mp4']);
-
-      // Try to get duration from FFmpeg output
-      // For now, we'll use a reasonable default based on frame count
-      // In a more complete implementation, you'd parse the FFmpeg output
-      return 10; // Default duration in seconds, will be converted to ms
-    } catch (error) {
-      console.warn('Could not get video duration, using default:', error);
-      return 10; // Default duration in seconds
-    }
-  }
-
-  /**
    * Create brightness map from image data
    */
   private async createBrightnessMapFromImageData(imageData: Uint8Array): Promise<number[][]> {
@@ -502,7 +478,15 @@ export class VideoEditorService {
 
           if (!ctx) {
             console.warn('Could not get canvas context, using fallback');
-            resolve(this.createBrightnessMapFromFrame(null as any));
+            // Create empty brightness map as fallback
+            const fallbackMap: number[][] = [];
+            for (let row = 0; row < 25; row++) {
+              fallbackMap[row] = [];
+              for (let col = 0; col < 25; col++) {
+                fallbackMap[row][col] = 0;
+              }
+            }
+            resolve(fallbackMap);
             return;
           }
 
@@ -538,34 +522,32 @@ export class VideoEditorService {
 
         img.onerror = () => {
           console.warn('Could not load image, using fallback');
-          resolve(this.createBrightnessMapFromFrame(null as any));
+          // Create empty brightness map as fallback
+          const fallbackMap: number[][] = [];
+          for (let row = 0; row < 25; row++) {
+            fallbackMap[row] = [];
+            for (let col = 0; col < 25; col++) {
+              fallbackMap[row][col] = 0;
+            }
+          }
+          resolve(fallbackMap);
         };
 
         // Load the image
         img.src = URL.createObjectURL(blob);
       } catch (error) {
         console.error('Error analyzing frame data:', error);
-        resolve(this.createBrightnessMapFromFrame(null as any));
+        // Create empty brightness map as fallback
+        const fallbackMap: number[][] = [];
+        for (let row = 0; row < 25; row++) {
+          fallbackMap[row] = [];
+          for (let col = 0; col < 25; col++) {
+            fallbackMap[row][col] = 0;
+          }
+        }
+        resolve(fallbackMap);
       }
     });
-  }
-
-  /**
-   * Create brightness map from frame (simplified for now)
-   * This will be enhanced to analyze the cropped frame and create proper brightness values
-   */
-  private createBrightnessMapFromFrame(frameFile: File): number[][] {
-    // For now, return a simple 25x25 brightness map
-    // This will be enhanced to actually analyze the frame pixels
-    const brightnessMap: number[][] = [];
-    for (let row = 0; row < 25; row++) {
-      brightnessMap[row] = [];
-      for (let col = 0; col < 25; col++) {
-        // Simple brightness calculation - will be enhanced
-        brightnessMap[row][col] = Math.random() * 255; // Placeholder
-      }
-    }
-    return brightnessMap;
   }
 
   /**
@@ -603,152 +585,6 @@ export class VideoEditorService {
    */
   private getPixelIndex(row: number, col: number): number {
     return row * 25 + col;
-  }
-
-  /**
-   * Check if pixel is within the circular area
-   * Since we're cropping to a square, all pixels are within the circle
-   */
-  private isPixelInCircle(row: number, col: number): boolean {
-    // Since we're cropping to a square that contains the circle,
-    // all pixels in the 25x25 grid are within the circular area
-    return row >= 0 && row < 25 && col >= 0 && col < 25;
-  }
-
-  /**
-   * Create a minimal valid WAV file
-   */
-  private createEmptyWavFile(): Uint8Array {
-    // Create a minimal valid WAV file (44 bytes header with no audio data)
-    const header = new Uint8Array(44);
-
-    // RIFF header
-    header[0] = 0x52; // R
-    header[1] = 0x49; // I
-    header[2] = 0x46; // F
-    header[3] = 0x46; // F
-    header[4] = 0x24; // ChunkSize (36 bytes)
-    header[5] = 0x00;
-    header[6] = 0x00;
-    header[7] = 0x00;
-    header[8] = 0x57; // W
-    header[9] = 0x41; // A
-    header[10] = 0x56; // V
-    header[11] = 0x45; // E
-
-    // fmt chunk
-    header[12] = 0x66; // f
-    header[13] = 0x6d; // m
-    header[14] = 0x74; // t
-    header[15] = 0x20; // space
-    header[16] = 0x10; // Subchunk1Size (16 bytes)
-    header[17] = 0x00;
-    header[18] = 0x00;
-    header[19] = 0x00;
-    header[20] = 0x01; // AudioFormat (PCM)
-    header[21] = 0x00;
-    header[22] = 0x01; // NumChannels (1)
-    header[23] = 0x00;
-    header[24] = 0x44; // SampleRate (44100)
-    header[25] = 0xac;
-    header[26] = 0x00;
-    header[27] = 0x00;
-    header[28] = 0x88; // ByteRate (44100 * 2)
-    header[29] = 0x58;
-    header[30] = 0x01;
-    header[31] = 0x00;
-    header[32] = 0x02; // BlockAlign (2)
-    header[33] = 0x00;
-    header[34] = 0x10; // BitsPerSample (16)
-    header[35] = 0x00;
-
-    // data chunk
-    header[36] = 0x64; // d
-    header[37] = 0x61; // a
-    header[38] = 0x74; // t
-    header[39] = 0x61; // a
-    header[40] = 0x00; // Subchunk2Size (0 bytes - no audio data)
-    header[41] = 0x00;
-    header[42] = 0x00;
-    header[43] = 0x00;
-
-    return header;
-  }
-
-  /**
-   * Create a silent WAV file with the specified duration
-   */
-  private createSilentWavFile(durationSeconds: number): Uint8Array {
-    const sampleRate = 44100;
-    const numChannels = 2;
-    const bitsPerSample = 16;
-    const bytesPerSample = bitsPerSample / 8;
-    const blockAlign = numChannels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-
-    // Calculate audio data size
-    const numSamples = Math.floor(durationSeconds * sampleRate);
-    const audioDataSize = numSamples * blockAlign;
-
-    // WAV file structure: 44-byte header + audio data
-    const totalSize = 44 + audioDataSize;
-    const wavFile = new Uint8Array(totalSize);
-
-    // RIFF header (12 bytes)
-    wavFile.set([0x52, 0x49, 0x46, 0x46]); // "RIFF"
-    // File size (4 bytes) - total size - 8
-    const fileSize = totalSize - 8;
-    wavFile[4] = fileSize & 0xff;
-    wavFile[5] = (fileSize >> 8) & 0xff;
-    wavFile[6] = (fileSize >> 16) & 0xff;
-    wavFile[7] = (fileSize >> 24) & 0xff;
-    wavFile.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
-
-    // fmt chunk (24 bytes)
-    wavFile.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
-    // Subchunk1Size (4 bytes) - 16 for PCM
-    wavFile[16] = 16;
-    wavFile[17] = 0;
-    wavFile[18] = 0;
-    wavFile[19] = 0;
-    // AudioFormat (2 bytes) - 1 for PCM
-    wavFile[20] = 1;
-    wavFile[21] = 0;
-    // NumChannels (2 bytes)
-    wavFile[22] = numChannels;
-    wavFile[23] = 0;
-    // SampleRate (4 bytes) - little endian
-    wavFile[24] = sampleRate & 0xff;
-    wavFile[25] = (sampleRate >> 8) & 0xff;
-    wavFile[26] = (sampleRate >> 16) & 0xff;
-    wavFile[27] = (sampleRate >> 24) & 0xff;
-    // ByteRate (4 bytes) - little endian
-    wavFile[28] = byteRate & 0xff;
-    wavFile[29] = (byteRate >> 8) & 0xff;
-    wavFile[30] = (byteRate >> 16) & 0xff;
-    wavFile[31] = (byteRate >> 24) & 0xff;
-    // BlockAlign (2 bytes) - little endian
-    wavFile[32] = blockAlign;
-    wavFile[33] = 0;
-    // BitsPerSample (2 bytes) - little endian
-    wavFile[34] = bitsPerSample;
-    wavFile[35] = 0;
-
-    // data chunk (8 + audio data bytes)
-    wavFile.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
-    // Subchunk2Size (4 bytes) - audio data size (little endian)
-    wavFile[40] = audioDataSize & 0xff;
-    wavFile[41] = (audioDataSize >> 8) & 0xff;
-    wavFile[42] = (audioDataSize >> 16) & 0xff;
-    wavFile[43] = (audioDataSize >> 24) & 0xff;
-
-    // Audio data (silent - all zeros)
-    // The audio data starts at byte 44 and is already initialized to 0
-
-    console.log(
-      `Created silent WAV file: ${durationSeconds}s, ${totalSize} bytes, ${numSamples} samples`
-    );
-    return wavFile;
   }
 
   /**
@@ -829,14 +665,16 @@ export class VideoEditorService {
   }
 
   /**
-   * Get processing progress
+   * Get current processing progress (0-100)
+   * @returns Progress percentage
    */
   getProgress(): number {
     return this.processingProgress;
   }
 
   /**
-   * Check if currently processing
+   * Check if video is currently being processed
+   * @returns True if processing, false otherwise
    */
   isCurrentlyProcessing(): boolean {
     return this.isProcessing;

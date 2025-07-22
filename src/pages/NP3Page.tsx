@@ -57,8 +57,8 @@ export default function NP3Page() {
   // Get NP3AudioService instance
   const audioService = NP3AudioService.getInstance();
 
-  // 25x25 = 625 pixels state array
-  const [pixelStates, setPixelStates] = useState<boolean[]>(new Array(625).fill(false));
+  // 25x25 = 625 pixels state array (internal state only)
+  const [, setPixelStates] = useState<boolean[]>(new Array(625).fill(false));
 
   // Video processing states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -241,6 +241,13 @@ export default function NP3Page() {
       }
     };
     initFFmpeg();
+  }, []);
+
+  // VideoEditorService now uses the shared FFmpeg instance
+  useEffect(() => {
+    // VideoEditorService will use the shared FFmpegService instance automatically
+    // No separate initialization needed
+    console.log('VideoEditorService will use shared FFmpeg instance');
   }, []);
 
   // Initialize VideoEditorService FFmpeg
@@ -1097,11 +1104,11 @@ export default function NP3Page() {
       // Ensure FFmpegService is loaded
       try {
         setProcessingProgress(5);
-        await FFmpegService.load();
-        toast.info('Video processing service loaded...');
+        // FFmpegService is already loaded globally, no need to reload
+        toast.info('Using shared video processing service...');
       } catch (error) {
-        console.error('Failed to load FFmpegService:', error);
-        toast.error('Failed to load video processing service');
+        console.error('Failed to access FFmpegService:', error);
+        toast.error('Failed to access video processing service');
         return;
       }
 
@@ -1422,70 +1429,11 @@ export default function NP3Page() {
   };
 
   /**
-   * Handle progress bar seeking
+   * Handle progress bar seeking (currently unused)
    */
-  const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!audioElement || !videoResult) return;
+  // const handleProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 
-    const progress = parseFloat(event.target.value);
-    // Calculate time from progress (no playbackSpeed adjustment)
-    const newTime = (progress / 100) * (videoResult.displayDuration / 1000);
-
-    // Pause playback temporarily during seeking
-    const wasPlaying = isVideoPlaying;
-    if (wasPlaying) {
-      setIsVideoPlaying(false);
-      audioElement.pause();
-    }
-
-    // Set the new time
-    audioElement.currentTime = newTime;
-    setVideoProgress(progress);
-
-    // Update display frame immediately - fix frame calculation
-    const frameIndex = Math.floor((newTime * 1000) / kTimeStepMilis);
-    if (frameIndex < videoResult.displayFrames.length) {
-      setCurrentDisplayFrame(frameIndex);
-
-      // Draw the current frame to the canvas
-      drawCurrentFrameToCanvas(frameIndex);
-
-      // Get the current frame analysis and update pixel states from brightness map
-      const frameAnalysis = getFrameAnalysis(frameIndex);
-
-      if (frameAnalysis) {
-        // Use the existing helper function to update pixel states
-        updatePixelStatesFromFrameAnalysis(frameAnalysis);
-      } else {
-        // Fallback to original display frame if analysis not available
-        const displayFrame = videoResult.displayFrames[frameIndex];
-        if (displayFrame && displayFrame.pixelStates) {
-          setPixelStates([...displayFrame.pixelStates]);
-        } else {
-          setPixelStates(new Array(625).fill(false));
-        }
-      }
-    }
-
-    // Resume playback if it was playing before
-    if (wasPlaying) {
-      setTimeout(async () => {
-        try {
-          if (audioElement && !isVideoPlaying) {
-            audioElement.playbackRate = playbackSpeed;
-            await audioElement.play();
-            setIsVideoPlaying(true);
-          }
-        } catch (error) {
-          console.error('Failed to resume playback after seeking:', error);
-          // Don't show error for interrupted playback
-          if (error instanceof Error && error.name !== 'AbortError') {
-            toast.error('Failed to resume playback after seeking');
-          }
-        }
-      }, 100); // Increased delay to ensure seeking is complete
-    }
-  };
+  // };
 
   // New handler for immediate slider movement
   const handlePendingProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
