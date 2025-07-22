@@ -57,52 +57,125 @@ class FFmpegService {
     processedGlyphData: string,
     currentDevice: string
   ): Promise<void> {
-    await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
-    // console.log("Initiating Save Process");
+    // Validate inputs
+    if (!inputAudioFile) {
+      throw new Error('No input audio file provided');
+    }
 
-    // default to NP1 on error
-    const phoneInfo: PhoneSpecificInfo = dataStore.get(currentDevice) ?? {
-      composer: `v1-Spacewar Glyph Composer`,
-      album: `BNGC v${kMajorVersion}`,
-      custom2: '5cols',
-      custom1: `eNoDAAAAAAE=`
-    };
-    const composer = phoneInfo.composer;
+    if (!processedGlyphData || processedGlyphData.length === 0) {
+      throw new Error('No glyph data provided for export');
+    }
 
-    const album = phoneInfo.album;
-    const custom1 = dataStore.get('exportCustom1');
-    const custom2 = phoneInfo.custom2;
+    if (!currentDevice) {
+      throw new Error('No device type specified');
+    }
 
-    const outputFileName = `glyph_tone_${getDateTime()}.ogg`;
+    // Validate audio file
+    if (inputAudioFile.size === 0) {
+      throw new Error('Input audio file is empty');
+    }
 
-    await this.ffmpeg.exec([
-      `-i`,
-      `input.ogg`,
-      `-strict`,
-      `-2`,
-      `-metadata`,
-      `AUTHOR=${processedGlyphData}`,
-      `-metadata`,
-      `TITLE=output_${Date.now()}`,
-      `-metadata`,
-      `COMPOSER=${composer}`,
-      `-metadata`,
-      `ALBUM=${album}`,
-      `-metadata`,
-      `CUSTOM1=${custom1}`,
-      `-metadata`,
-      `CUSTOM2=${custom2}`,
-      `-c:a`,
-      `opus`,
-      `-vn`,
-      `-map_metadata`,
-      `0:s:a:0`,
-      `${outputFileName}`
-    ]);
+    if (!inputAudioFile.type.startsWith('audio/')) {
+      console.warn('Input file may not be a valid audio file:', inputAudioFile.type);
+    }
 
-    const outputFile = await this.ffmpeg.readFile(`${outputFileName}`);
+    try {
+      // Write input file to FFmpeg filesystem
+      const fileData = await fetchFile(inputAudioFile);
+      if (!fileData || fileData.byteLength === 0) {
+        throw new Error('Failed to read input audio file');
+      }
 
-    fileDownload(outputFile, outputFileName);
+      await this.ffmpeg.writeFile(`input.ogg`, fileData);
+
+      // default to NP1 on error
+      const phoneInfo: PhoneSpecificInfo = dataStore.get(currentDevice) ?? {
+        composer: `v1-Spacewar Glyph Composer`,
+        album: `BNGC v${kMajorVersion}`,
+        custom2: '5cols',
+        custom1: `eNoDAAAAAAE=`
+      };
+      const composer = phoneInfo.composer;
+      const album = phoneInfo.album;
+      const custom1 = dataStore.get('exportCustom1');
+      const custom2 = phoneInfo.custom2;
+
+      const outputFileName = `glyph_tone_${getDateTime()}.ogg`;
+
+      // Execute FFmpeg command with error handling
+      try {
+        await this.ffmpeg.exec([
+          `-i`,
+          `input.ogg`,
+          `-strict`,
+          `-2`,
+          `-metadata`,
+          `AUTHOR=${processedGlyphData}`,
+          `-metadata`,
+          `TITLE=output_${Date.now()}`,
+          `-metadata`,
+          `COMPOSER=${composer}`,
+          `-metadata`,
+          `ALBUM=${album}`,
+          `-metadata`,
+          `CUSTOM1=${custom1}`,
+          `-metadata`,
+          `CUSTOM2=${custom2}`,
+          `-c:a`,
+          `opus`,
+          `-vn`,
+          `-map_metadata`,
+          `0:s:a:0`,
+          `${outputFileName}`
+        ]);
+      } catch (ffmpegError) {
+        console.error('FFmpegService: FFmpeg command failed:', ffmpegError);
+        throw new Error(
+          `FFmpeg processing failed: ${
+            ffmpegError instanceof Error ? ffmpegError.message : 'Unknown error'
+          }`
+        );
+      }
+
+      // Read output file
+      let outputFile: Uint8Array;
+      try {
+        outputFile = (await this.ffmpeg.readFile(`${outputFileName}`)) as Uint8Array;
+        if (!outputFile || outputFile.byteLength === 0) {
+          throw new Error('Generated output file is empty');
+        }
+      } catch (readError) {
+        console.error('FFmpegService: Failed to read output file:', readError);
+        throw new Error(
+          `Failed to read output file: ${
+            readError instanceof Error ? readError.message : 'Unknown error'
+          }`
+        );
+      }
+
+      // Download the file
+      try {
+        fileDownload(outputFile, outputFileName);
+      } catch (downloadError) {
+        console.error('FFmpegService: File download failed:', downloadError);
+        throw new Error(
+          `File download failed: ${
+            downloadError instanceof Error ? downloadError.message : 'Unknown error'
+          }`
+        );
+      }
+
+      // Clean up FFmpeg filesystem
+      try {
+        await this.ffmpeg.deleteFile('input.ogg');
+        await this.ffmpeg.deleteFile(outputFileName);
+      } catch (cleanupError) {
+        console.warn('FFmpegService: Cleanup failed (non-critical):', cleanupError);
+      }
+    } catch (error) {
+      console.error('FFmpegService: saveOutput failed:', error);
+      throw error;
+    }
   }
 
   async getGlyphData(inputAudioFile: File): Promise<string[] | null> {

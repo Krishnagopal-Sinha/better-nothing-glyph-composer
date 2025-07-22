@@ -155,16 +155,68 @@ export default function NP3Page() {
   // Add state to track last processed frame
   const [lastProcessedFrame, setLastProcessedFrame] = useState<number>(-1);
 
+  // Debounced progress bar state
+  const [pendingProgress, setPendingProgress] = useState<number | null>(null);
+
+  // Debounced value for progress bar
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Helper: Get undo/redo stacks for the current frame only
   const getCurrentFrameAnalysisIndex = () => {
     if (!videoResult) return -1;
-    const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
-    return Math.floor(frameTime / (1000 / videoResult.fps));
+    const frameTimeMs = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
+    return Math.floor(frameTimeMs / (1000 / videoResult.fps));
+  };
+
+  /**
+   * Get the frame analysis index for a given display frame index
+   * @param frameIndex - The display frame index
+   * @returns The corresponding frame analysis index, or -1 if not available
+   */
+  const getFrameAnalysisIndex = (frameIndex: number): number => {
+    if (!videoResult) return -1;
+    const frameTimeMs = frameIndex * kTimeStepMilis; // Convert to milliseconds
+    return Math.floor(frameTimeMs / (1000 / videoResult.fps));
+  };
+
+  /**
+   * Get the frame analysis for a given display frame index
+   * @param frameIndex - The display frame index
+   * @returns The corresponding frame analysis, or undefined if not available
+   */
+  const getFrameAnalysis = (frameIndex: number): FrameAnalysis | undefined => {
+    if (!videoResult) return undefined;
+    const analysisIndex = getFrameAnalysisIndex(frameIndex);
+    if (analysisIndex >= 0 && analysisIndex < videoResult.frameAnalyses.length) {
+      return videoResult.frameAnalyses[analysisIndex];
+    }
+    return undefined;
   };
 
   const currentFrameAnalysisIndex = getCurrentFrameAnalysisIndex();
   const currentFrameUndoStack = undoStack.filter((u) => u.frameIndex === currentFrameAnalysisIndex);
   const currentFrameRedoStack = redoStack.filter((r) => r.frameIndex === currentFrameAnalysisIndex);
+
+  // Debug effect to track videoResult changes
+  useEffect(() => {
+    if (videoResult) {
+      console.log('NP3Page: VideoResult updated:', {
+        originalFileType: videoResult.originalFileType,
+        duration: videoResult.duration,
+        totalFrames: videoResult.totalFrames,
+        displayFrames: videoResult.displayFrames.length,
+        audioFile: videoResult.audioFile
+          ? {
+              name: videoResult.audioFile.name,
+              type: videoResult.audioFile.type,
+              size: videoResult.audioFile.size
+            }
+          : null
+      });
+    } else {
+      console.log('NP3Page: VideoResult cleared');
+    }
+  }, [videoResult]);
 
   // Set the phone model to NP3 when this page loads
   useEffect(() => {
@@ -191,6 +243,20 @@ export default function NP3Page() {
     initFFmpeg();
   }, []);
 
+  // Initialize VideoEditorService FFmpeg
+  useEffect(() => {
+    const initVideoEditorFFmpeg = async () => {
+      try {
+        await videoEditorService.ensureFFmpegLoaded();
+        console.log('VideoEditorService FFmpeg loaded successfully');
+      } catch (error) {
+        console.error('Failed to load VideoEditorService FFmpeg:', error);
+        toast.error('Failed to load video processing service');
+      }
+    };
+    initVideoEditorFFmpeg();
+  }, [videoEditorService]);
+
   // Progress monitoring
   useEffect(() => {
     if (isProcessing) {
@@ -202,8 +268,16 @@ export default function NP3Page() {
         // Use the higher progress value (whichever service is active)
         const progress = Math.max(videoProgress, audioProgress);
         setProcessingProgress(progress);
-      }, 100);
+
+        // Only log significant progress changes to avoid spam
+        if (progress > 0 && progress < 100 && progress % 10 < 1) {
+          console.log(`Processing progress: ${progress.toFixed(0)}%`);
+        }
+      }, 200); // Faster updates for smoother progress bar
       return () => clearInterval(interval);
+    } else {
+      // Reset progress when not processing
+      setProcessingProgress(0);
     }
   }, [isProcessing, videoEditorService, audioService]);
 
@@ -236,11 +310,15 @@ export default function NP3Page() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Get the current frame analysis
-    const frameTime = frameIndex * kTimeStepMilis; // ms
-    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
-    if (analysisIndex >= videoResult.frameAnalyses.length) return;
-    const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+    // Get the current frame analysis using the reusable function
+    const frameAnalysis = getFrameAnalysis(frameIndex);
+    if (!frameAnalysis) return;
+
+    // Validate brightness map structure
+    if (!frameAnalysis.brightnessMap || !Array.isArray(frameAnalysis.brightnessMap)) {
+      console.warn('Invalid brightness map structure:', frameAnalysis.brightnessMap);
+      return;
+    }
 
     // Draw each pixel
     const gridSize = 25;
@@ -248,8 +326,30 @@ export default function NP3Page() {
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
         if (isPixelInCircle(row, col)) {
+          // Safety check for brightness map row
+          if (
+            !frameAnalysis.brightnessMap[row] ||
+            !Array.isArray(frameAnalysis.brightnessMap[row])
+          ) {
+            console.warn(
+              `Invalid brightness map row at index ${row}:`,
+              frameAnalysis.brightnessMap[row]
+            );
+            continue;
+          }
+
+          // Safety check for brightness value
+          if (frameAnalysis.brightnessMap[row][col] === undefined) {
+            console.warn(
+              `Invalid brightness value at [${row}][${col}]:`,
+              frameAnalysis.brightnessMap[row][col]
+            );
+            continue;
+          }
+
           let brightness = frameAnalysis.brightnessMap[row][col];
           // Check if this pixel was user-drawn
+          const analysisIndex = getFrameAnalysisIndex(frameIndex);
           const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${row}-${col}`);
           // Get display brightness, preserving user drawing and applying dot matrix settings
           brightness = getDisplayBrightnessWithDotMatrixSettings(
@@ -284,12 +384,12 @@ export default function NP3Page() {
           if (!audioElement || audioElement.readyState === 0) return;
           const currentTime = audioElement.currentTime * 1000;
           const frameIndex = Math.floor(currentTime / kTimeStepMilis);
-          if (frameIndex < videoResult.displayFrames.length && frameIndex !== lastProcessedFrame) {
+          if (frameIndex < videoResult.totalFrames && frameIndex !== lastProcessedFrame) {
             setLastProcessedFrame(frameIndex);
             setCurrentDisplayFrame(frameIndex);
             drawDotMatrixToCanvas(frameIndex);
           }
-          const progress = (currentTime / videoResult.displayDuration) * 100;
+          const progress = (currentTime / videoResult.duration) * 100;
           setVideoProgress(Math.min(progress, 100));
         } catch (error) {
           console.error('Error in playback loop:', error);
@@ -310,6 +410,10 @@ export default function NP3Page() {
   // Also draw to canvas on frame change (for manual navigation)
   useEffect(() => {
     drawDotMatrixToCanvas(currentDisplayFrame);
+    // Also update the video preview canvas for video uploads
+    if (videoResult && videoResult.originalFileType === 'video') {
+      drawCurrentFrameToCanvas(currentDisplayFrame);
+    }
   }, [currentDisplayFrame, videoResult, userDrawnPixels, dotMatrixSettings]);
 
   // Handle video settings changes and apply to current frame
@@ -326,10 +430,49 @@ export default function NP3Page() {
   // Audio element management
   useEffect(() => {
     if (videoResult && !audioElement) {
+      console.log(
+        'Creating audio element for file:',
+        videoResult.audioFile.name,
+        'type:',
+        videoResult.audioFile.type,
+        'size:',
+        videoResult.audioFile.size
+      );
+
       const audio = new Audio(URL.createObjectURL(videoResult.audioFile));
       audio.preload = 'metadata';
 
+      // Add event listeners for better audio handling
+      audio.addEventListener('loadedmetadata', () => {
+        console.log(
+          'Audio metadata loaded, duration:',
+          audio.duration,
+          'readyState:',
+          audio.readyState
+        );
+        if (audio.duration === 0 || audio.duration < 0.1) {
+          console.warn('Audio file appears to be empty or very short');
+        } else {
+          console.log('Audio file has valid duration:', audio.duration);
+        }
+      });
+
+      // audio.addEventListener('canplay', () => {
+      //   console.log('Audio can play, readyState:', audio.readyState);
+      // });
+
+      // audio.addEventListener('canplaythrough', () => {
+      //   console.log('Audio can play through, readyState:', audio.readyState);
+      // });
+
+      audio.addEventListener('error', (e) => {
+        console.error('Audio element error:', e);
+        console.error('Audio error details:', audio.error);
+        toast.error('Failed to load audio file');
+      });
+
       audio.addEventListener('ended', () => {
+        console.log('Audio playback ended');
         setIsVideoPlaying(false);
         setCurrentDisplayFrame(0);
         setVideoProgress(0);
@@ -535,12 +678,9 @@ export default function NP3Page() {
   const getCurrentFrameAnalysis = (): FrameAnalysis | undefined => {
     if (!videoResult || !videoResult.frameAnalyses.length) return undefined;
 
-    // Calculate which frame analysis corresponds to current display frame
-    const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
-    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
-
-    if (analysisIndex < videoResult.frameAnalyses.length) {
-      return videoResult.frameAnalyses[analysisIndex];
+    const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
+    if (frameAnalysis) {
+      return frameAnalysis;
     }
 
     // Fallback to first frame if current frame analysis not found
@@ -588,6 +728,15 @@ export default function NP3Page() {
    * Handle audio file upload and processing
    */
   const handleAudioUpload = async (audioFile: File) => {
+    console.log(
+      'NP3Page: Starting audio upload for file:',
+      audioFile.name,
+      'type:',
+      audioFile.type,
+      'size:',
+      audioFile.size
+    );
+
     setIsProcessing(true);
     setProcessingProgress(0);
 
@@ -597,10 +746,20 @@ export default function NP3Page() {
       // Use selected preset if available, otherwise use default (zeros)
       let result: VideoProcessingResult;
       if (selectedPreset) {
+        console.log('NP3Page: Using selected preset:', selectedPreset);
         result = await audioService.processAudioForNP3WithPreset(audioFile, selectedPreset);
       } else {
+        console.log('NP3Page: No preset selected, using default processing');
         result = await audioService.processAudioForNP3(audioFile);
       }
+
+      console.log('NP3Page: Audio processing complete. Result:', {
+        originalFileType: result.originalFileType,
+        duration: result.duration,
+        totalFrames: result.totalFrames,
+        displayFrames: result.displayFrames.length,
+        audioFileSize: result.audioFile.size
+      });
 
       setVideoResult(result);
 
@@ -619,7 +778,7 @@ export default function NP3Page() {
    * Handle preset selection and reprocess audio
    */
   const handlePresetSelect = async (presetId: string) => {
-    if (!videoResult || !videoResult.audioFile.type.startsWith('audio/')) {
+    if (!videoResult || videoResult.originalFileType !== 'audio') {
       toast.error('No audio file loaded');
       return;
     }
@@ -772,63 +931,128 @@ export default function NP3Page() {
    * Convert pixel states to CSV format for export
    */
   const convertPixelStatesToCSV = (): string => {
-    if (!videoResult) return '';
+    if (!videoResult) {
+      console.error('convertPixelStatesToCSV: No videoResult available');
+      return '';
+    }
+
+    if (!videoResult.frameAnalyses || videoResult.frameAnalyses.length === 0) {
+      console.error('convertPixelStatesToCSV: No frame analyses available');
+      return '';
+    }
 
     const csvRows: string[] = [];
     const totalFrames = videoResult.displayFrames.length;
 
+    console.log(
+      `convertPixelStatesToCSV: Processing ${totalFrames} frames with ${videoResult.frameAnalyses.length} frame analyses`
+    );
+
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
       const row: number[] = [];
 
-      // Find corresponding frame analysis
-      const frameTime = frameIndex * kTimeStepMilis; // Convert to milliseconds
-      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+      // Find corresponding frame analysis using the reusable function
+      const frameAnalysis = getFrameAnalysis(frameIndex);
 
-      if (analysisIndex < videoResult.frameAnalyses.length) {
-        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      if (frameAnalysis && frameAnalysis.brightnessMap) {
+        // Validate brightness map structure
+        if (
+          !Array.isArray(frameAnalysis.brightnessMap) ||
+          frameAnalysis.brightnessMap.length !== 25
+        ) {
+          console.warn(
+            `convertPixelStatesToCSV: Invalid brightness map structure for frame ${frameIndex}, using fallback`
+          );
+          // Fallback: fill with zeros
+          for (let pixelIndex = 0; pixelIndex < 625; pixelIndex++) {
+            row.push(0);
+          }
+        } else {
+          // Process each pixel with all applied effects
+          for (let rowIndex = 0; rowIndex < 25; rowIndex++) {
+            for (let colIndex = 0; colIndex < 25; colIndex++) {
+              // Validate brightness map access
+              if (
+                !frameAnalysis.brightnessMap[rowIndex] ||
+                !Array.isArray(frameAnalysis.brightnessMap[rowIndex]) ||
+                frameAnalysis.brightnessMap[rowIndex].length !== 25 ||
+                typeof frameAnalysis.brightnessMap[rowIndex][colIndex] !== 'number'
+              ) {
+                console.warn(
+                  `convertPixelStatesToCSV: Invalid brightness value at [${rowIndex}][${colIndex}] for frame ${frameIndex}, using 0`
+                );
+                row.push(0);
+                continue;
+              }
 
-        // Process each pixel with all applied effects
-        for (let rowIndex = 0; rowIndex < 25; rowIndex++) {
-          for (let colIndex = 0; colIndex < 25; colIndex++) {
-            let brightness = frameAnalysis.brightnessMap[rowIndex][colIndex];
+              let brightness = frameAnalysis.brightnessMap[rowIndex][colIndex];
 
-            // Check if this pixel was user-drawn
-            const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${rowIndex}-${colIndex}`);
+              // Ensure brightness is a valid number
+              if (isNaN(brightness) || !isFinite(brightness)) {
+                brightness = 0;
+              }
 
-            // Apply video settings first
-            brightness = applyVideoSettingsToBrightness(brightness, videoSettings);
+              // Clamp brightness to valid range
+              brightness = Math.max(0, Math.min(255, brightness));
 
-            // Apply dot matrix settings (but preserve user-drawn content)
-            if (!isUserDrawn) {
-              brightness = applyDotMatrixSettingsToBrightness(brightness, dotMatrixSettings);
-            }
+              // Check if this pixel was user-drawn
+              const analysisIndex = getFrameAnalysisIndex(frameIndex);
+              const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${rowIndex}-${colIndex}`);
 
-            // Convert to NP3 range (0-4095) for export
-            if (isPixelInCircle(rowIndex, colIndex)) {
-              const np3Brightness = (brightness / 255) * 4095;
-              row.push(Math.round(np3Brightness));
-            } else {
-              // Pixels outside circle are always 0
-              row.push(0);
+              // Apply video settings first
+              brightness = applyVideoSettingsToBrightness(brightness, videoSettings);
+
+              // Apply dot matrix settings (but preserve user-drawn content)
+              if (!isUserDrawn) {
+                brightness = applyDotMatrixSettingsToBrightness(brightness, dotMatrixSettings);
+              }
+
+              // Convert to NP3 range (0-4095) for export
+              if (isPixelInCircle(rowIndex, colIndex)) {
+                const np3Brightness = (brightness / 255) * 4095;
+                row.push(Math.round(Math.max(0, Math.min(4095, np3Brightness))));
+              } else {
+                // Pixels outside circle are always 0
+                row.push(0);
+              }
             }
           }
         }
       } else {
         // Fallback: fill with zeros if frame analysis not available
+        console.warn(
+          `convertPixelStatesToCSV: No frame analysis for frame ${frameIndex}, using fallback`
+        );
         for (let pixelIndex = 0; pixelIndex < 625; pixelIndex++) {
           row.push(0);
         }
       }
 
+      // Validate row length
+      if (row.length !== 625) {
+        console.error(
+          `convertPixelStatesToCSV: Invalid row length ${row.length} for frame ${frameIndex}, expected 625`
+        );
+        // Pad or truncate to correct length
+        while (row.length < 625) {
+          row.push(0);
+        }
+        row.splice(625);
+      }
+
       csvRows.push(row.join(','));
+    }
+
+    if (csvRows.length === 0) {
+      console.error('convertPixelStatesToCSV: No CSV rows generated');
+      return '';
     }
 
     const csvData = csvRows.join(',\r\n') + ',';
 
-    // Debug: Print CSV data to console
-    // console.log('=== CSV DATA FOR EXPORT ===');
-    // console.log('CSV Data:', csvData);
-    // console.log('=== END CSV DATA ===');
+    console.log(
+      `convertPixelStatesToCSV: Generated CSV with ${csvRows.length} frames, total length: ${csvData.length}`
+    );
 
     return csvData;
   };
@@ -851,6 +1075,15 @@ export default function NP3Page() {
    * Save video as .ogg with pixel state data as metadata
    */
   const handleSaveVideo = async () => {
+    // Validate export pipeline first
+    const validation = validateExportPipeline();
+    if (!validation.isValid) {
+      console.error('Export pipeline validation failed:', validation.errors);
+      toast.error(`Export validation failed: ${validation.errors.join(', ')}`);
+      return;
+    }
+
+    // Additional null check after validation
     if (!videoResult) {
       toast.error('No video to save');
       return;
@@ -859,11 +1092,13 @@ export default function NP3Page() {
     try {
       setIsProcessing(true);
       setProcessingProgress(0);
-      toast.info('Converting video to .ogg format with pixel data...');
+      toast.info('Starting export process...');
 
       // Ensure FFmpegService is loaded
       try {
+        setProcessingProgress(5);
         await FFmpegService.load();
+        toast.info('Video processing service loaded...');
       } catch (error) {
         console.error('Failed to load FFmpegService:', error);
         toast.error('Failed to load video processing service');
@@ -871,6 +1106,8 @@ export default function NP3Page() {
       }
 
       // Convert pixel states to CSV
+      setProcessingProgress(15);
+      toast.info('Generating pixel data...');
       const csvData = convertPixelStatesToCSV();
 
       if (!csvData) {
@@ -878,16 +1115,18 @@ export default function NP3Page() {
         return;
       }
 
-      // Debug: Print CSV data to console
-      // console.log('=== CSV DATA FOR EXPORT ===');
-      // console.log('CSV Length:', csvData.length);
-      // console.log('Total frames:', videoResult.displayFrames.length);
-      // console.log('Video duration:', videoResult.duration);
-      // console.log('Current video settings:', videoSettings);
-      // console.log('CSV Length:', csvData);
-      // console.log('=== END CSV DATA ===');
+      // Validate CSV data
+      if (csvData.length < 100) {
+        console.warn('CSV data seems too short, may indicate processing issue');
+      }
+
+      console.log('Export pipeline: CSV data generated successfully');
+      console.log('Export pipeline: CSV length:', csvData.length);
+      console.log('Export pipeline: Total frames:', videoResult.displayFrames.length);
 
       // Encode CSV data using the existing export logic
+      setProcessingProgress(35);
+      toast.info('Encoding pixel data...');
       const encodedData = encodeStuffTheWayNothingLikesIt(csvData);
 
       if (!encodedData) {
@@ -895,18 +1134,32 @@ export default function NP3Page() {
         return;
       }
 
-      // console.log('=== ENCODED DATA ===');
-      // console.log('Encoded data length:', encodedData.length);
-      // console.log('Encoded data:', encodedData);
-      // console.log('=== END ENCODED DATA ===');
+      console.log('Export pipeline: Data encoded successfully');
+      console.log('Export pipeline: Encoded data length:', encodedData.length);
 
-      // Save using FFmpegService
-      await FFmpegService.saveOutput(
+      // Validate encoded data
+      if (encodedData.length < 10) {
+        console.warn('Encoded data seems too short, may indicate encoding issue');
+      }
+
+      // Save using FFmpegService with timeout
+      setProcessingProgress(60);
+      toast.info('Converting to .ogg format...');
+
+      const savePromise = FFmpegService.saveOutput(
         videoResult.audioFile,
         encodedData,
         'NP3' // Use NP3 as the device type
       );
 
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Export timeout after 60 seconds')), 60000);
+      });
+
+      await Promise.race([savePromise, timeoutPromise]);
+
+      setProcessingProgress(100);
       toast.success('Video saved successfully as .ogg file!');
 
       // Refresh video elements to ensure they remain functional
@@ -915,9 +1168,24 @@ export default function NP3Page() {
       }, 100);
     } catch (error) {
       console.error('Failed to save video:', error);
-      toast.error('Failed to save video. Please try again.');
+
+      // Provide specific error messages based on error type
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          toast.error('Export timed out. Please try again with a shorter video.');
+        } else if (error.message.includes('FFmpeg')) {
+          toast.error('Video processing error. Please try again.');
+        } else if (error.message.includes('audio')) {
+          toast.error('Audio processing error. Please try again.');
+        } else {
+          toast.error(`Export failed: ${error.message}`);
+        }
+      } else {
+        toast.error('Failed to save video. Please try again.');
+      }
     } finally {
       setIsProcessing(false);
+      setProcessingProgress(0);
     }
   };
 
@@ -1043,13 +1311,20 @@ export default function NP3Page() {
       return;
     }
 
+    // Check if audio file has actual content
+    if (audioElement.duration === 0 || audioElement.duration < 0.1) {
+      console.warn('Audio file is empty or too short, cannot play');
+      toast.info('No audio content available. Video frames will still be displayed.');
+      return;
+    }
+
     // Check if audio element is ready
     if (audioElement.readyState === 0) {
       console.log('Audio element not ready, waiting...');
       audioElement.addEventListener(
         'canplay',
         () => {
-          // console.log('Audio element ready, starting playback');
+          console.log('Audio element ready, starting playback');
           startPlayback();
         },
         { once: true }
@@ -1064,6 +1339,13 @@ export default function NP3Page() {
     if (!audioElement) return;
 
     try {
+      // Check if audio file has actual content (not just a header)
+      if (audioElement.duration === 0 || audioElement.duration < 0.1) {
+        console.warn('Audio file is empty or too short, skipping playback');
+        toast.info('No audio content available for playback');
+        return;
+      }
+
       // Set playback rate before playing
       audioElement.playbackRate = playbackSpeed;
 
@@ -1074,7 +1356,7 @@ export default function NP3Page() {
       await audioElement.play();
 
       setIsVideoPlaying(true);
-      // console.log('Playback started successfully');
+      console.log('Playback started successfully');
       toast.info(
         `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
       );
@@ -1084,7 +1366,7 @@ export default function NP3Page() {
       // Handle specific error types
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          // console.log('Playback was interrupted, this is normal when seeking or stopping');
+          console.log('Playback was interrupted, this is normal when seeking or stopping');
           // Don't show error for interrupted playback
           return;
         }
@@ -1160,7 +1442,7 @@ export default function NP3Page() {
     audioElement.currentTime = newTime;
     setVideoProgress(progress);
 
-    // Update display frame immediately
+    // Update display frame immediately - fix frame calculation
     const frameIndex = Math.floor((newTime * 1000) / kTimeStepMilis);
     if (frameIndex < videoResult.displayFrames.length) {
       setCurrentDisplayFrame(frameIndex);
@@ -1169,12 +1451,9 @@ export default function NP3Page() {
       drawCurrentFrameToCanvas(frameIndex);
 
       // Get the current frame analysis and update pixel states from brightness map
-      const frameTime = frameIndex * kTimeStepMilis; // Convert to milliseconds
-      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+      const frameAnalysis = getFrameAnalysis(frameIndex);
 
-      if (analysisIndex < videoResult.frameAnalyses.length) {
-        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-
+      if (frameAnalysis) {
         // Use the existing helper function to update pixel states
         updatePixelStatesFromFrameAnalysis(frameAnalysis);
       } else {
@@ -1208,6 +1487,99 @@ export default function NP3Page() {
     }
   };
 
+  // New handler for immediate slider movement
+  const handlePendingProgressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const progress = parseFloat(event.target.value);
+    setPendingProgress(progress);
+  };
+
+  // Debounce and commit the progress change
+  useEffect(() => {
+    if (pendingProgress === null) return;
+    // Clear any previous debounce
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    // Debounce: only update after 120ms of no changes
+    debounceTimeoutRef.current = setTimeout(() => {
+      handleProgressChangeCommitted(pendingProgress);
+      debounceTimeoutRef.current = null;
+    }, 120);
+    // Optionally, update a preview here if desired
+    // drawCurrentFrameToCanvas(...) for instant feedback
+    // setCurrentDisplayFrame(...) for instant feedback
+    // But do not update videoProgress or audioElement.currentTime until committed
+    //
+    // Optionally, pause playback while scrubbing
+    // if (isVideoPlaying) {
+    //   pauseVideo();
+    // }
+    //
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [pendingProgress]);
+
+  // The committed handler (was handleProgressChange)
+  const handleProgressChangeCommitted = (progress: number) => {
+    if (!audioElement || !videoResult) return;
+
+    // Calculate time from progress (no playbackSpeed adjustment)
+    const newTime = (progress / 100) * (videoResult.displayDuration / 1000);
+
+    // Pause playback temporarily during seeking
+    const wasPlaying = isVideoPlaying;
+    if (wasPlaying) {
+      setIsVideoPlaying(false);
+      audioElement.pause();
+    }
+
+    // Set the new time
+    audioElement.currentTime = newTime;
+    setVideoProgress(progress);
+    setCurrentDisplayFrame(Math.floor((newTime * 1000) / kTimeStepMilis));
+
+    // Draw the current frame to the canvas
+    drawCurrentFrameToCanvas(Math.floor((newTime * 1000) / kTimeStepMilis));
+
+    // Get the current frame analysis and update pixel states from brightness map
+    const frameAnalysis = getFrameAnalysis(Math.floor((newTime * 1000) / kTimeStepMilis));
+
+    if (frameAnalysis) {
+      // Use the existing helper function to update pixel states
+      updatePixelStatesFromFrameAnalysis(frameAnalysis);
+    } else {
+      // Fallback to original display frame if analysis not available
+      const displayFrame = videoResult.displayFrames[Math.floor((newTime * 1000) / kTimeStepMilis)];
+      if (displayFrame && displayFrame.pixelStates) {
+        setPixelStates([...displayFrame.pixelStates]);
+      } else {
+        setPixelStates(new Array(625).fill(false));
+      }
+    }
+
+    // Resume playback if it was playing before
+    if (wasPlaying) {
+      setTimeout(async () => {
+        try {
+          if (audioElement && !isVideoPlaying) {
+            audioElement.playbackRate = playbackSpeed;
+            await audioElement.play();
+            setIsVideoPlaying(true);
+          }
+        } catch (error) {
+          console.error('Failed to resume playback after seeking:', error);
+          // Don't show error for interrupted playback
+          if (error instanceof Error && error.name !== 'AbortError') {
+            toast.error('Failed to resume playback after seeking');
+          }
+        }
+      }, 100); // Increased delay to ensure seeking is complete
+    }
+  };
+
   /**
    * Toggle pixel state when clicked
    * @param index - The index of the pixel to toggle
@@ -1215,11 +1587,9 @@ export default function NP3Page() {
   const handlePixelClick = (index: number) => {
     // For NP3, set brightness to match processed video range (0-255)
     if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
-      const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
-      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+      const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
 
-      if (analysisIndex < videoResult.frameAnalyses.length) {
-        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      if (frameAnalysis) {
         const row = Math.floor(index / 25);
         const col = index % 25;
 
@@ -1248,12 +1618,16 @@ export default function NP3Page() {
                 // Draw mode - set brightness to current brightness value (0-255)
                 frameAnalysis.brightnessMap[r][c] = brightnessValue;
                 // Mark as user-drawn
-                setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                setUserDrawnPixels((prev) =>
+                  new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+                );
               } else {
                 // Erase mode - set brightness to 0
                 frameAnalysis.brightnessMap[r][c] = 0;
                 // Mark as user-drawn (erased)
-                setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                setUserDrawnPixels((prev) =>
+                  new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+                );
               }
             }
           }
@@ -1263,7 +1637,7 @@ export default function NP3Page() {
         setUndoStack((prev) => [
           ...prev,
           {
-            frameIndex: analysisIndex,
+            frameIndex: currentFrameAnalysisIndex,
             brightnessMap: currentBrightnessMap,
             timestamp: Date.now()
           }
@@ -1473,11 +1847,9 @@ export default function NP3Page() {
 
         // Use the same modification tracking as handlePixelClick
         if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
-          const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
-          const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+          const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
 
-          if (analysisIndex < videoResult.frameAnalyses.length) {
-            const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+          if (frameAnalysis) {
             const pixelRow = Math.floor(index / 25);
             const pixelCol = index % 25;
 
@@ -1506,12 +1878,16 @@ export default function NP3Page() {
                     // Draw mode - set brightness to current brightness value (0-255)
                     frameAnalysis.brightnessMap[r][c] = brightnessValue;
                     // Mark as user-drawn
-                    setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                    setUserDrawnPixels((prev) =>
+                      new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+                    );
                   } else {
                     // Erase mode - set brightness to 0
                     frameAnalysis.brightnessMap[r][c] = 0;
                     // Mark as user-drawn (erased)
-                    setUserDrawnPixels((prev) => new Set(prev).add(`${analysisIndex}-${r}-${c}`));
+                    setUserDrawnPixels((prev) =>
+                      new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+                    );
                   }
                 }
               }
@@ -1521,7 +1897,7 @@ export default function NP3Page() {
             setUndoStack((prev) => [
               ...prev,
               {
-                frameIndex: analysisIndex,
+                frameIndex: currentFrameAnalysisIndex,
                 brightnessMap: currentBrightnessMap,
                 timestamp: Date.now()
               }
@@ -1651,48 +2027,36 @@ export default function NP3Page() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Get the current frame analysis
-    const frameTime = frameIndex * kTimeStepMilis; // Convert to milliseconds
-    const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+    // Get the current frame analysis using the reusable function
+    const frameAnalysis = getFrameAnalysis(frameIndex);
 
-    if (analysisIndex < videoResult.frameAnalyses.length) {
-      const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+    if (frameAnalysis) {
+      // Draw the brightness map as a visual representation
+      const gridSize = 25;
+      const cellSize = canvas.width / gridSize;
 
-      // Create a temporary canvas to process the frame
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-
-      if (tempCtx) {
-        // Create a 25x25 grid representation of the frame
-        const gridSize = 25;
-        const cellSize = canvas.width / gridSize;
-
-        // Draw the brightness map as a grid
-        for (let row = 0; row < gridSize; row++) {
-          for (let col = 0; col < gridSize; col++) {
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          if (
+            frameAnalysis.brightnessMap[row] &&
+            frameAnalysis.brightnessMap[row][col] !== undefined
+          ) {
             const brightness = frameAnalysis.brightnessMap[row][col];
             const x = col * cellSize;
             const y = row * cellSize;
 
-            // Apply dot matrix settings using centralized function
+            // Apply dot matrix settings for preview
             const adjustedBrightness = applyDotMatrixSettingsToBrightness(
               brightness,
               dotMatrixSettings
             );
 
-            // Threshold for black & white
-            const isLit = adjustedBrightness > dotMatrixSettings.threshold;
-            const color = isLit ? 255 : 0;
-
-            tempCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
-            tempCtx.fillRect(x, y, cellSize, cellSize);
+            // Convert brightness to grayscale
+            const grayValue = Math.round(adjustedBrightness);
+            ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
+            ctx.fillRect(x, y, cellSize, cellSize);
           }
         }
-
-        // Draw the processed frame to the main canvas
-        ctx.drawImage(tempCanvas, 0, 0);
       }
     }
   };
@@ -1736,18 +2100,16 @@ export default function NP3Page() {
       }
 
       // Update progress
-      const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+      const newProgress = (newFrameIndex / videoResult.totalFrames) * 100;
       setVideoProgress(newProgress);
 
       // Draw the frame to canvas
       drawCurrentFrameToCanvas(newFrameIndex);
 
       // Update pixel states from brightness map for the new frame
-      const frameTime = newFrameIndex * kTimeStepMilis; // Convert to milliseconds
-      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+      const frameAnalysis = getFrameAnalysis(newFrameIndex);
 
-      if (analysisIndex < videoResult.frameAnalyses.length) {
-        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      if (frameAnalysis) {
         // Use the existing helper function to update pixel states
         updatePixelStatesFromFrameAnalysis(frameAnalysis);
       } else {
@@ -1771,7 +2133,7 @@ export default function NP3Page() {
     if (!videoResult) return;
 
     setCurrentDisplayFrame((prevFrame) => {
-      const newFrameIndex = Math.min(videoResult.displayFrames.length - 1, prevFrame + 1);
+      const newFrameIndex = Math.min(videoResult.totalFrames - 1, prevFrame + 1);
 
       // Update audio position to match the new frame
       if (audioElement) {
@@ -1803,18 +2165,16 @@ export default function NP3Page() {
       }
 
       // Update progress
-      const newProgress = (newFrameIndex / videoResult.displayFrames.length) * 100;
+      const newProgress = (newFrameIndex / videoResult.totalFrames) * 100;
       setVideoProgress(newProgress);
 
       // Draw the frame to canvas
       drawCurrentFrameToCanvas(newFrameIndex);
 
       // Update pixel states from brightness map for the new frame
-      const frameTime = newFrameIndex * kTimeStepMilis; // Convert to milliseconds
-      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+      const frameAnalysis = getFrameAnalysis(newFrameIndex);
 
-      if (analysisIndex < videoResult.frameAnalyses.length) {
-        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+      if (frameAnalysis) {
         // Use the existing helper function to update pixel states
         updatePixelStatesFromFrameAnalysis(frameAnalysis);
       } else {
@@ -1943,7 +2303,7 @@ export default function NP3Page() {
         const currentTime = audioElement.currentTime * 1000;
         const frameIndex = Math.floor(currentTime / kTimeStepMilis);
 
-        if (frameIndex >= videoResult.displayFrames.length) {
+        if (frameIndex >= videoResult.totalFrames) {
           // Video ended
           setIsVideoPlaying(false);
           setCurrentDisplayFrame(0);
@@ -1970,6 +2330,97 @@ export default function NP3Page() {
   const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
     handleMouseMove(event as unknown as React.MouseEvent<Element>);
   };
+
+  /**
+   * Validate export pipeline health before saving
+   */
+  const validateExportPipeline = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    // Check video result
+    if (!videoResult) {
+      errors.push('No video result available');
+      return { isValid: false, errors };
+    }
+
+    // Check audio file
+    if (!videoResult.audioFile) {
+      errors.push('No audio file available');
+    } else if (videoResult.audioFile.size === 0) {
+      errors.push('Audio file is empty');
+    }
+
+    // Check frame analyses
+    if (!videoResult.frameAnalyses || videoResult.frameAnalyses.length === 0) {
+      errors.push('No frame analyses available');
+    } else {
+      // Validate frame analyses structure
+      for (let i = 0; i < Math.min(5, videoResult.frameAnalyses.length); i++) {
+        const analysis = videoResult.frameAnalyses[i];
+        if (!analysis.brightnessMap) {
+          errors.push(`Frame analysis ${i} missing brightness map`);
+        } else if (!Array.isArray(analysis.brightnessMap) || analysis.brightnessMap.length !== 25) {
+          errors.push(`Frame analysis ${i} has invalid brightness map structure`);
+        } else {
+          // Check a few sample pixels
+          for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+              if (
+                !Array.isArray(analysis.brightnessMap[row]) ||
+                analysis.brightnessMap[row].length !== 25 ||
+                typeof analysis.brightnessMap[row][col] !== 'number' ||
+                isNaN(analysis.brightnessMap[row][col])
+              ) {
+                errors.push(`Frame analysis ${i} has invalid brightness values`);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check display frames
+    if (!videoResult.displayFrames || videoResult.displayFrames.length === 0) {
+      errors.push('No display frames available');
+    }
+
+    // Check frame count consistency
+    if (videoResult.frameAnalyses && videoResult.displayFrames) {
+      if (videoResult.frameAnalyses.length !== videoResult.displayFrames.length) {
+        errors.push(
+          `Frame count mismatch: ${videoResult.frameAnalyses.length} analyses vs ${videoResult.displayFrames.length} display frames`
+        );
+      }
+    }
+
+    // Check duration
+    if (videoResult.duration <= 0) {
+      errors.push('Invalid video duration');
+    }
+
+    // Check total frames
+    if (videoResult.totalFrames <= 0) {
+      errors.push('Invalid total frame count');
+    }
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  // Debug effect to track when audio presets should be shown
+  useEffect(() => {
+    if (videoResult) {
+      if (videoResult.originalFileType === 'audio') {
+        console.log('NP3Page: Should show audio presets - originalFileType is audio');
+        console.log('NP3Page: Audio presets available:', audioPresets.length);
+      } else {
+        console.log(
+          'NP3Page: Should show video preview - originalFileType is:',
+          videoResult.originalFileType
+        );
+      }
+    }
+  }, [videoResult, audioPresets]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -2095,7 +2546,7 @@ export default function NP3Page() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mb-8">
               {/* Processed Video/Audio (Cropped & Black & White for video, preset panel for audio) */}
               <div className="space-y-4">
-                {videoResult.audioFile.type.startsWith('audio/') ? (
+                {videoResult.originalFileType === 'audio' ? (
                   // Audio Preset Panel
                   <div>
                     <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center font-[ndot] tracking-wider uppercase mb-4">
@@ -2142,7 +2593,18 @@ export default function NP3Page() {
                           />
                         </div>
                         <p className="text-sm text-white/70 mt-3 font-mono text-center">
-                          Processing: {processingProgress.toFixed(1)}%
+                          Processing: {processingProgress.toFixed(2)}%
+                          {processingProgress >= 5 &&
+                            processingProgress < 15 &&
+                            ' - Loading services...'}
+                          {processingProgress >= 15 &&
+                            processingProgress < 35 &&
+                            ' - Generating data...'}
+                          {processingProgress >= 35 && processingProgress < 60 && ' - Encoding...'}
+                          {processingProgress >= 60 &&
+                            processingProgress < 100 &&
+                            ' - Saving file...'}
+                          {processingProgress >= 100 && ' - Complete!'}
                         </p>
                       </div>
                     )}
@@ -2228,11 +2690,9 @@ export default function NP3Page() {
                     setDotMatrixSettings(newSettings);
                     // Apply settings immediately to the current frame
                     if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
-                      const frameTime = currentDisplayFrame * kTimeStepMilis; // Convert to milliseconds
-                      const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+                      const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
 
-                      if (analysisIndex < videoResult.frameAnalyses.length) {
-                        const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
+                      if (frameAnalysis) {
                         updatePixelStatesFromFrameAnalysis(frameAnalysis);
                       }
                     }
@@ -2441,8 +2901,9 @@ export default function NP3Page() {
                 </div>
                 {/* Debug info for dot matrix */}
                 <div className="text-center text-xs text-white/50">
-                  <p>Lit pixels: {pixelStates.filter((state) => state).length} / 625</p>
-                  <p>Current frame: {currentDisplayFrame}</p>
+                  <p className="text-base font-mono font-medium">
+                    Current frame: {currentDisplayFrame}
+                  </p>
                 </div>
 
                 {/* Zoom Controls */}
@@ -2505,14 +2966,14 @@ export default function NP3Page() {
                     max="100"
                     step="0.01"
                     value={videoProgress}
-                    onChange={handleProgressChange}
+                    onChange={handlePendingProgressChange}
                     className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                     style={{
                       background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
                     }}
                   />
                   <span className="text-xs text-white/70 min-w-[3rem] flex-shrink-0 font-mono">
-                    {Math.floor((videoProgress / 100) * (videoResult?.duration || 0))}s
+                    {Math.floor((videoProgress / 100) * ((videoResult?.duration || 0) / 1000))}s
                   </span>
                 </div>
 
@@ -2522,8 +2983,7 @@ export default function NP3Page() {
                   size="sm"
                   onClick={goToNextFrame}
                   disabled={
-                    !videoResult ||
-                    currentDisplayFrame >= (videoResult?.displayFrames.length || 0) - 1
+                    !videoResult || currentDisplayFrame >= (videoResult?.totalFrames || 0) - 1
                   }
                   className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title="Next frame"
@@ -2578,14 +3038,18 @@ export default function NP3Page() {
 
                 {/* Save Button */}
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={handleSaveVideo}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
+                  disabled={isProcessing}
+                  className={`bg-white text-black hover:bg-gray-200 focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl px-4 py-2 shadow-lg border-2 border-white font-mono ${
+                    isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                   title="Save as .ogg with pixel data"
                   aria-label="Save video"
                 >
-                  <Download className="h-3 w-3" />
+                  <Download className="h-4 w-4 mr-2" />
+                  {isProcessing ? 'Saving...' : 'Save'}
                 </Button>
 
                 {/* Undo Button - Always visible, disabled if no modifications */}
@@ -2687,16 +3151,31 @@ export default function NP3Page() {
                 </label>
 
                 {isProcessing && (
-                  <div className="mt-6">
+                  <div className="mt-6 space-y-3">
                     <div className="w-full bg-white/10 rounded-full h-3">
                       <div
                         className="bg-gradient-to-r from-white to-gray-300 h-3 rounded-full transition-all duration-300"
                         style={{ width: `${processingProgress}%` }}
                       />
                     </div>
-                    <p className="text-sm text-white/70 mt-3 font-mono">
-                      Processing: {processingProgress.toFixed(1)}%
-                    </p>
+                    <div className="flex flex-col items-center space-y-1">
+                      <p className="text-sm text-white/70 font-mono">
+                        Processing: {processingProgress.toFixed(2)}%
+                      </p>
+                      <p className="text-xs text-white/50">
+                        {processingProgress < 10 && 'Preparing...'}
+                        {processingProgress >= 10 &&
+                          processingProgress < 50 &&
+                          'Extracting frames...'}
+                        {processingProgress >= 50 &&
+                          processingProgress < 70 &&
+                          'Processing audio...'}
+                        {processingProgress >= 70 &&
+                          processingProgress < 90 &&
+                          'Analyzing frames...'}
+                        {processingProgress >= 90 && 'Finalizing...'}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2704,8 +3183,8 @@ export default function NP3Page() {
               <div className="space-y-4">
                 <div className="text-center">
                   <p className="text-sm sm:text-base text-white/70 font-mono">
-                    {videoResult.audioFile.type.startsWith('audio/') ? 'Audio' : 'Video'}:{' '}
-                    {videoResult.totalFrames} frames, {videoResult.duration.toFixed(1)}s
+                    {videoResult.originalFileType === 'audio' ? 'Audio' : 'Video'}:{' '}
+                    {videoResult.totalFrames} frames, {(videoResult.duration / 1000).toFixed(1)}s
                   </p>
                   <p className="text-sm sm:text-base text-white/70 font-mono">
                     Display: {videoResult.displayFrames.length} frames at 60Hz
@@ -2717,6 +3196,35 @@ export default function NP3Page() {
                     </p>
                   )}
                 </div>
+
+                {/* Global Save Progress Indicator */}
+                {isProcessing && (
+                  <div className="mt-6 space-y-3">
+                    <div className="w-full bg-white/10 rounded-full h-3">
+                      <div
+                        className="bg-gradient-to-r from-white to-gray-300 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${processingProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex flex-col items-center space-y-1">
+                      <p className="text-sm text-white/70 font-mono">
+                        {processingProgress >= 5 &&
+                          processingProgress < 15 &&
+                          'Loading services...'}
+                        {processingProgress >= 15 &&
+                          processingProgress < 35 &&
+                          'Generating pixel data...'}
+                        {processingProgress >= 35 && processingProgress < 60 && 'Encoding data...'}
+                        {processingProgress >= 60 && processingProgress < 100 && 'Saving file...'}
+                        {processingProgress >= 100 && 'Export complete!'}
+                        {processingProgress < 5 && 'Processing...'}
+                      </p>
+                      <p className="text-xs text-white/50">
+                        {processingProgress.toFixed(2)}% complete
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3080,8 +3588,7 @@ export default function NP3Page() {
             setVideoProgress(progress);
 
             // Update display frame immediately (accounting for playback speed)
-            const adjustedTime = (newTime * 1000) / playbackSpeed;
-            const frameIndex = Math.floor(adjustedTime / kTimeStepMilis);
+            const frameIndex = Math.floor((newTime * 1000) / kTimeStepMilis);
             if (frameIndex < videoResult.displayFrames.length) {
               setCurrentDisplayFrame(frameIndex);
 
@@ -3089,12 +3596,9 @@ export default function NP3Page() {
               drawCurrentFrameToCanvas(frameIndex);
 
               // Get the current frame analysis and update pixel states from brightness map
-              const frameTime = frameIndex * kTimeStepMilis; // Convert to milliseconds
-              const analysisIndex = Math.floor(frameTime / (1000 / videoResult.fps));
+              const frameAnalysis = getFrameAnalysis(frameIndex);
 
-              if (analysisIndex < videoResult.frameAnalyses.length) {
-                const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-
+              if (frameAnalysis) {
                 // Use the existing helper function to update pixel states
                 updatePixelStatesFromFrameAnalysis(frameAnalysis);
               } else {

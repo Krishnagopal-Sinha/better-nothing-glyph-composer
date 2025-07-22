@@ -93,18 +93,42 @@ export class NP3AudioService {
     }, 30000); // 30 second timeout
 
     try {
+      console.log(
+        'NP3AudioService: Processing audio with preset:',
+        presetId,
+        'file:',
+        audioFile.name,
+        'type:',
+        audioFile.type,
+        'size:',
+        audioFile.size
+      );
+
       // Find the preset
       const preset = this.presets.find((p) => p.id === presetId);
       if (!preset) {
         throw new Error(`Preset '${presetId}' not found`);
       }
 
+      console.log('NP3AudioService: Using preset:', preset.name);
+
       // Load and analyze audio
       const audioData = await this.loadAudioData(audioFile);
       const duration = audioData.duration;
+      console.log('NP3AudioService: Audio loaded, duration:', duration, 'seconds');
+
       const fps = 60; // 60Hz refresh rate for NP3
       const totalFrames = Math.floor(duration * fps);
       const frameInterval = duration / totalFrames;
+
+      console.log(
+        'NP3AudioService: Calculated frames:',
+        totalFrames,
+        'fps:',
+        fps,
+        'frameInterval:',
+        frameInterval
+      );
 
       // Create frame analyses with generated brightness maps
       const frameAnalyses: FrameAnalysis[] = [];
@@ -140,10 +164,19 @@ export class NP3AudioService {
         frameAnalyses,
         displayFrames,
         totalFrames,
-        duration,
+        duration: duration * 1000, // Convert to milliseconds for consistency
         fps,
-        displayDuration: duration * 1000 // Duration in milliseconds
+        displayDuration: duration * 1000, // Duration in milliseconds
+        originalFileType: 'audio' // Track that this was an audio file
       };
+
+      console.log('NP3AudioService: Preset processing complete. Result:', {
+        totalFrames: result.totalFrames,
+        duration: result.duration,
+        displayFrames: result.displayFrames.length,
+        originalFileType: result.originalFileType,
+        presetUsed: preset.name
+      });
 
       // Clear timeout since processing completed successfully
       clearTimeout(timeout);
@@ -176,6 +209,15 @@ export class NP3AudioService {
     }, 30000); // 30 second timeout
 
     try {
+      console.log(
+        'NP3AudioService: Processing audio file:',
+        audioFile.name,
+        'type:',
+        audioFile.type,
+        'size:',
+        audioFile.size
+      );
+
       // Create audio element to get duration
       const audio = document.createElement('audio');
       const audioUrl = URL.createObjectURL(audioFile);
@@ -184,15 +226,29 @@ export class NP3AudioService {
 
       // Wait for audio to load
       await new Promise<void>((resolve, reject) => {
-        audio.addEventListener('loadedmetadata', () => resolve());
+        audio.addEventListener('loadedmetadata', () => {
+          console.log('NP3AudioService: Audio metadata loaded, duration:', audio.duration);
+          resolve();
+        });
         audio.addEventListener('error', () => reject(new Error('Failed to load audio file')));
         audio.load();
       });
 
       const duration = audio.duration;
+      console.log('NP3AudioService: Final duration:', duration, 'seconds');
+
       const fps = 60; // 60Hz refresh rate for NP3
       const totalFrames = Math.floor(duration * fps);
       const frameInterval = duration / totalFrames;
+
+      console.log(
+        'NP3AudioService: Calculated frames:',
+        totalFrames,
+        'fps:',
+        fps,
+        'frameInterval:',
+        frameInterval
+      );
 
       // Create frame analyses with zero-filled brightness maps
       const frameAnalyses: FrameAnalysis[] = [];
@@ -228,10 +284,18 @@ export class NP3AudioService {
         frameAnalyses,
         displayFrames,
         totalFrames,
-        duration,
+        duration: duration * 1000, // Convert to milliseconds for consistency
         fps,
-        displayDuration: duration * 1000 // Duration in milliseconds
+        displayDuration: duration * 1000, // Duration in milliseconds
+        originalFileType: 'audio' // Track that this was an audio file
       };
+
+      console.log('NP3AudioService: Processing complete. Result:', {
+        totalFrames: result.totalFrames,
+        duration: result.duration,
+        displayFrames: result.displayFrames.length,
+        originalFileType: result.originalFileType
+      });
 
       // Clear timeout since processing completed successfully
       clearTimeout(timeout);

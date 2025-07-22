@@ -5,11 +5,30 @@ import { convertArrayToObjects, showPopUp } from '@/lib/helpers';
 import pako from 'pako';
 
 export function encodeStuffTheWayNothingLikesIt(input: string | undefined): string | undefined {
-  if (!input) return;
+  if (!input) {
+    console.error('encodeStuffTheWayNothingLikesIt: No input provided');
+    return;
+  }
+
+  if (input.length === 0) {
+    console.error('encodeStuffTheWayNothingLikesIt: Input is empty');
+    return;
+  }
+
   try {
+    // Validate input contains valid CSV data
+    if (!input.includes(',')) {
+      console.warn('encodeStuffTheWayNothingLikesIt: Input may not be valid CSV data');
+    }
+
     // const utf8Encoded = new TextEncoder().encode(csv); //No need as Pako does this outta the box
 
     const compressedData = pako.deflate(input, { level: 9 });
+
+    if (!compressedData || compressedData.length === 0) {
+      console.error('encodeStuffTheWayNothingLikesIt: Compression failed - no data returned');
+      return;
+    }
 
     // Fun fact: simple uint8Array .toString() works very wrongly, gotta do it the proper way like below | can't directly do a simple, const base64Data = btoa(String.fromCharCode(...new Uint8Array(compressedData))); as thanks to spread operator for big uInt8Arr it'll throw below error!
     // Bug Fix: Convert Uint8Array to string in chunks to avoid "maximum call stack size exceeded" error
@@ -18,19 +37,42 @@ export function encodeStuffTheWayNothingLikesIt(input: string | undefined): stri
     const chunkSize = 0x8000; // Process in chunks of 32KB
 
     for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      binaryString += String.fromCharCode.apply(
-        null,
-        Array.from(uint8Array.subarray(i, i + chunkSize))
-      );
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      const chunkArray = Array.from(chunk);
+      binaryString += String.fromCharCode.apply(null, chunkArray);
+    }
+
+    if (!binaryString || binaryString.length === 0) {
+      console.error('encodeStuffTheWayNothingLikesIt: Binary string conversion failed');
+      return;
     }
 
     const base64Data = btoa(binaryString);
+
+    if (!base64Data || base64Data.length === 0) {
+      console.error('encodeStuffTheWayNothingLikesIt: Base64 encoding failed');
+      return;
+    }
 
     // console.warn(`data:${csv}\nbase64Encoded:\n${base64Data}`);
 
     return base64Data;
   } catch (error) {
-    console.error(`Error: while processing final glyph data -> ${error}`);
+    console.error(
+      `encodeStuffTheWayNothingLikesIt: Error while processing final glyph data -> ${error}`
+    );
+
+    // Provide more specific error information
+    if (error instanceof Error) {
+      if (error.message.includes('maximum call stack size exceeded')) {
+        console.error('encodeStuffTheWayNothingLikesIt: Stack overflow - input may be too large');
+      } else if (error.message.includes('memory')) {
+        console.error('encodeStuffTheWayNothingLikesIt: Memory allocation failed');
+      } else {
+        console.error('encodeStuffTheWayNothingLikesIt: Unknown encoding error:', error.message);
+      }
+    }
+
     return;
   }
 }
@@ -284,18 +326,15 @@ export function generateCSV(data: { [key: number]: GlyphBlock[] }): string | und
 }
 //=======================
 const mapPeakToBrightness = (peak: number, minPeak: number, maxPeak: number): number => {
-
-  const threshold = 0.6; 
-
+  const threshold = 0.6;
 
   let normalizedPeak = (peak - minPeak) / (maxPeak - minPeak);
-
 
   if (normalizedPeak < threshold) {
     return 0;
   }
 
-  normalizedPeak = Math.pow(normalizedPeak, 2); 
+  normalizedPeak = Math.pow(normalizedPeak, 2);
 
   const brightness = Math.floor(normalizedPeak * kMaxBrightness);
 
@@ -316,7 +355,7 @@ const getRandomFactor = (min: number, max: number): number => {
 
 // Function to detect strong beats based on threshold
 const isStrongBeat = (peak: number, minPeak: number, maxPeak: number): boolean => {
-  const threshold = minPeak + (maxPeak - minPeak) * 0.8;  // 80% of the peak range
+  const threshold = minPeak + (maxPeak - minPeak) * 0.8; // 80% of the peak range
   return peak >= threshold;
 };
 
@@ -325,13 +364,13 @@ export const generateLEDBrightnessCSV = (): string | undefined => {
   const ledCount = 5; // Adjust based on your circular LED arrangement
   const peaks: number[] | undefined = dataStore.get('currentAudioPeaks');
   const totalDurationInMilis: number | undefined = dataStore.get('currentAudioDurationInMilis');
-  
+
   if (!totalDurationInMilis || !peaks) {
     showPopUp('Error - Audio File', 'Audio Duration is 0 or Some other issue occurred');
     return;
   }
 
-  const totalRows = Math.floor(totalDurationInMilis / kTimeStepMilis);  // Total number of rows based on 16.66ms slices
+  const totalRows = Math.floor(totalDurationInMilis / kTimeStepMilis); // Total number of rows based on 16.66ms slices
   const totalPeaks = peaks.length;
 
   let csvData = '';
@@ -344,7 +383,7 @@ export const generateLEDBrightnessCSV = (): string | undefined => {
 
   for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
     const row = [];
-    
+
     // Start and end time for this row's time slice
     const sliceStartTime = rowIndex * kTimeStepMilis;
     const sliceEndTime = sliceStartTime + kTimeStepMilis;
@@ -362,41 +401,41 @@ export const generateLEDBrightnessCSV = (): string | undefined => {
     const peakForThisSlice = peaksInSlice.length > 0 ? Math.max(...peaksInSlice) : 0;
 
     // Rotational offset to create wave-like effects, spread the wave with distinct separation
-    const waveOffset = rowIndex % (ledCount * 2);  // Modulo to rotate around the circle with stronger separation
+    const waveOffset = rowIndex % (ledCount * 2); // Modulo to rotate around the circle with stronger separation
 
     // Detect if this peak represents a strong beat
     const strongBeat = isStrongBeat(peakForThisSlice, minPeak, maxPeak);
 
     // Choose a random lighting pattern: either wave or flashing, or full-LED flash on strong beat
-    const isFlashingPattern = Math.random() < 0.5 && !strongBeat;  // Flash or wave, but not during strong beat
+    const isFlashingPattern = Math.random() < 0.5 && !strongBeat; // Flash or wave, but not during strong beat
 
     for (let ledIndex = 0; ledIndex < ledCount; ledIndex++) {
       let brightness = 0;
 
       if (strongBeat) {
         // Strong beat: flash all LEDs at max brightness
-        brightness = 4095;  // Max brightness for a strong beat flash
+        brightness = 4095; // Max brightness for a strong beat flash
       } else if (!isFlashingPattern) {
         // Wave-like effect: each LED lights up in sequence with distinct separation
         const offsetIndex = (ledIndex + waveOffset) % ledCount;
-        const randomWaveFactor = getRandomFactor(0.8, 1.2);  // Randomize each LED's reaction to the wave with a sharper factor
+        const randomWaveFactor = getRandomFactor(0.8, 1.2); // Randomize each LED's reaction to the wave with a sharper factor
 
         // Create more pronounced separation between LEDs by skipping brightness for some
-        const isActiveLED = Math.abs(offsetIndex - waveOffset) < 2;  // Only light up LEDs closer to the wave position
+        const isActiveLED = Math.abs(offsetIndex - waveOffset) < 2; // Only light up LEDs closer to the wave position
 
         if (isActiveLED) {
           brightness = mapPeakToBrightness(peakForThisSlice * randomWaveFactor, minPeak, maxPeak);
         } else {
-          brightness = 0;  // Sharp cutoff for LEDs that aren't close to the wave
+          brightness = 0; // Sharp cutoff for LEDs that aren't close to the wave
         }
-
       } else {
         // Flashing effect: Random LEDs flash in sync with the peak
-        if (Math.random() > 0.6) {  // Randomly choose some LEDs to flash
-          const randomFlashFactor = getRandomFactor(1.0, 1.5);  // Make flashes more intense
+        if (Math.random() > 0.6) {
+          // Randomly choose some LEDs to flash
+          const randomFlashFactor = getRandomFactor(1.0, 1.5); // Make flashes more intense
           brightness = mapPeakToBrightness(peakForThisSlice * randomFlashFactor, minPeak, maxPeak);
         } else {
-          brightness = 0;  // Other LEDs stay off in the flashing pattern
+          brightness = 0; // Other LEDs stay off in the flashing pattern
         }
       }
 

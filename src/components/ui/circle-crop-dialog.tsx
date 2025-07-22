@@ -10,10 +10,12 @@ interface CircleCropDialogProps {
 }
 
 interface CropSettings {
-  x: number;
-  y: number;
-  radius: number;
-  scale: number;
+  x: number; // Center X in pixels
+  y: number; // Center Y in pixels
+  radius: number; // Radius in pixels
+  scale: number; // Scale factor
+  videoWidth: number; // Original video width
+  videoHeight: number; // Original video height
 }
 
 export default function CircleCropDialog({
@@ -23,10 +25,12 @@ export default function CircleCropDialog({
   isOpen
 }: CircleCropDialogProps) {
   const [cropSettings, setCropSettings] = useState<CropSettings>({
-    x: 50,
-    y: 50,
-    radius: 40,
-    scale: 1
+    x: 0, // Will be set when video loads
+    y: 0, // Will be set when video loads
+    radius: 0, // Will be set when video loads
+    scale: 1,
+    videoWidth: 0,
+    videoHeight: 0
   });
 
   const [videoUrl, setVideoUrl] = useState<string>('');
@@ -49,9 +53,20 @@ export default function CircleCropDialog({
     if (videoRef.current) {
       const video = videoRef.current;
       const handleLoadedMetadata = () => {
-        setVideoDimensions({
-          width: video.videoWidth,
-          height: video.videoHeight
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        setVideoDimensions({ width, height });
+
+        // Initialize crop settings with pixel coordinates based on video dimensions
+        const defaultRadius = Math.min(width, height) * 0.2; // 20% of smaller dimension
+        setCropSettings({
+          x: width / 2, // Center X in pixels
+          y: height / 2, // Center Y in pixels
+          radius: defaultRadius, // Radius in pixels
+          scale: 1,
+          videoWidth: width,
+          videoHeight: height
         });
       };
 
@@ -62,7 +77,12 @@ export default function CircleCropDialog({
 
   // Draw crop preview
   useEffect(() => {
-    if (canvasRef.current && videoRef.current && videoDimensions.width > 0) {
+    if (
+      canvasRef.current &&
+      videoRef.current &&
+      videoDimensions.width > 0 &&
+      cropSettings.videoWidth > 0
+    ) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       const video = videoRef.current;
@@ -73,7 +93,7 @@ export default function CircleCropDialog({
       const containerRect = container.getBoundingClientRect();
       const videoRect = video.getBoundingClientRect();
 
-      // Set canvas size to match the container (800x800)
+      // Set canvas size to match the container
       canvas.width = containerRect.width;
       canvas.height = containerRect.height;
 
@@ -84,30 +104,30 @@ export default function CircleCropDialog({
       const videoX = (containerRect.width - videoRect.width) / 2;
       const videoY = (containerRect.height - videoRect.height) / 2;
 
-      // Calculate circle parameters based on the actual video display area
-      // Always use the smaller dimension to ensure a perfect circle
-      const maxCircleDiameter = Math.min(videoRect.width, videoRect.height);
-      const circleRadius = (cropSettings.radius / 100) * (maxCircleDiameter / 2);
+      // Calculate scale factor from original video to displayed video
+      const scaleX = videoRect.width / videoDimensions.width;
+      const scaleY = videoRect.height / videoDimensions.height;
 
-      // Calculate center position relative to the video display area
-      const centerX = videoX + (cropSettings.x / 100) * videoRect.width;
-      const centerY = videoY + (cropSettings.y / 100) * videoRect.height;
+      // Convert pixel coordinates to display coordinates
+      const displayCenterX = videoX + cropSettings.x * scaleX;
+      const displayCenterY = videoY + cropSettings.y * scaleY;
+      const displayRadius = cropSettings.radius * Math.min(scaleX, scaleY) * cropSettings.scale;
 
       // Ensure circle stays within video bounds
       const boundedCenterX = Math.max(
-        videoX + circleRadius,
-        Math.min(videoX + videoRect.width - circleRadius, centerX)
+        videoX + displayRadius,
+        Math.min(videoX + videoRect.width - displayRadius, displayCenterX)
       );
       const boundedCenterY = Math.max(
-        videoY + circleRadius,
-        Math.min(videoY + videoRect.height - circleRadius, centerY)
+        videoY + displayRadius,
+        Math.min(videoY + videoRect.height - displayRadius, displayCenterY)
       );
 
       // Draw circle outline
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(boundedCenterX, boundedCenterY, circleRadius, 0, 2 * Math.PI);
+      ctx.arc(boundedCenterX, boundedCenterY, displayRadius, 0, 2 * Math.PI);
       ctx.stroke();
 
       // Draw center crosshair
@@ -129,17 +149,26 @@ export default function CircleCropDialog({
       // Clear the circle area to show the video
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.arc(boundedCenterX, boundedCenterY, circleRadius, 0, 2 * Math.PI);
+      ctx.arc(boundedCenterX, boundedCenterY, displayRadius, 0, 2 * Math.PI);
       ctx.fill();
       ctx.restore();
     }
   }, [cropSettings, videoDimensions]);
 
   const handleCropChange = (setting: keyof CropSettings, value: number) => {
-    setCropSettings((prev) => ({
-      ...prev,
-      [setting]: Math.max(0, Math.min(100, value))
-    }));
+    setCropSettings((prev) => {
+      if (setting === 'x') {
+        return { ...prev, x: Math.max(0, Math.min(prev.videoWidth, value)) };
+      } else if (setting === 'y') {
+        return { ...prev, y: Math.max(0, Math.min(prev.videoHeight, value)) };
+      } else if (setting === 'radius') {
+        const maxRadius = Math.min(prev.videoWidth, prev.videoHeight) / 2;
+        return { ...prev, radius: Math.max(10, Math.min(maxRadius, value)) };
+      } else if (setting === 'scale') {
+        return { ...prev, scale: Math.max(0.1, Math.min(3, value)) };
+      }
+      return prev;
+    });
   };
 
   const handleScaleChange = (delta: number) => {
@@ -150,12 +179,17 @@ export default function CircleCropDialog({
   };
 
   const handleReset = () => {
-    setCropSettings({
-      x: 50,
-      y: 50,
-      radius: 40,
-      scale: 1
-    });
+    if (videoDimensions.width > 0 && videoDimensions.height > 0) {
+      const defaultRadius = Math.min(videoDimensions.width, videoDimensions.height) * 0.2;
+      setCropSettings({
+        x: videoDimensions.width / 2,
+        y: videoDimensions.height / 2,
+        radius: defaultRadius,
+        scale: 1,
+        videoWidth: videoDimensions.width,
+        videoHeight: videoDimensions.height
+      });
+    }
   };
 
   const handleApplyCrop = async () => {
@@ -220,7 +254,13 @@ export default function CircleCropDialog({
               </p>
               <p>Aspect ratio: {(videoDimensions.width / videoDimensions.height).toFixed(2)}</p>
               <p>Container: 800×800px fixed size</p>
-              <p>Circle diameter: {Math.min(videoDimensions.width, videoDimensions.height)}px</p>
+              <p>
+                Crop center: ({Math.round(cropSettings.x)}, {Math.round(cropSettings.y)})px
+              </p>
+              <p>
+                Crop radius: {Math.round(cropSettings.radius)}px (scale:{' '}
+                {cropSettings.scale.toFixed(1)}x)
+              </p>
             </div>
           </div>
 
@@ -236,12 +276,12 @@ export default function CircleCropDialog({
                   <input
                     type="range"
                     min="0"
-                    max="100"
+                    max={cropSettings.videoWidth || 100}
                     value={cropSettings.x}
                     onChange={(e) => handleCropChange('x', parseFloat(e.target.value))}
                     className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                   />
-                  <span className="text-xs text-white/50">{cropSettings.x.toFixed(1)}%</span>
+                  <span className="text-xs text-white/50">{Math.round(cropSettings.x)}px</span>
                 </div>
 
                 <div>
@@ -249,12 +289,12 @@ export default function CircleCropDialog({
                   <input
                     type="range"
                     min="0"
-                    max="100"
+                    max={cropSettings.videoHeight || 100}
                     value={cropSettings.y}
                     onChange={(e) => handleCropChange('y', parseFloat(e.target.value))}
                     className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                   />
-                  <span className="text-xs text-white/50">{cropSettings.y.toFixed(1)}%</span>
+                  <span className="text-xs text-white/50">{Math.round(cropSettings.y)}px</span>
                 </div>
 
                 <div>
@@ -262,12 +302,12 @@ export default function CircleCropDialog({
                   <input
                     type="range"
                     min="10"
-                    max="100"
+                    max={Math.min(cropSettings.videoWidth, cropSettings.videoHeight) / 2 || 100}
                     value={cropSettings.radius}
                     onChange={(e) => handleCropChange('radius', parseFloat(e.target.value))}
                     className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
                   />
-                  <span className="text-xs text-white/50">{cropSettings.radius.toFixed(1)}%</span>
+                  <span className="text-xs text-white/50">{Math.round(cropSettings.radius)}px</span>
                 </div>
 
                 <div>
