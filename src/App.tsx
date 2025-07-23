@@ -353,7 +353,7 @@ export default function App() {
             </Button>
           </div>
         )}
-        <div className={`max-h-[48dvh] relative`}>
+        <div className={`max-h-[48dvh] relative overflow-y-auto`}>
           {/* Main Top Half Component */}
           <MainTopPanel isSaving={isSaving} isAudioLoaded={isInputLoaded} />
         </div>

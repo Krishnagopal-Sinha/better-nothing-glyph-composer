@@ -1,5 +1,5 @@
 import * as React from 'react';
-import dataStore from './data_store';
+import useGlobalAppStore from './timeline_state';
 
 interface Coordinates {
   x: number;
@@ -19,6 +19,7 @@ boxNode.style.border = 'solid 1px white';
 boxNode.style.borderRadius = '2px';
 boxNode.style.mixBlendMode = 'screen';
 boxNode.style.pointerEvents = 'none';
+boxNode.style.zIndex = '9999';
 
 export function useAreaSelection({
   container = { current: document.body }
@@ -32,10 +33,11 @@ export function useAreaSelection({
     end: undefined
   });
 
+  // Get the selectAll function from the global store
+  const selectAll = useGlobalAppStore((state) => state.selectAll);
+
   const handleMouseMove = (e: MouseEvent) => {
-    // check here as well as mouse down only fires once! safety fallback
-    const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
-    if (!isDragSelectActive) return;
+    // Always allow drag selection - no need to check if it's enabled
     document.body.style.userSelect = 'none';
     setDrawArea((prev) => ({
       ...prev,
@@ -45,39 +47,38 @@ export function useAreaSelection({
       }
     }));
   };
-  // throttle mouse move
-  // const throttledMouseMove = throttle((e: MouseEvent) => {
-  //   const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
-  //   if (!isDragSelectActive) return;
 
-  //   document.body.style.userSelect = 'none';
-  //   setDrawArea((prev) => ({
-  //     ...prev,
-  //     end: {
-  //       x: e.clientX,
-  //       y: e.clientY
-  //     }
-  //   }));
-  // }, 20);
   const handleMouseDown = (e: MouseEvent) => {
-    const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
-    if (!isDragSelectActive) return;
     const containerElement = container.current;
+    const target = e.target as HTMLElement;
 
-    setMouseDown(true);
+    // Check if clicking on a block or interactive element
+    const isClickingOnBlock =
+      target.closest('[data-drag-handler]') ||
+      target.closest('[data-trim-handler]') ||
+      target.closest('[data-selected-block]');
 
-    if (containerElement && containerElement.contains(e.target as HTMLElement)) {
-      document.addEventListener('mousemove', handleMouseMove);
-      setDrawArea({
-        start: {
-          x: e.clientX,
-          y: e.clientY
-        },
-        end: {
-          x: e.clientX,
-          y: e.clientY
-        }
-      });
+    // If clicking outside blocks, start drag selection
+    if (!isClickingOnBlock) {
+      setMouseDown(true);
+
+      if (containerElement && containerElement.contains(target)) {
+        document.addEventListener('mousemove', handleMouseMove);
+        setDrawArea({
+          start: {
+            x: e.clientX,
+            y: e.clientY
+          },
+          end: {
+            x: e.clientX,
+            y: e.clientY
+          }
+        });
+      }
+    } else {
+      // Clear any existing drag selection when clicking on blocks
+      setMouseDown(false);
+      setDrawArea({ start: undefined, end: undefined });
     }
   };
 
@@ -85,7 +86,7 @@ export function useAreaSelection({
     document.body.style.userSelect = 'initial';
     document.removeEventListener('mousemove', handleMouseMove);
     setMouseDown(false);
-    // set selection
+    setDrawArea({ start: undefined, end: undefined });
   };
 
   React.useEffect(() => {
@@ -99,13 +100,19 @@ export function useAreaSelection({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [container]);
+  }, [container, selectAll]);
 
   React.useEffect(() => {
     const { start, end } = drawArea;
     if (start && end && boxElement.current) {
       drawSelectionBox(boxElement.current, start, end);
       setSelection(boxElement.current.getBoundingClientRect());
+      // Show the selection box
+      boxElement.current.style.display = 'block';
+    } else if (boxElement.current) {
+      // Hide the selection box when no selection area
+      boxElement.current.style.display = 'none';
+      setSelection(null);
     }
   }, [drawArea, boxElement]);
 
@@ -120,6 +127,10 @@ export function useAreaSelection({
       } else {
         if (containerElement.contains(selectionBoxElement)) {
           containerElement.removeChild(selectionBoxElement);
+        }
+        // Also hide the selection box when drag select is disabled
+        if (selectionBoxElement.style.display !== 'none') {
+          selectionBoxElement.style.display = 'none';
         }
       }
     }

@@ -46,10 +46,7 @@ export default function SettingsPanel() {
   );
   const timelineRowHeight = useGlobalAppStore((state) => state.appSettings.timelineRowHeight);
   const setTimelineRowHeight = useGlobalAppStore((state) => state.setTimelineRowHeight);
-  const toggleDragSelect = () => {
-    const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
-    dataStore.set('isDragSelectActive', !isDragSelectActive);
-  };
+
   const onPasteBrightnessOverwriteToggle = (e: boolean) => {
     dataStore.set('overwriteBrightnessWithNewBlock', e);
   };
@@ -242,20 +239,6 @@ export default function SettingsPanel() {
             id="multiSelect"
             onCheckedChange={toggleMultiSelect}
             checked={isMultiSelectActive}
-          />
-
-          {/* Drag Select */}
-          <Label
-            htmlFor="dragSelect"
-            className="text-base sm:text-lg font-light"
-            title={`Enables Drag to Multi Select Gesture`}
-          >
-            Enable Drag Select
-          </Label>
-          <Switch
-            id="dragSelect"
-            onCheckedChange={toggleDragSelect}
-            // checked={dataStore.get('isDragSelectActive') ?? false}
           />
 
           {/* Show audio timestamp */}

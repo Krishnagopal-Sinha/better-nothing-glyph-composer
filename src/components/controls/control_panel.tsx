@@ -94,7 +94,7 @@ export default function MainTopPanel({
             Make ringtones with custom glyphs for your Nothing Phone, Supports auto generation of
             glyph synced to audio too!
             <br />
-            Supports: Nothing Phone (1), (2), (2a) / (2a) Plus, (3a) / (3a) Pro, 3?
+            Supports: Nothing Phone (1), (2), (2a) / (2a) Plus, (3a) / (3a) Pro & (3)
             <br />
             Use on fullscreen Desktop / Laptop for best experience
             <br />

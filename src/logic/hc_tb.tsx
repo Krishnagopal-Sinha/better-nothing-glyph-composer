@@ -83,6 +83,8 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
       >
         <div
           {...dragHandler()}
+          data-selected-block={glyphItem.isSelected ? 'true' : 'false'}
+          data-drag-handler="true"
           title={`Click to select / unselect, right click to delete\nStart Time: ${(
             glyphItem.startTimeMilis / 1000
           ).toFixed(2)} s\nDuration: ${(glyphItem.durationMilis / 1000).toFixed(2)} s\nEffect: ${
@@ -92,6 +94,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           )}%`}
           onClick={(e) => {
             e.preventDefault();
+            // Check if we're in the middle of a drag selection
+            const selectionBox = document.querySelector('[style*="display: block"]');
+            if (selectionBox) {
+              // Don't handle click during drag selection
+              return;
+            }
+
             // Toggle Selection
             if (glyphItem.isSelected) {
               selectItem(glyphItem, false);
@@ -101,9 +110,9 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           }}
           className={`h-full border-primary relative flex items-center cursor-auto border-red-500 rounded-md bg-[rgb(57,57,57)] text-black
              hover:shadow-[0px_0px_15px_1px_#ffffff] duration-200
-            ${
-              glyphItem.isSelected ? 'outline outline-red-500 outline-[3px]' : ''
-            } ${isTrimActive ? '' : 'overflow-clip'}`}
+            ${glyphItem.isSelected ? 'outline outline-red-500 outline-[3px]' : ''} ${
+            isTrimActive ? '' : 'overflow-clip'
+          }`}
           style={{
             width: `${(glyphItem.durationMilis / 1000) * timelinePixelFactor}px`,
             touchAction: 'none'
@@ -128,6 +137,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           {glyphItem.isSelected && (
             <animated.div
               {...trimHandler()}
+              data-trim-handler="true"
               onMouseDown={() => setIsTrimActive(true)}
               className={`text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
@@ -177,15 +187,12 @@ function throttle(func: (...args: any[]) => void, limit: number) {
       }, limit);
     } else {
       clearTimeout(lastFunc);
-      lastFunc = setTimeout(
-        () => {
-          if (Date.now() - lastRan! >= limit) {
-            func(...args);
-            lastRan = Date.now();
-          }
-        },
-        limit - (Date.now() - lastRan)
-      );
+      lastFunc = setTimeout(() => {
+        if (Date.now() - lastRan! >= limit) {
+          func(...args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
     }
   };
 }

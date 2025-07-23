@@ -13,7 +13,6 @@ import { DeltaUpdateBlock, GlyphBlock } from '@/lib/glyph_model';
 import { useDrag } from '@use-gesture/react';
 import { SelectionContext } from '@/lib/area_select_context';
 import { useSelected } from '@/lib/area_selection_helper';
-import dataStore from '@/lib/data_store';
 import { throttle } from '@/lib/helpers';
 
 type Props = {
@@ -67,8 +66,8 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         const delta = (mx / timelinePixelFactor) * 1000;
 
         const deltaBlock: DeltaUpdateBlock = {
-          durationMilis: delta + 20
-          //20 is offset for trim bar width
+          durationMilis: delta + 1
+          //20 is offset for trim bar width | made it 2 for precision while zoomed in
         };
         setIsTrimActive(false);
         // console.error((offset / timelinePixelFactor) * 1000);
@@ -85,8 +84,6 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
   useEffect(() => {
     if (isSelected) {
       if (glyphItem.isSelected) return;
-      const isDragSelectActive: boolean = dataStore.get('isDragSelectActive') ?? false;
-      if (!isDragSelectActive) return;
       toggleMultiSelect(true);
       selectItem(glyphItem, true);
       toggleMultiSelect(false);
@@ -103,6 +100,8 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         <div
           ref={ref}
           {...dragHandler()}
+          data-selected-block={glyphItem.isSelected ? 'true' : 'false'}
+          data-drag-handler="true"
           title={`Click to select / unselect, right click to delete\nStart Time: ${(
             glyphItem.startTimeMilis / 1000
           ).toFixed(2)} s\nDuration: ${(glyphItem.durationMilis / 1000).toFixed(2)} s\nEffect: ${
@@ -112,6 +111,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           )}%`}
           onClick={(e) => {
             e.preventDefault();
+            // Check if we're in the middle of a drag selection
+            const selectionBox = document.querySelector('[style*="display: block"]');
+            if (selectionBox) {
+              // Don't handle click during drag selection
+              return;
+            }
+
             // Toggle Selection
             if (glyphItem.isSelected) {
               selectItem(glyphItem, false);
@@ -134,6 +140,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
           {glyphItem.isSelected && (
             <animated.div
               {...trimHandler()}
+              data-trim-handler="true"
               onMouseDown={() => setIsTrimActive(true)}
               className={`text-white bg-[red] absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
