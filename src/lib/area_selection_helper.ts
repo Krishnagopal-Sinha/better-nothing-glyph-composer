@@ -33,8 +33,9 @@ export function useAreaSelection({
     end: undefined
   });
 
-  // Get the selectAll function from the global store
+  // Get the selectAll function and timelinePixelFactor from the global store
   const selectAll = useGlobalAppStore((state) => state.selectAll);
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
 
   const handleMouseMove = (e: MouseEvent) => {
     // Always allow drag selection - no need to check if it's enabled
@@ -100,7 +101,17 @@ export function useAreaSelection({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [container, selectAll]);
+  }, [container, selectAll, timelinePixelFactor]);
+
+  // Reset selection state when zoom level changes
+  React.useEffect(() => {
+    setMouseDown(false);
+    setDrawArea({ start: undefined, end: undefined });
+    setSelection(null);
+    if (boxElement.current) {
+      boxElement.current.style.display = 'none';
+    }
+  }, [timelinePixelFactor]);
 
   React.useEffect(() => {
     const { start, end } = drawArea;
@@ -142,6 +153,9 @@ export function useAreaSelection({
 export function useSelected(elementRef: React.RefObject<HTMLElement>, selection: DOMRect | null) {
   const [isSelected, setIsSelected] = React.useState<boolean>(false);
 
+  // Get timelinePixelFactor to ensure recalculation when zoom changes
+  const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
+
   React.useEffect(() => {
     if (!elementRef.current || !selection) {
       setIsSelected(false);
@@ -158,7 +172,7 @@ export function useSelected(elementRef: React.RefObject<HTMLElement>, selection:
       );
       // console.log('block drag selection updated!');
     }
-  }, [elementRef, selection]);
+  }, [elementRef, selection, timelinePixelFactor]);
 
   return isSelected;
 }

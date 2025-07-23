@@ -28,6 +28,14 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
 
   const [isTrimActive, setIsTrimActive] = useState<boolean>(false);
   const toggleMultiSelect = useGlobalAppStore((state) => state.toggleMultiSelect);
+
+  // Reset trim state when block is deselected
+  useEffect(() => {
+    if (!glyphItem.isSelected && isTrimActive) {
+      setIsTrimActive(false);
+    }
+  }, [glyphItem.isSelected, isTrimActive]);
+
   const onEffectSelect = (effectId: number) => {
     const deltaBlock: DeltaUpdateBlock = {
       effectId: effectId
@@ -77,6 +85,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     },
     { axis: 'x' }
   );
+
+  // Cleanup trim state on unmount
+  useEffect(() => {
+    return () => {
+      setIsTrimActive(false);
+    };
+  }, []);
 
   const ref = useRef(null);
   const selection = useContext(SelectionContext);
@@ -142,9 +157,21 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               {...trimHandler()}
               data-trim-handler="true"
               onMouseDown={() => setIsTrimActive(true)}
+              onMouseLeave={() => {
+                // Reset trim state if mouse leaves the handle area
+                if (isTrimActive) {
+                  setIsTrimActive(false);
+                }
+              }}
+              onMouseUp={() => {
+                // Ensure trim state is reset on mouse up
+                if (isTrimActive) {
+                  setIsTrimActive(false);
+                }
+              }}
               className={`text-white bg-[red] absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
-                  ? 'h-screen w-[2px] p-0 absolute  bg-[red] z-10 right-0'
+                  ? 'h-screen w-[2px] p-0 absolute  bg-[red] z-10 right-[0px]'
                   : ' p-1 pb-[8px]'
               }`}
               style={{ x: x2, touchAction: 'none' }}

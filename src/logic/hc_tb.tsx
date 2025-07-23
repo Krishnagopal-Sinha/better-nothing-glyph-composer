@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/context-menu';
 import { useSpring, animated } from '@react-spring/web';
 import { kEffectNames, kMaxBrightness } from '@/lib/consts';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DeltaUpdateBlock, GlyphBlock } from '@/lib/glyph_model';
 import { useDrag } from '@use-gesture/react';
 
@@ -23,6 +23,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
   const selectItem = useGlobalAppStore((state) => state.toggleSelection);
   const timelinePixelFactor = useGlobalAppStore((state) => state.appSettings.timelinePixelFactor);
   const [isTrimActive, setIsTrimActive] = useState<boolean>(false);
+
+  // Reset trim state when block is deselected
+  useEffect(() => {
+    if (!glyphItem.isSelected && isTrimActive) {
+      setIsTrimActive(false);
+    }
+  }, [glyphItem.isSelected, isTrimActive]);
 
   const onEffectSelect = (effectId: number) => {
     const deltaBlock: DeltaUpdateBlock = {
@@ -62,7 +69,7 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
         const delta = (mx / timelinePixelFactor) * 1000;
 
         const deltaBlock: DeltaUpdateBlock = {
-          durationMilis: delta + 20
+          durationMilis: delta + 1
           //20 is offset for trim bar width
         };
         setIsTrimActive(false);
@@ -73,6 +80,13 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
     },
     { axis: 'x' }
   );
+
+  // Cleanup trim state on unmount
+  useEffect(() => {
+    return () => {
+      setIsTrimActive(false);
+    };
+  }, []);
 
   return (
     <ContextMenu>
@@ -139,9 +153,21 @@ export default function TimelineBlockComponent({ glyphItem }: Props) {
               {...trimHandler()}
               data-trim-handler="true"
               onMouseDown={() => setIsTrimActive(true)}
+              onMouseLeave={() => {
+                // Reset trim state if mouse leaves the handle area
+                if (isTrimActive) {
+                  setIsTrimActive(false);
+                }
+              }}
+              onMouseUp={() => {
+                // Ensure trim state is reset on mouse up
+                if (isTrimActive) {
+                  setIsTrimActive(false);
+                }
+              }}
               className={`text-white bg-red-500 absolute right-[-5px] cursor-col-resize select-none rounded-sm ${
                 isTrimActive
-                  ? 'h-screen w-[3px] p-0 absolute  bg-red-600 z-10 right-0'
+                  ? 'h-screen w-[3px] p-0 absolute  bg-red-600 z-10 right-[0px]'
                   : ' p-1 pb-[8px]'
               }`}
               style={{ x: x2, touchAction: 'none' }}
