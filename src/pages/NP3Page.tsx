@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
   Smartphone,
@@ -92,6 +93,9 @@ export default function NP3Page() {
   // Pre-processed frame data for efficient playback
   const [isPreProcessing, setIsPreProcessing] = useState(false);
   const [preProcessingProgress, setPreProcessingProgress] = useState(0);
+
+  // Output filename state
+  const [outputFilename, setOutputFilename] = useState<string>('glyph_tone');
 
   // Ref for the canvas to draw the processed video
   const processedVideoCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -579,7 +583,7 @@ export default function NP3Page() {
           break;
 
         case 'KeyR':
-          if (event.ctrlKey || event.metaKey) {
+          if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
             preventDefault();
             // Only reset if video is loaded
             if (videoResult) {
@@ -618,7 +622,7 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyA':
+        case 'KeyE':
           if (event.ctrlKey || event.metaKey) {
             preventDefault();
             // Open advanced editor if video is loaded
@@ -630,7 +634,7 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyD':
+        case 'KeyM':
           if (event.ctrlKey || event.metaKey) {
             preventDefault();
             // Toggle drawing mode
@@ -639,10 +643,10 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyB':
+        case 'KeyI':
           if (event.ctrlKey || event.metaKey) {
             preventDefault();
-            // Toggle brightness slider
+            // Toggle brightness slider (I for Intensity/Illumination)
             setShowBrightnessSlider(!showBrightnessSlider);
           }
           break;
@@ -769,6 +773,13 @@ export default function NP3Page() {
       });
 
       setVideoResult(result);
+      
+      // Update default filename based on input file name
+      if (audioFile.name) {
+        const baseName = audioFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
+        const sanitized = baseName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        setOutputFilename(sanitized || 'glyph_tone');
+      }
 
       toast.success(
         `Audio processed successfully! ${result.displayFrames.length} display frames created at 60Hz.`
@@ -879,6 +890,13 @@ export default function NP3Page() {
       // console.log('Video processing result:', result);
 
       setVideoResult(result);
+      
+      // Update default filename based on input file name
+      if (videoFile.name) {
+        const baseName = videoFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
+        const sanitized = baseName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        setOutputFilename(sanitized || 'glyph_tone');
+      }
 
       toast.success(
         `Video processed successfully! ${result.displayFrames.length} display frames created at 60Hz.`
@@ -1153,10 +1171,13 @@ export default function NP3Page() {
       setProcessingProgress(60);
       toast.info('Converting to .ogg format...');
 
+      // Use custom filename if provided, otherwise use default
+      const filename = outputFilename.trim() || 'glyph_tone';
       const savePromise = FFmpegService.saveOutput(
         videoResult.audioFile,
         encodedData,
-        'NP3' // Use NP3 as the device type
+        'NP3', // Use NP3 as the device type
+        filename // Optional custom filename
       );
 
       // Add timeout to prevent hanging
@@ -2483,10 +2504,40 @@ export default function NP3Page() {
         <div className="max-w-7xl mx-auto">
           {/* Title Section */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-[ndot] tracking-wider uppercase bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 font-[ndot] tracking-wider uppercase bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent">
               Video/Audio to Glyph Matrix
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-white/20 to-white/40 mx-auto rounded-full"></div>
+            <div className="w-24 h-1 bg-gradient-to-r from-white/20 to-white/40 mx-auto rounded-full mb-4"></div>
+            
+            {/* Output Filename Input - Only show after file is processed */}
+            {videoResult && (
+              <div className="max-w-md mx-auto">
+                <label htmlFor="output-filename" className="block text-sm font-medium text-white/70 mb-2">
+                  Output Filename
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="output-filename"
+                    type="text"
+                    value={outputFilename}
+                    onChange={(e) => {
+                      // Remove .ogg extension if user adds it, we'll add it automatically
+                      let value = e.target.value.replace(/\.ogg$/i, '');
+                      // Sanitize filename - remove invalid characters
+                      value = value.replace(/[^a-zA-Z0-9_-]/g, '_');
+                      setOutputFilename(value);
+                    }}
+                    placeholder="glyph_tone"
+                    className="bg-black/40 border-white/20 text-white placeholder:text-white/40 focus:border-white/60"
+                    disabled={isProcessing}
+                  />
+                  <span className="text-white/70 text-sm whitespace-nowrap">.ogg</span>
+                </div>
+                <p className="text-xs text-white/50 mt-1">
+                  Enter a custom filename for your export
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Video and Dot Matrix Display */}
@@ -3310,7 +3361,7 @@ export default function NP3Page() {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
-                    Ctrl/Cmd + R
+                    Ctrl/Cmd + Shift + R
                   </div>
                   <p className="text-xs">Reset to Beginning</p>
                 </div>
@@ -3328,19 +3379,19 @@ export default function NP3Page() {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
-                    Ctrl/Cmd + A
+                    Ctrl/Cmd + E
                   </div>
                   <p className="text-xs">Open Advanced Editor</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
-                    Ctrl/Cmd + D
+                    Ctrl/Cmd + M
                   </div>
                   <p className="text-xs">Switch Drawing Mode</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
-                    Ctrl/Cmd + B
+                    Ctrl/Cmd + I
                   </div>
                   <p className="text-xs">Toggle Brightness Slider</p>
                 </div>

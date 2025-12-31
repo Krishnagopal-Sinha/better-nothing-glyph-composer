@@ -25,3 +25,8 @@ dist-ssr
 
 # Million Lint
 .million
+
+# Test fixtures and output files
+src/__tests__/fixtures/files/
+src/output/
+src/__tests__/output/

@@ -359,7 +359,8 @@ export class VideoEditorService {
         // Final fallback: create a minimal WAV file
         const videoDurationSeconds = (pngFrames.length * frameInterval) / 1000; // Convert ms to seconds
         const silentWavData = this.createMinimalSilentAudio(videoDurationSeconds);
-        audioFile = new File([silentWavData], 'audio.wav', { type: 'audio/wav' });
+        // Create new Uint8Array to ensure ArrayBuffer backing for BlobPart compatibility
+        audioFile = new File([new Uint8Array(silentWavData)], 'audio.wav', { type: 'audio/wav' });
       }
 
       // Create processed video file (use first frame as representative)
@@ -468,7 +469,8 @@ export class VideoEditorService {
     return new Promise((resolve) => {
       try {
         // Create blob and image from the PNG data
-        const blob = new Blob([imageData], { type: 'image/png' });
+        // Create new Uint8Array to ensure ArrayBuffer backing for BlobPart compatibility
+        const blob = new Blob([new Uint8Array(imageData)], { type: 'image/png' });
         const img = new Image();
 
         img.onload = () => {

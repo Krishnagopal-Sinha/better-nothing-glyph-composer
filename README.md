@@ -58,6 +58,66 @@ https://github.com/user-attachments/assets/0dbcb302-aa48-467d-81e9-e0b2097639b0
    - Use the top-right 3-dot menu to import your saved file.
    - Scroll to the top of 'Library' if you can’t find your file, preview it, and set it as your default ringtone.
 
+## 🧪 Testing
+
+This project includes comprehensive test coverage to ensure reliability and correctness.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run tests with UI
+npm test:ui
+
+# Run tests with coverage
+npm test:coverage
+```
+
+### Test Structure
+
+- **Unit Tests**: Test individual functions and utilities
+
+  - `helpers.test.ts` - Helper functions and utilities
+  - `import.test.ts` - JSON import and file validation
+  - `export.test.ts` - CSV generation and encoding
+  - `process.test.ts` - Video and audio processing logic
+
+- **Integration Tests**: Test complete workflows
+  - `np3-integration.test.ts` - NP3 device audio/video processing
+  - `np3-output-generation.test.ts` - End-to-end output file generation
+  - `multi-device-audio-format.test.ts` - Multi-device (NP1, NP2, NP3) and multi-format (WAV, MP3, OGG, AAC) compatibility
+
+### Test Fixtures
+
+Test fixtures are automatically generated and include:
+
+- **Audio Files**: Metronome beeps (5 seconds, 5 beeps at 1-second intervals) in WAV, MP3, and OGG formats
+- **Video Files**: 120-frame test video (2 seconds at 60fps) with frame numbers
+
+To regenerate test fixtures:
+
+```bash
+npm run generate-fixtures
+npm run generate-video  # Requires FFmpeg
+```
+
+### Test Coverage
+
+The test suite validates:
+
+- ✅ Audio processing for all formats (WAV, MP3, OGG, AAC)
+- ✅ Video processing with crop settings
+- ✅ Frame analysis and brightness map generation
+- ✅ CSV data generation and encoding
+- ✅ OGG file generation with embedded glyph data
+- ✅ Multi-device compatibility (NP1, NP2, NP3)
+- ✅ End-to-end workflows (import → process → export)
+
 ## 📜 Early Release Notes
 
 - **Stay Humorous**: Remember, this is an early version, so let's keep a light-hearted approach while using it! 😄

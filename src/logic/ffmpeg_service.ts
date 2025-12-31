@@ -55,7 +55,8 @@ class FFmpegService {
   async saveOutput(
     inputAudioFile: File,
     processedGlyphData: string,
-    currentDevice: string
+    currentDevice: string,
+    customFilename?: string
   ): Promise<void> {
     // Validate inputs
     if (!inputAudioFile) {
@@ -81,12 +82,16 @@ class FFmpegService {
 
     try {
       // Write input file to FFmpeg filesystem
+      // Determine file extension from MIME type or filename
+      const fileExtension = this.getAudioFileExtension(inputAudioFile);
+      const inputFileName = `input.${fileExtension}`;
+
       const fileData = await fetchFile(inputAudioFile);
       if (!fileData || fileData.byteLength === 0) {
         throw new Error('Failed to read input audio file');
       }
 
-      await this.ffmpeg.writeFile(`input.ogg`, fileData);
+      await this.ffmpeg.writeFile(inputFileName, fileData);
 
       // default to NP1 on error
       const phoneInfo: PhoneSpecificInfo = dataStore.get(currentDevice) ?? {
@@ -100,19 +105,37 @@ class FFmpegService {
       const custom1 = dataStore.get('exportCustom1');
       const custom2 = phoneInfo.custom2;
 
-      const outputFileName = `glyph_tone_${getDateTime()}.ogg`;
+      // Use custom filename if provided, otherwise use default
+      let baseFileName: string;
+      let titleMetadata: string;
+
+      if (customFilename && customFilename.trim()) {
+        // Sanitize filename and ensure it doesn't have .ogg extension
+        const sanitized = customFilename
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, '_')
+          .replace(/\.ogg$/i, '');
+        baseFileName = sanitized;
+        titleMetadata = sanitized; // TITLE should be the user's filename (sanitized)
+      } else {
+        baseFileName = 'glyph_tone';
+        titleMetadata = 'glyph_tone'; // Default title
+      }
+
+      // Output filename always includes date_time for uniqueness
+      const outputFileName = `${baseFileName}_${getDateTime()}.ogg`;
 
       // Execute FFmpeg command with error handling
       try {
         await this.ffmpeg.exec([
           `-i`,
-          `input.ogg`,
+          inputFileName,
           `-strict`,
           `-2`,
           `-metadata`,
           `AUTHOR=${processedGlyphData}`,
           `-metadata`,
-          `TITLE=output_${Date.now()}`,
+          `TITLE=${titleMetadata}`,
           `-metadata`,
           `COMPOSER=${composer}`,
           `-metadata`,
@@ -167,7 +190,7 @@ class FFmpegService {
 
       // Clean up FFmpeg filesystem
       try {
-        await this.ffmpeg.deleteFile('input.ogg');
+        await this.ffmpeg.deleteFile(inputFileName);
         await this.ffmpeg.deleteFile(outputFileName);
       } catch (cleanupError) {
         console.warn('FFmpegService: Cleanup failed (non-critical):', cleanupError);
@@ -180,9 +203,21 @@ class FFmpegService {
 
   async getGlyphData(inputAudioFile: File): Promise<string[] | null> {
     this.logs = [];
-    await this.ffmpeg.writeFile(`input.ogg`, await fetchFile(inputAudioFile));
+    const fileExtension = this.getAudioFileExtension(inputAudioFile);
+    const inputFileName = `input.${fileExtension}`;
+    await this.ffmpeg.writeFile(inputFileName, await fetchFile(inputAudioFile));
 
-    await this.ffmpeg.exec(['-i', 'input.ogg', '-map', '0', '-c', 'copy', '-f', 'ffmetadata', '-']);
+    await this.ffmpeg.exec([
+      '-i',
+      inputFileName,
+      '-map',
+      '0',
+      '-c',
+      'copy',
+      '-f',
+      'ffmetadata',
+      '-'
+    ]);
 
     const author = this.extractAuthor(this.logs.join('\n'));
 
@@ -229,6 +264,34 @@ class FFmpegService {
   }
   getSaveProgress(): number {
     return this.progressPercentage;
+  }
+
+  /**
+   * Get appropriate file extension for audio file based on MIME type or filename
+   * @param audioFile - The audio file
+   * @returns File extension (without dot)
+   */
+  private getAudioFileExtension(audioFile: File): string {
+    // Check filename first
+    const fileName = audioFile.name.toLowerCase();
+    if (fileName.endsWith('.mp3')) return 'mp3';
+    if (fileName.endsWith('.m4a') || fileName.endsWith('.aac')) return 'm4a';
+    if (fileName.endsWith('.ogg')) return 'ogg';
+    if (fileName.endsWith('.wav')) return 'wav';
+    if (fileName.endsWith('.flac')) return 'flac';
+    if (fileName.endsWith('.opus')) return 'opus';
+
+    // Check MIME type
+    const mimeType = audioFile.type.toLowerCase();
+    if (mimeType.includes('mpeg') || mimeType.includes('mp3')) return 'mp3';
+    if (mimeType.includes('mp4') || mimeType.includes('aac') || mimeType.includes('m4a'))
+      return 'm4a';
+    if (mimeType.includes('ogg') || mimeType.includes('opus')) return 'ogg';
+    if (mimeType.includes('wav') || mimeType.includes('wave')) return 'wav';
+    if (mimeType.includes('flac')) return 'flac';
+
+    // Default to ogg (will be converted by FFmpeg)
+    return 'ogg';
   }
 }
 
