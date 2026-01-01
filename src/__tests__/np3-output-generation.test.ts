@@ -8,7 +8,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { execSync } from 'child_process';
-import NP3AudioService from '@/logic/np3_audio_service';
+import NP3AudioService, { getDefaultParamsForPreset } from '@/logic/np3_audio_service';
 import type { CropSettings } from '@/logic/video_editor_service';
 import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
 import { createAudioFixtures } from './fixtures/fixture-loader';
@@ -251,9 +251,12 @@ describe('NP3 Output Generation Tests', () => {
       async () => {
         console.log('\n🎵 Processing metronome.wav with BeatMonitor preset...');
         const presets = audioService.getPresets();
+        const presetId = presets[0].id;
+        const params = getDefaultParamsForPreset(presetId);
         const result = await audioService.processAudioForNP3WithPreset(
           audioFixtures.wav,
-          presets[0].id
+          presetId,
+          params
         );
 
         console.log(`✓ Processed with preset: ${result.totalFrames} frames`);

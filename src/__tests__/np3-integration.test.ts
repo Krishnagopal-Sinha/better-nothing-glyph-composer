@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import type { CropSettings } from '@/logic/video_editor_service';
-import NP3AudioService from '@/logic/np3_audio_service';
+import NP3AudioService, { getDefaultParamsForPreset } from '@/logic/np3_audio_service';
 import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
 import { createAudioFixtures, createTestVideoFile } from './fixtures/fixture-loader';
 import type { VideoProcessingResult } from '@/logic/video_editor_service';
@@ -169,7 +169,8 @@ describe('NP3 Integration Tests', () => {
         expect(presets.length).toBeGreaterThan(0);
 
         const presetId = presets[0].id;
-        const result = await audioService.processAudioForNP3WithPreset(audioFixtures.wav, presetId);
+        const params = getDefaultParamsForPreset(presetId);
+        const result = await audioService.processAudioForNP3WithPreset(audioFixtures.wav, presetId, params);
 
         expect(result).toBeDefined();
         expect(result.originalFileType).toBe('audio');

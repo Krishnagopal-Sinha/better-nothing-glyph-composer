@@ -66,12 +66,12 @@ export default function DotMatrixSettingsDialog({
     <>
       {/* Backdrop */}
       {open && (
-        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => onOpenChange(false)} />
+        <div className="fixed inset-0 bg-black/30 z-[55]" onClick={() => onOpenChange(false)} />
       )}
 
       {/* Side Panel */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-black/95 border-r border-white/20 z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-80 bg-black/95 border-r border-white/20 z-[60] transform transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -95,7 +95,7 @@ export default function DotMatrixSettingsDialog({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
             {/* Drawing Settings */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-white font-[ndot] tracking-wide">

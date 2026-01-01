@@ -61,6 +61,29 @@ if (typeof window.AudioContext === 'undefined') {
         copyToChannel: vi.fn()
       };
     }),
+    // Mock createAnalyser for FFT analysis (used in preset processing)
+    createAnalyser: vi.fn(() => {
+      const analyser = {
+        fftSize: 2048,
+        smoothingTimeConstant: 0.8,
+        get frequencyBinCount() {
+          return this.fftSize / 2;
+        },
+        getByteTimeDomainData: vi.fn(),
+        getByteFrequencyData: vi.fn(),
+        getFloatTimeDomainData: vi.fn(),
+        getFloatFrequencyData: vi.fn()
+      };
+      return analyser;
+    }),
+    // Mock createBufferSource for audio source nodes
+    createBufferSource: vi.fn(() => ({
+      buffer: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn()
+    })),
     sampleRate: 44100,
     currentTime: 0,
     destination: {},

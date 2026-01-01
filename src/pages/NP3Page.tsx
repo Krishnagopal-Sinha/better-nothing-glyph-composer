@@ -20,7 +20,8 @@ import {
   Eraser,
   Palette,
   Minus,
-  Plus
+  Plus,
+  RotateCcw
 } from 'lucide-react';
 import { kAppName, kTimeStepMilis } from '@/lib/consts';
 import useGlobalAppStore from '@/lib/timeline_state';
@@ -30,7 +31,31 @@ import VideoEditorService, {
   FrameAnalysis,
   VideoProcessingResult
 } from '@/logic/video_editor_service';
-import NP3AudioService, { AudioPreset } from '@/logic/np3_audio_service';
+import NP3AudioService, {
+  AudioPreset,
+  EffectParameters,
+  getDefaultParamsForPreset,
+  BeatMonitorParams,
+  PulseParams,
+  AliveThingParams,
+  SpinnyParams,
+  SpectrumParams,
+  RadialSpokesParams,
+  BassBlobsParams,
+  TrebleSparklesParams,
+  PeakDetectorsParams,
+  StereoPingpongParams,
+  CheckerboardParams,
+  HueCycleParams,
+  AmbisonicRadialParams,
+  StrobeParams,
+  NoiseFieldParams,
+  NoteMapParams,
+  NebulaParams
+} from '@/logic/np3_audio_service';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 import FFmpegService from '@/logic/ffmpeg_service';
 import { encodeStuffTheWayNothingLikesIt } from '@/logic/export_logic';
 import CircleCropDialog from '@/components/ui/circle-crop-dialog';
@@ -38,7 +63,9 @@ import AdvancedVideoEditor from '@/components/ui/advanced-video-editor';
 import DotMatrixSettingsDialog, {
   DotMatrixSettings
 } from '@/components/ui/dot-matrix-settings-dialog';
+import AllEffectPreviewDialog from '@/components/ui/multi-effect-preview-dialog';
 import { toast } from 'sonner';
+import type { AudioData } from '@/logic/np3_audio_service';
 
 // Remove duplicate interface declarations since they're imported from VideoEditorService
 interface NP3VideoProcessingResult extends VideoProcessingResult {}
@@ -80,6 +107,8 @@ export default function NP3Page() {
 
   // Advanced video editor states
   const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
+  const [showMultiEffectPreview, setShowMultiEffectPreview] = useState(false);
+  const [audioData, setAudioData] = useState<AudioData | null>(null);
   const [videoSettings, setVideoSettings] = useState<VideoSettings>({
     gamma: 1,
     brightness: 0,
@@ -129,6 +158,26 @@ export default function NP3Page() {
   // Audio preset states
   const [audioPresets, setAudioPresets] = useState<AudioPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  // Store effect parameters per preset ID
+  const [effectParamsMap, setEffectParamsMap] = useState<Map<string, EffectParameters>>(new Map());
+  const [effectSettingsOpen, setEffectSettingsOpen] = useState(false);
+
+  // Get current effect params for selected preset
+  const getCurrentEffectParams = (): EffectParameters => {
+    if (!selectedPreset) {
+      return getDefaultParamsForPreset('beatmonitor');
+    }
+    const params = effectParamsMap.get(selectedPreset);
+    if (params) {
+      return params;
+    }
+    // Initialize with defaults if not found
+    const defaultParams = getDefaultParamsForPreset(selectedPreset);
+    setEffectParamsMap((prev) => new Map(prev).set(selectedPreset, defaultParams));
+    return defaultParams;
+  };
+
+  const effectParams = getCurrentEffectParams();
 
   // Drawing tool states
   const [drawingMode, setDrawingMode] = useState<'draw' | 'erase'>('draw');
@@ -164,6 +213,9 @@ export default function NP3Page() {
 
   // Debounced value for progress bar
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce timeout for sensitivity changes
+  const sensitivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper: Get undo/redo stacks for the current frame only
   const getCurrentFrameAnalysisIndex = () => {
@@ -358,7 +410,9 @@ export default function NP3Page() {
             continue;
           }
 
-          let brightness = frameAnalysis.brightnessMap[row][col];
+          // Brightness values are in NP3 range (0-4095), convert to display range (0-255)
+          const np3Brightness = frameAnalysis.brightnessMap[row][col];
+          let brightness = Math.round((np3Brightness / 4095) * 255);
           // Check if this pixel was user-drawn
           const analysisIndex = getFrameAnalysisIndex(frameIndex);
           const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${row}-${col}`);
@@ -754,11 +808,21 @@ export default function NP3Page() {
     try {
       toast.info('Processing audio file... This may take a while.');
 
+      // Load audio data for multi-effect preview
+      const loadedAudioData = await audioService.loadAudioData(audioFile);
+      setAudioData(loadedAudioData);
+
       // Use selected preset if available, otherwise use default (zeros)
       let result: VideoProcessingResult;
       if (selectedPreset) {
         console.log('NP3Page: Using selected preset:', selectedPreset);
-        result = await audioService.processAudioForNP3WithPreset(audioFile, selectedPreset);
+        // Get or initialize params for this preset
+        let params = effectParamsMap.get(selectedPreset);
+        if (!params) {
+          params = getDefaultParamsForPreset(selectedPreset);
+          setEffectParamsMap((prev) => new Map(prev).set(selectedPreset, params!));
+        }
+        result = await audioService.processAudioForNP3WithPreset(audioFile, selectedPreset, params);
       } else {
         console.log('NP3Page: No preset selected, using default processing');
         result = await audioService.processAudioForNP3(audioFile);
@@ -773,7 +837,7 @@ export default function NP3Page() {
       });
 
       setVideoResult(result);
-      
+
       // Update default filename based on input file name
       if (audioFile.name) {
         const baseName = audioFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
@@ -793,6 +857,127 @@ export default function NP3Page() {
   };
 
   /**
+   * Handle effect parameters change and reprocess audio if preset is selected
+   */
+  const handleEffectParamsChange = async (newParams: EffectParameters) => {
+    if (!selectedPreset) return;
+    setEffectParamsMap((prev) => new Map(prev).set(selectedPreset, newParams));
+
+    // Only reprocess if we have audio loaded and a preset selected
+    if (videoResult && videoResult.originalFileType === 'audio' && selectedPreset) {
+      // Store current playback state to preserve position
+      const wasPlaying = isVideoPlaying;
+      const savedCurrentTime = audioElement?.currentTime || 0;
+      const savedDisplayFrame = currentDisplayFrame;
+      const savedProgress = videoProgress;
+
+      setIsProcessing(true);
+      setProcessingProgress(0);
+
+      try {
+        toast.info('Updating effect parameters...');
+
+        const result = await audioService.processAudioForNP3WithPreset(
+          videoResult.audioFile,
+          selectedPreset,
+          newParams
+        );
+        setVideoResult(result);
+
+        // Clean up old audio element and create a new one
+        if (audioElement) {
+          audioElement.pause();
+          URL.revokeObjectURL(audioElement.src);
+        }
+
+        // Create new audio element with fresh object URL
+        const newAudio = new Audio(URL.createObjectURL(result.audioFile));
+        newAudio.preload = 'metadata';
+
+        newAudio.addEventListener('ended', () => {
+          setIsVideoPlaying(false);
+          setCurrentDisplayFrame(0);
+          setVideoProgress(0);
+        });
+
+        // Wait for audio to load metadata before setting position
+        await new Promise<void>((resolve) => {
+          const onLoadedMetadata = () => {
+            newAudio.removeEventListener('loadedmetadata', onLoadedMetadata);
+            resolve();
+          };
+          newAudio.addEventListener('loadedmetadata', onLoadedMetadata);
+          newAudio.load();
+        });
+
+        // Restore playback position
+        const restoredTime = Math.min(savedCurrentTime, newAudio.duration || 0);
+        newAudio.currentTime = restoredTime;
+
+        // Calculate and restore frame position
+        const restoredFrame = Math.min(
+          savedDisplayFrame,
+          Math.floor((restoredTime * 1000) / kTimeStepMilis)
+        );
+        const restoredProgress = Math.min(
+          savedProgress,
+          (restoredTime / (result.duration / 1000)) * 100
+        );
+
+        setAudioElement(newAudio);
+        setCurrentDisplayFrame(restoredFrame);
+        setVideoProgress(restoredProgress);
+        setLastProcessedFrame(-1);
+
+        // Draw the frame at the restored position
+        drawCurrentFrameToCanvas(restoredFrame);
+
+        // Update pixel states from the restored frame
+        const restoredFrameAnalysis = getFrameAnalysis(restoredFrame);
+        if (restoredFrameAnalysis) {
+          updatePixelStatesFromFrameAnalysis(restoredFrameAnalysis);
+        }
+
+        toast.success('Effect parameters updated!');
+
+        // Resume playback if it was playing before
+        if (wasPlaying) {
+          setTimeout(async () => {
+            try {
+              if (newAudio) {
+                newAudio.playbackRate = playbackSpeed;
+                await newAudio.play();
+                setIsVideoPlaying(true);
+              }
+            } catch (error) {
+              console.error('Failed to resume playback after params change:', error);
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Effect parameters update failed:', error);
+        toast.error('Failed to update effect parameters. Please try again.');
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  /**
+   * Reset effect parameters to defaults for the currently selected preset
+   */
+  const handleResetEffectParams = async () => {
+    if (!selectedPreset) {
+      toast.error('No effect selected');
+      return;
+    }
+
+    const defaultParams = getDefaultParamsForPreset(selectedPreset);
+    await handleEffectParamsChange(defaultParams);
+    toast.success('Effect parameters reset to defaults');
+  };
+
+  /**
    * Handle preset selection and reprocess audio
    */
   const handlePresetSelect = async (presetId: string) => {
@@ -801,8 +986,11 @@ export default function NP3Page() {
       return;
     }
 
-    // Store current playback state
+    // Store current playback state to preserve position
     const wasPlaying = isVideoPlaying;
+    const savedCurrentTime = audioElement?.currentTime || 0;
+    const savedDisplayFrame = currentDisplayFrame;
+    const savedProgress = videoProgress;
 
     setSelectedPreset(presetId);
     setIsProcessing(true);
@@ -811,9 +999,17 @@ export default function NP3Page() {
     try {
       toast.info(`Applying ${audioPresets.find((p) => p.id === presetId)?.name} preset...`);
 
+      // Get or initialize params for this preset
+      let params = effectParamsMap.get(presetId);
+      if (!params) {
+        params = getDefaultParamsForPreset(presetId);
+        setEffectParamsMap((prev) => new Map(prev).set(presetId, params!));
+      }
+
       const result = await audioService.processAudioForNP3WithPreset(
         videoResult.audioFile,
-        presetId
+        presetId,
+        params
       );
       setVideoResult(result);
 
@@ -833,12 +1029,43 @@ export default function NP3Page() {
         setVideoProgress(0);
       });
 
-      setAudioElement(newAudio);
+      // Wait for audio to load metadata before setting position
+      await new Promise<void>((resolve) => {
+        const onLoadedMetadata = () => {
+          newAudio.removeEventListener('loadedmetadata', onLoadedMetadata);
+          resolve();
+        };
+        newAudio.addEventListener('loadedmetadata', onLoadedMetadata);
+        newAudio.load();
+      });
 
-      // Reset playback states
-      setCurrentDisplayFrame(0);
-      setVideoProgress(0);
+      // Restore playback position
+      const restoredTime = Math.min(savedCurrentTime, newAudio.duration || 0);
+      newAudio.currentTime = restoredTime;
+
+      // Calculate and restore frame position
+      const restoredFrame = Math.min(
+        savedDisplayFrame,
+        Math.floor((restoredTime * 1000) / kTimeStepMilis)
+      );
+      const restoredProgress = Math.min(
+        savedProgress,
+        (restoredTime / (result.duration / 1000)) * 100
+      );
+
+      setAudioElement(newAudio);
+      setCurrentDisplayFrame(restoredFrame);
+      setVideoProgress(restoredProgress);
       setLastProcessedFrame(-1);
+
+      // Draw the frame at the restored position
+      drawCurrentFrameToCanvas(restoredFrame);
+
+      // Update pixel states from the restored frame
+      const restoredFrameAnalysis = getFrameAnalysis(restoredFrame);
+      if (restoredFrameAnalysis) {
+        updatePixelStatesFromFrameAnalysis(restoredFrameAnalysis);
+      }
 
       toast.success(
         `${audioPresets.find((p) => p.id === presetId)?.name} preset applied successfully!`
@@ -890,7 +1117,7 @@ export default function NP3Page() {
       // console.log('Video processing result:', result);
 
       setVideoResult(result);
-      
+
       // Update default filename based on input file name
       if (videoFile.name) {
         const baseName = videoFile.name.replace(/\.[^/.]+$/, ''); // Remove extension
@@ -1756,7 +1983,9 @@ export default function NP3Page() {
       for (let col = 0; col < 25; col++) {
         const index = getPixelIndex(row, col);
         if (isPixelInCircle(row, col)) {
-          const brightness = frameAnalysis.brightnessMap[row][col];
+          // Brightness values are in NP3 range (0-4095), convert to display range (0-255)
+          const np3Brightness = frameAnalysis.brightnessMap[row][col];
+          const brightness = Math.round((np3Brightness / 4095) * 255);
 
           // Check if this pixel was user-drawn
           const isUserDrawn = userDrawnPixels.has(`${currentFrameAnalysisIndex}-${row}-${col}`);
@@ -2010,7 +2239,9 @@ export default function NP3Page() {
             frameAnalysis.brightnessMap[row] &&
             frameAnalysis.brightnessMap[row][col] !== undefined
           ) {
-            const brightness = frameAnalysis.brightnessMap[row][col];
+            // Brightness values are in NP3 range (0-4095), convert to display range (0-255)
+            const np3Brightness = frameAnalysis.brightnessMap[row][col];
+            const brightness = Math.round((np3Brightness / 4095) * 255);
             const x = col * cellSize;
             const y = row * cellSize;
 
@@ -2020,8 +2251,8 @@ export default function NP3Page() {
               dotMatrixSettings
             );
 
-            // Convert brightness to grayscale
-            const grayValue = Math.round(adjustedBrightness);
+            // Convert brightness to grayscale (already in 0-255 range)
+            const grayValue = Math.round(Math.max(0, Math.min(255, adjustedBrightness)));
             ctx.fillStyle = `rgb(${grayValue}, ${grayValue}, ${grayValue})`;
             ctx.fillRect(x, y, cellSize, cellSize);
           }
@@ -2508,11 +2739,14 @@ export default function NP3Page() {
               Video/Audio to Glyph Matrix
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-white/20 to-white/40 mx-auto rounded-full mb-4"></div>
-            
+
             {/* Output Filename Input - Only show after file is processed */}
             {videoResult && (
               <div className="max-w-md mx-auto">
-                <label htmlFor="output-filename" className="block text-sm font-medium text-white/70 mb-2">
+                <label
+                  htmlFor="output-filename"
+                  className="block text-sm font-medium text-white/70 mb-2"
+                >
                   Output Filename
                 </label>
                 <div className="flex items-center gap-2">
@@ -2935,6 +3169,2063 @@ export default function NP3Page() {
                     +
                   </Button>
                 </div>
+
+                {/* Effect Parameters Popover - Only show for audio files */}
+                {videoResult && videoResult.originalFileType === 'audio' && (
+                  <div className="mt-6 flex justify-center">
+                    <Popover open={effectSettingsOpen} onOpenChange={setEffectSettingsOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={isProcessing || !selectedPreset}
+                          className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 button-hover rounded-xl"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Effect Settings
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-96 max-h-[80vh] overflow-y-auto bg-black/95 border-white/20 text-white">
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2">
+                              {selectedPreset
+                                ? audioPresets.find((p) => p.id === selectedPreset)?.name
+                                : 'Effect'}{' '}
+                              Parameters
+                            </h4>
+
+                            {/* Common Parameters: Sensitivity and Intensity */}
+                            <div className="space-y-3 mb-4 pb-4 border-b border-white/10">
+                              {/* Sensitivity */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="sensitivity" className="text-xs text-white/90">
+                                    Sensitivity
+                                  </Label>
+                                  <span className="text-xs text-white/70 font-mono">
+                                    {Math.round(effectParams.sensitivity * 100)}%
+                                  </span>
+                                </div>
+                                <Slider
+                                  id="sensitivity"
+                                  min={0}
+                                  max={1}
+                                  step={0.01}
+                                  value={[effectParams.sensitivity]}
+                                  onValueChange={(value) => {
+                                    const newParams = {
+                                      ...effectParams,
+                                      sensitivity: value[0]
+                                    } as EffectParameters;
+                                    if (sensitivityTimeoutRef.current) {
+                                      clearTimeout(sensitivityTimeoutRef.current);
+                                    }
+                                    sensitivityTimeoutRef.current = setTimeout(() => {
+                                      handleEffectParamsChange(newParams);
+                                    }, 300);
+                                  }}
+                                  disabled={isProcessing || !selectedPreset}
+                                  className="w-full"
+                                />
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-white/50">
+                                    Low (High Threshold)
+                                  </span>
+                                  <span className="text-xs text-white/50">
+                                    High (Low Threshold)
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Intensity */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label htmlFor="intensity" className="text-xs text-white/90">
+                                    Intensity
+                                  </Label>
+                                  <span className="text-xs text-white/70 font-mono">
+                                    {Math.round(effectParams.intensity * 100)}%
+                                  </span>
+                                </div>
+                                <Slider
+                                  id="intensity"
+                                  min={0}
+                                  max={1}
+                                  step={0.01}
+                                  value={[effectParams.intensity]}
+                                  onValueChange={(value) => {
+                                    const newParams = {
+                                      ...effectParams,
+                                      intensity: value[0]
+                                    } as EffectParameters;
+                                    if (sensitivityTimeoutRef.current) {
+                                      clearTimeout(sensitivityTimeoutRef.current);
+                                    }
+                                    sensitivityTimeoutRef.current = setTimeout(() => {
+                                      handleEffectParamsChange(newParams);
+                                    }, 300);
+                                  }}
+                                  disabled={isProcessing || !selectedPreset}
+                                  className="w-full"
+                                />
+                                <div className="flex justify-between">
+                                  <span className="text-xs text-white/50">Dim</span>
+                                  <span className="text-xs text-white/50">Bright</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Effect-Specific Parameters */}
+                            {selectedPreset === 'beatmonitor' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Wave Height</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as BeatMonitorParams).waveHeight * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as BeatMonitorParams).waveHeight]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        waveHeight: value[0]
+                                      } as BeatMonitorParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Wave Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as BeatMonitorParams).waveSpeed * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as BeatMonitorParams).waveSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        waveSpeed: value[0]
+                                      } as BeatMonitorParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Line Thickness</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as BeatMonitorParams).lineThickness * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as BeatMonitorParams).lineThickness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        lineThickness: value[0]
+                                      } as BeatMonitorParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">
+                                      Baseline Brightness
+                                    </Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as BeatMonitorParams).baselineBrightness * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as BeatMonitorParams).baselineBrightness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        baselineBrightness: value[0]
+                                      } as BeatMonitorParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'pulse' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Pulse Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as PulseParams).pulseSpeed * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as PulseParams).pulseSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        pulseSpeed: value[0]
+                                      } as PulseParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Ring Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {Math.floor(1 + (effectParams as PulseParams).ringCount * 4)}
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PulseParams).ringCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        ringCount: value[0]
+                                      } as PulseParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Ring Thickness</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as PulseParams).ringThickness * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PulseParams).ringThickness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        ringThickness: value[0]
+                                      } as PulseParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Fade Intensity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as PulseParams).fadeIntensity * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PulseParams).fadeIntensity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        fadeIntensity: value[0]
+                                      } as PulseParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'alivething' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Wave Complexity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as AliveThingParams).waveComplexity * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as AliveThingParams).waveComplexity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        waveComplexity: value[0]
+                                      } as AliveThingParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Movement Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as AliveThingParams).movementSpeed * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as AliveThingParams).movementSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        movementSpeed: value[0]
+                                      } as AliveThingParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Pattern Density</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as AliveThingParams).patternDensity * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as AliveThingParams).patternDensity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        patternDensity: value[0]
+                                      } as AliveThingParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Variation</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as AliveThingParams).variation * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as AliveThingParams).variation]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        variation: value[0]
+                                      } as AliveThingParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'spinny' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Rotation Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as SpinnyParams).rotationSpeed * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as SpinnyParams).rotationSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        rotationSpeed: value[0]
+                                      } as SpinnyParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Blade Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {Math.floor(
+                                        3 + (effectParams as SpinnyParams).bladeCount * 5
+                                      )}
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpinnyParams).bladeCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        bladeCount: value[0]
+                                      } as SpinnyParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Blade Length</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as SpinnyParams).bladeLength * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpinnyParams).bladeLength]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        bladeLength: value[0]
+                                      } as SpinnyParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">
+                                      Center Brightness
+                                    </Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as SpinnyParams).centerBrightness * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpinnyParams).centerBrightness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        centerBrightness: value[0]
+                                      } as SpinnyParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'spectrum' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Bar Sensitivity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as SpectrumParams).barSensitivity * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as SpectrumParams).barSensitivity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        barSensitivity: value[0]
+                                      } as SpectrumParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Decay Rate</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as SpectrumParams).decayRate * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpectrumParams).decayRate]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        decayRate: value[0]
+                                      } as SpectrumParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Peak Hold</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as SpectrumParams).peakHold * 100).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpectrumParams).peakHold]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        peakHold: value[0]
+                                      } as SpectrumParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Frequency Range</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as SpectrumParams).frequencyRange * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as SpectrumParams).frequencyRange]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        frequencyRange: value[0]
+                                      } as SpectrumParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* New Effects */}
+                            {selectedPreset === 'radialspokes' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Spoke Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {Math.floor(
+                                        8 + (effectParams as RadialSpokesParams).spokeCount * 24
+                                      )}
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as RadialSpokesParams).spokeCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        spokeCount: value[0]
+                                      } as RadialSpokesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Spoke Length</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as RadialSpokesParams).spokeLength * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as RadialSpokesParams).spokeLength]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        spokeLength: value[0]
+                                      } as RadialSpokesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Rotation Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as RadialSpokesParams).rotationSpeed * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as RadialSpokesParams).rotationSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        rotationSpeed: value[0]
+                                      } as RadialSpokesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'bassblobs' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Blob Size</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as BassBlobsParams).blobSize * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as BassBlobsParams).blobSize]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        blobSize: value[0]
+                                      } as BassBlobsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Blob Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as BassBlobsParams).blobSpeed * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as BassBlobsParams).blobSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        blobSpeed: value[0]
+                                      } as BassBlobsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Merge Intensity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as BassBlobsParams).mergeIntensity * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as BassBlobsParams).mergeIntensity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        mergeIntensity: value[0]
+                                      } as BassBlobsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Decay Rate</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as BassBlobsParams).decayRate * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as BassBlobsParams).decayRate]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        decayRate: value[0]
+                                      } as BassBlobsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'treblesparkles' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Sparkle Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as TrebleSparklesParams).sparkleCount * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as TrebleSparklesParams).sparkleCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        sparkleCount: value[0]
+                                      } as TrebleSparklesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">
+                                      Sparkle Duration
+                                    </Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as TrebleSparklesParams).sparkleDuration * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as TrebleSparklesParams).sparkleDuration]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        sparkleDuration: value[0]
+                                      } as TrebleSparklesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Sparkle Size</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as TrebleSparklesParams).sparkleSize * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as TrebleSparklesParams).sparkleSize]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        sparkleSize: value[0]
+                                      } as TrebleSparklesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Jitter Amount</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as TrebleSparklesParams).jitterAmount * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as TrebleSparklesParams).jitterAmount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        jitterAmount: value[0]
+                                      } as TrebleSparklesParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'peakdetectors' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Peak Hold</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as PeakDetectorsParams).peakHold * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PeakDetectorsParams).peakHold]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        peakHold: value[0]
+                                      } as PeakDetectorsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Bloom Size</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as PeakDetectorsParams).bloomSize * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as PeakDetectorsParams).bloomSize]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        bloomSize: value[0]
+                                      } as PeakDetectorsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Decay Rate</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as PeakDetectorsParams).decayRate * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PeakDetectorsParams).decayRate]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        decayRate: value[0]
+                                      } as PeakDetectorsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Threshold</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as PeakDetectorsParams).threshold * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as PeakDetectorsParams).threshold]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        threshold: value[0]
+                                      } as PeakDetectorsParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'stereopingpong' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Dot Size</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as StereoPingpongParams).dotSize * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as StereoPingpongParams).dotSize]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        dotSize: value[0]
+                                      } as StereoPingpongParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Movement Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as StereoPingpongParams).movementSpeed * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as StereoPingpongParams).movementSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        movementSpeed: value[0]
+                                      } as StereoPingpongParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Smoothing</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as StereoPingpongParams).smoothing * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as StereoPingpongParams).smoothing]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        smoothing: value[0]
+                                      } as StereoPingpongParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'checkerboard' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Square Size</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as CheckerboardParams).squareSize * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as CheckerboardParams).squareSize]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        squareSize: value[0]
+                                      } as CheckerboardParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Rotation Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as CheckerboardParams).rotationSpeed * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as CheckerboardParams).rotationSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        rotationSpeed: value[0]
+                                      } as CheckerboardParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Color Shift</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as CheckerboardParams).colorShift * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as CheckerboardParams).colorShift]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        colorShift: value[0]
+                                      } as CheckerboardParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'huecycle' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Cycle Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as HueCycleParams).cycleSpeed * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as HueCycleParams).cycleSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        cycleSpeed: value[0]
+                                      } as HueCycleParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Saturation</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as HueCycleParams).saturation * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as HueCycleParams).saturation]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        saturation: value[0]
+                                      } as HueCycleParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Brightness</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as HueCycleParams).brightness * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as HueCycleParams).brightness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        brightness: value[0]
+                                      } as HueCycleParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'ambisonicradial' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Octant Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {Math.floor(
+                                        4 + (effectParams as AmbisonicRadialParams).octantCount * 12
+                                      )}
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as AmbisonicRadialParams).octantCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        octantCount: value[0]
+                                      } as AmbisonicRadialParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">
+                                      Radius Multiplier
+                                    </Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as AmbisonicRadialParams).radiusMultiplier *
+                                        100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[
+                                      (effectParams as AmbisonicRadialParams).radiusMultiplier
+                                    ]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        radiusMultiplier: value[0]
+                                      } as AmbisonicRadialParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Smoothing</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as AmbisonicRadialParams).smoothing * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as AmbisonicRadialParams).smoothing]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        smoothing: value[0]
+                                      } as AmbisonicRadialParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'strobe' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Flash Intensity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as StrobeParams).flashIntensity * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as StrobeParams).flashIntensity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        flashIntensity: value[0]
+                                      } as StrobeParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Flash Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as StrobeParams).flashSpeed * 100).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as StrobeParams).flashSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        flashSpeed: value[0]
+                                      } as StrobeParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Duty Cycle</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as StrobeParams).dutyCycle * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as StrobeParams).dutyCycle]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        dutyCycle: value[0]
+                                      } as StrobeParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'noisefield' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Noise Scale</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {(
+                                        (effectParams as NoiseFieldParams).noiseScale * 100
+                                      ).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as NoiseFieldParams).noiseScale]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        noiseScale: value[0]
+                                      } as NoiseFieldParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Flow Speed</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NoiseFieldParams).flowSpeed * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as NoiseFieldParams).flowSpeed]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        flowSpeed: value[0]
+                                      } as NoiseFieldParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Contrast</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NoiseFieldParams).contrast * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NoiseFieldParams).contrast]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        contrast: value[0]
+                                      } as NoiseFieldParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'notemap' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Note Range</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NoteMapParams).noteRange * 100).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NoteMapParams).noteRange]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        noteRange: value[0]
+                                      } as NoteMapParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Note Hold</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NoteMapParams).noteHold * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NoteMapParams).noteHold]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        noteHold: value[0]
+                                      } as NoteMapParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Brightness</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NoteMapParams).brightness * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NoteMapParams).brightness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        brightness: value[0]
+                                      } as NoteMapParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedPreset === 'nebula' && (
+                              <div className="space-y-3">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Blob Count</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NebulaParams).blobCount * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NebulaParams).blobCount]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        blobCount: value[0]
+                                      } as NebulaParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Flow Intensity</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NebulaParams).flowIntensity * 100).toFixed(
+                                        0
+                                      )}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={2}
+                                    step={0.01}
+                                    value={[(effectParams as NebulaParams).flowIntensity]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        flowIntensity: value[0]
+                                      } as NebulaParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Softness</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NebulaParams).softness * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NebulaParams).softness]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        softness: value[0]
+                                      } as NebulaParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs text-white/90">Color Shift</Label>
+                                    <span className="text-xs text-white/70 font-mono">
+                                      {((effectParams as NebulaParams).colorShift * 100).toFixed(0)}
+                                      %
+                                    </span>
+                                  </div>
+                                  <Slider
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={[(effectParams as NebulaParams).colorShift]}
+                                    onValueChange={(value) => {
+                                      const newParams = {
+                                        ...effectParams,
+                                        colorShift: value[0]
+                                      } as NebulaParams;
+                                      if (sensitivityTimeoutRef.current)
+                                        clearTimeout(sensitivityTimeoutRef.current);
+                                      sensitivityTimeoutRef.current = setTimeout(
+                                        () => handleEffectParamsChange(newParams),
+                                        300
+                                      );
+                                    }}
+                                    disabled={isProcessing}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Reset to Default Button */}
+                            <div className="mt-6 pt-4 border-t border-white/10">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleResetEffectParams}
+                                disabled={isProcessing || !selectedPreset}
+                                className="w-full border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
+                                title="Reset all parameters to default values"
+                                aria-label="Reset to defaults"
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Reset to Defaults
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2942,6 +5233,20 @@ export default function NP3Page() {
           {/* Video Controls - Floating at bottom */}
           {videoResult && (
             <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 floating-controls rounded-2xl p-4 shadow-2xl space-y-3 min-w-[90vw] max-w-4xl">
+              {/* Loading Indicator - Only show when processing */}
+              {isProcessing && (
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span className="text-xs text-white/70 font-mono">
+                    Processing: {processingProgress.toFixed(0)}%
+                  </span>
+                  <div
+                    className="w-2 h-2 bg-white rounded-full animate-pulse"
+                    style={{ animationDelay: '0.2s' }}
+                  ></div>
+                </div>
+              )}
+
               {/* Progress Bar */}
               <div className="flex items-center space-x-3">
                 {/* Previous Frame Button */}
@@ -2949,7 +5254,7 @@ export default function NP3Page() {
                   variant="outline"
                   size="sm"
                   onClick={goToPreviousFrame}
-                  disabled={!videoResult || currentDisplayFrame <= 0}
+                  disabled={!videoResult || currentDisplayFrame <= 0 || isProcessing}
                   className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title="Previous frame"
                   aria-label="Previous frame"
@@ -2966,7 +5271,8 @@ export default function NP3Page() {
                     step="0.01"
                     value={videoProgress}
                     onChange={handlePendingProgressChange}
-                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                    disabled={isProcessing}
+                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: `linear-gradient(to right, white 0%, white ${videoProgress}%, rgba(255,255,255,0.1) ${videoProgress}%, rgba(255,255,255,0.1) 100%)`
                     }}
@@ -2982,7 +5288,9 @@ export default function NP3Page() {
                   size="sm"
                   onClick={goToNextFrame}
                   disabled={
-                    !videoResult || currentDisplayFrame >= (videoResult?.totalFrames || 0) - 1
+                    !videoResult ||
+                    currentDisplayFrame >= (videoResult?.totalFrames || 0) - 1 ||
+                    isProcessing
                   }
                   className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl"
                   title="Next frame"
@@ -3004,7 +5312,8 @@ export default function NP3Page() {
                       playVideo();
                     }
                   }}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
+                  disabled={isProcessing}
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   title={isVideoPlaying ? 'Pause playback' : 'Play video'}
                   aria-label={isVideoPlaying ? 'Pause playback' : 'Play video'}
                 >
@@ -3016,7 +5325,8 @@ export default function NP3Page() {
                   variant="outline"
                   size="sm"
                   onClick={stopVideo}
-                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl"
+                  disabled={isProcessing}
+                  className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 button-hover rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Stop playback and reset to beginning"
                   aria-label="Stop playback"
                 >
@@ -3034,6 +5344,50 @@ export default function NP3Page() {
                 >
                   <X className="h-3 w-3" />
                 </Button>
+
+                {/* Multi-Effect Preview Button - Only show for audio files */}
+                {videoResult && videoResult.originalFileType === 'audio' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (videoResult && audioData) {
+                        setShowMultiEffectPreview(true);
+                      } else {
+                        toast.info('Please wait for audio processing to complete');
+                      }
+                    }}
+                    disabled={isProcessing || !audioData}
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl px-4 py-2"
+                    title="Preview all effects simultaneously"
+                    aria-label="All Effects Preview"
+                  >
+                    <Palette className="h-4 w-4 mr-2" />
+                    All Effects Preview
+                  </Button>
+                )}
+
+                {/* Advanced Editor Button */}
+                {videoResult && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (videoResult) {
+                        setShowAdvancedEditor(true);
+                      } else {
+                        toast.info('Upload a video first to open advanced editor');
+                      }
+                    }}
+                    disabled={isProcessing}
+                    className="border-white/20 text-white hover:bg-white/10 hover:border-white/40 focus:ring-2 focus:ring-white/40 focus:outline-none active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed button-hover rounded-xl px-4 py-2"
+                    title="Open Advanced Editor (Ctrl/Cmd + E) - Adjust gamma, brightness, contrast, and saturation"
+                    aria-label="Open Advanced Editor"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Advanced Editor
+                  </Button>
+                )}
 
                 {/* Save Button */}
                 <Button
@@ -3473,6 +5827,9 @@ export default function NP3Page() {
                         • <strong>Spinny:</strong> Rotating fan synced to audio
                       </li>
                       <li>
+                        • <strong>Spectrum:</strong> Frequency spectrum analyzer with vertical bars
+                      </li>
+                      <li>
                         • Switch presets anytime during playback to see different visualizations
                       </li>
                       <li>
@@ -3619,6 +5976,78 @@ export default function NP3Page() {
             }
           }}
           onStop={stopVideo}
+        />
+      )}
+
+      {/* All Effect Preview Dialog */}
+      {videoResult && videoResult.originalFileType === 'audio' && (
+        <AllEffectPreviewDialog
+          isOpen={showMultiEffectPreview}
+          onClose={() => setShowMultiEffectPreview(false)}
+          audioData={audioData}
+          audioPresets={audioPresets}
+          effectParamsMap={effectParamsMap}
+          dotMatrixSettings={dotMatrixSettings}
+          isVideoPlaying={isVideoPlaying}
+          videoProgress={videoProgress}
+          currentFrameIndex={currentDisplayFrame}
+          totalFrames={videoResult.displayFrames.length}
+          onPlayPause={() => {
+            if (isVideoPlaying) {
+              pauseVideo();
+            } else {
+              playVideo();
+            }
+          }}
+          onStop={stopVideo}
+          onEffectSelect={async (presetId: string) => {
+            await handlePresetSelect(presetId);
+          }}
+          onSeek={(progress) => {
+            if (!videoResult) return;
+            const newTime = (progress / 100) * (videoResult.displayDuration / 1000);
+
+            // Pause playback temporarily during seeking
+            const wasPlaying = isVideoPlaying;
+            if (wasPlaying) {
+              setIsVideoPlaying(false);
+            }
+
+            if (audioElement) {
+              audioElement.currentTime = newTime;
+            }
+            setVideoProgress(progress);
+
+            // Update display frame immediately
+            const frameIndex = Math.floor((newTime * 1000) / kTimeStepMilis);
+            if (frameIndex < videoResult.displayFrames.length) {
+              setCurrentDisplayFrame(frameIndex);
+
+              // Draw the current frame to the canvas
+              drawCurrentFrameToCanvas(frameIndex);
+
+              // Get the current frame analysis and update pixel states
+              const frameAnalysis = getFrameAnalysis(frameIndex);
+
+              if (frameAnalysis) {
+                updatePixelStatesFromFrameAnalysis(frameAnalysis);
+              } else {
+                const displayFrame = videoResult.displayFrames[frameIndex];
+                if (displayFrame && displayFrame.pixelStates) {
+                  setPixelStates([...displayFrame.pixelStates]);
+                } else {
+                  setPixelStates(new Array(625).fill(false));
+                }
+              }
+            }
+
+            // Resume playback if it was playing before
+            if (wasPlaying) {
+              setTimeout(() => {
+                setIsVideoPlaying(true);
+              }, 50);
+            }
+          }}
         />
       )}
 

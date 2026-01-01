@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { X, RotateCcw, Check } from 'lucide-react';
+import { RotateCcw, Check } from 'lucide-react';
+import FullscreenDialog from '@/components/ui/fullscreen-dialog';
 
 interface AdvancedVideoEditorProps {
   onApplySettings: (settings: VideoSettings) => void;
@@ -286,24 +287,13 @@ export default function AdvancedVideoEditor({
     onApplySettings(videoSettings);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-black border border-white/20 rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white font-[ndot] tracking-wider uppercase">
-            Advanced Video Editor
-          </h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            className="text-white hover:text-white hover:bg-white/10"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+    <FullscreenDialog
+      isOpen={isOpen}
+      onClose={onCancel}
+      title="Advanced Video Editor"
+      zIndex={50}
+    >
 
         {/* Playback Controls - Moved to top */}
         <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-lg">
@@ -625,7 +615,6 @@ export default function AdvancedVideoEditor({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </FullscreenDialog>
   );
 }

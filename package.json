@@ -1,7 +1,7 @@
 {
   "name": "better-nothing-glyph-composer",
   "private": true,
-  "version": "1.3.5",
+  "version": "1.4.2",
   "type": "module",
   "homepage": "https://krishnagopal-sinha.github.io/better-nothing-glyph-composer/",
   "scripts": {
