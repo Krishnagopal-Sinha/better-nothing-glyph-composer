@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,17 +16,17 @@ import {
   Redo2,
   ChevronLeft,
   ChevronRight,
-  Pencil,
-  Eraser,
+  // COMMENTED OUT: Drawing-related imports - Drawing feature removed
+  // Pencil,
+  // Eraser,
   Palette,
-  Minus,
-  Plus,
+  // Minus,
+  // Plus,
   RotateCcw
 } from 'lucide-react';
 import { kAppName, kTimeStepMilis } from '@/lib/consts';
 import useGlobalAppStore from '@/lib/timeline_state';
 import VideoEditorService, {
-  VideoSettings,
   CropSettings,
   FrameAnalysis,
   VideoProcessingResult
@@ -64,6 +64,7 @@ import DotMatrixSettingsDialog, {
   DotMatrixSettings
 } from '@/components/ui/dot-matrix-settings-dialog';
 import AllEffectPreviewDialog from '@/components/ui/multi-effect-preview-dialog';
+import GlyphPreview from '@/components/ui/glyph-preview';
 import { toast } from 'sonner';
 import type { AudioData } from '@/logic/np3_audio_service';
 
@@ -109,16 +110,6 @@ export default function NP3Page() {
   const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
   const [showMultiEffectPreview, setShowMultiEffectPreview] = useState(false);
   const [audioData, setAudioData] = useState<AudioData | null>(null);
-  const [videoSettings, setVideoSettings] = useState<VideoSettings>({
-    gamma: 1,
-    brightness: 0,
-    contrast: 1,
-    saturation: 1,
-    hue: 0,
-    threshold: 128,
-    inversion: false
-  });
-
   // Pre-processed frame data for efficient playback
   const [isPreProcessing, setIsPreProcessing] = useState(false);
   const [preProcessingProgress, setPreProcessingProgress] = useState(0);
@@ -129,9 +120,8 @@ export default function NP3Page() {
   // Ref for the canvas to draw the processed video
   const processedVideoCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Drag-to-paint states
-
-  const [isMouseDown, setIsMouseDown] = useState(false);
+  // COMMENTED OUT: Drag-to-paint states - Drawing feature removed
+  // const [isMouseDown, setIsMouseDown] = useState(false);
 
   // Zoom state for dot matrix
   const [dotMatrixZoom, setDotMatrixZoom] = useState(0.75);
@@ -179,12 +169,12 @@ export default function NP3Page() {
 
   const effectParams = getCurrentEffectParams();
 
-  // Drawing tool states
-  const [drawingMode, setDrawingMode] = useState<'draw' | 'erase'>('draw');
-  const [strokeWidth, setStrokeWidth] = useState(1); // 1-5 pixels
-  const [brightnessValue, setBrightnessValue] = useState(255); // 0-255 to match processed video
-  const [showBrightnessSlider, setShowBrightnessSlider] = useState(false);
-  const [lastDrawnPixel, setLastDrawnPixel] = useState<number | null>(null);
+  // COMMENTED OUT: Drawing tool states - Drawing feature removed
+  // const [drawingMode, setDrawingMode] = useState<'draw' | 'erase'>('draw');
+  // const [strokeWidth, setStrokeWidth] = useState(1); // 1-5 pixels
+  // const [brightnessValue, setBrightnessValue] = useState(255); // 0-255 to match processed video
+  // const [showBrightnessSlider, setShowBrightnessSlider] = useState(false);
+  // const [lastDrawnPixel, setLastDrawnPixel] = useState<number | null>(null);
 
   // Undo/Redo state for user modifications
   const [undoStack, setUndoStack] = useState<
@@ -248,6 +238,24 @@ export default function NP3Page() {
     }
     return undefined;
   };
+
+  /**
+   * Get the current frame's brightness map for GlyphPreview
+   * Passes raw brightness map EXACTLY like Advanced Video Editor receives it
+   * Advanced Video Editor receives currentFrameAnalysis.brightnessMap directly
+   * No normalization - let the component process it exactly like Advanced Video Editor
+   * Memoized to avoid unnecessary recalculations
+   */
+  const currentFrameBrightnessMap = useMemo((): number[][] | null => {
+    if (!videoResult) return null;
+    const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
+    if (!frameAnalysis || !frameAnalysis.brightnessMap) return null;
+
+    // Return the brightness map directly, EXACTLY like Advanced Video Editor receives it
+    // Advanced Video Editor receives currentFrameAnalysis.brightnessMap and processes it directly
+    // No normalization - the component will process it the same way
+    return frameAnalysis.brightnessMap;
+  }, [videoResult, currentDisplayFrame]);
 
   const currentFrameAnalysisIndex = getCurrentFrameAnalysisIndex();
   const currentFrameUndoStack = undoStack.filter((u) => u.frameIndex === currentFrameAnalysisIndex);
@@ -360,86 +368,88 @@ export default function NP3Page() {
     }
   }, [isPreProcessing]);
 
+  // COMMENTED OUT: Replaced with GlyphPreview component (DRY principle)
   // Ref for the dot matrix canvas
-  const dotMatrixCanvasRef = useRef<HTMLCanvasElement>(null);
+  // const dotMatrixCanvasRef = useRef<HTMLCanvasElement>(null);
 
+  // COMMENTED OUT: Replaced with GlyphPreview component (DRY principle)
   // Draw the dot matrix to the canvas
-  const drawDotMatrixToCanvas = (frameIndex: number) => {
-    if (!videoResult || !dotMatrixCanvasRef.current) return;
-    const canvas = dotMatrixCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // const drawDotMatrixToCanvas = (frameIndex: number) => {
+  //   if (!videoResult || !dotMatrixCanvasRef.current) return;
+  //   const canvas = dotMatrixCanvasRef.current;
+  //   const ctx = canvas.getContext('2d');
+  //   if (!ctx) return;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  //   // Clear canvas
+  //   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Get the current frame analysis using the reusable function
-    const frameAnalysis = getFrameAnalysis(frameIndex);
-    if (!frameAnalysis) return;
+  //   // Get the current frame analysis using the reusable function
+  //   const frameAnalysis = getFrameAnalysis(frameIndex);
+  //   if (!frameAnalysis) return;
 
-    // Validate brightness map structure
-    if (!frameAnalysis.brightnessMap || !Array.isArray(frameAnalysis.brightnessMap)) {
-      console.warn('Invalid brightness map structure:', frameAnalysis.brightnessMap);
-      return;
-    }
+  //   // Validate brightness map structure
+  //   if (!frameAnalysis.brightnessMap || !Array.isArray(frameAnalysis.brightnessMap)) {
+  //     console.warn('Invalid brightness map structure:', frameAnalysis.brightnessMap);
+  //     return;
+  //   }
 
-    // Draw each pixel
-    const gridSize = 25;
-    const cellSize = canvas.width / gridSize;
-    for (let row = 0; row < gridSize; row++) {
-      for (let col = 0; col < gridSize; col++) {
-        if (isPixelInCircle(row, col)) {
-          // Safety check for brightness map row
-          if (
-            !frameAnalysis.brightnessMap[row] ||
-            !Array.isArray(frameAnalysis.brightnessMap[row])
-          ) {
-            console.warn(
-              `Invalid brightness map row at index ${row}:`,
-              frameAnalysis.brightnessMap[row]
-            );
-            continue;
-          }
+  //   // Draw each pixel
+  //   const gridSize = 25;
+  //   const cellSize = canvas.width / gridSize;
+  //   for (let row = 0; row < gridSize; row++) {
+  //     for (let col = 0; col < gridSize; col++) {
+  //       if (isPixelInCircle(row, col)) {
+  //         // Safety check for brightness map row
+  //         if (
+  //           !frameAnalysis.brightnessMap[row] ||
+  //           !Array.isArray(frameAnalysis.brightnessMap[row])
+  //         ) {
+  //           console.warn(
+  //             `Invalid brightness map row at index ${row}:`,
+  //             frameAnalysis.brightnessMap[row]
+  //           );
+  //           continue;
+  //         }
 
-          // Safety check for brightness value
-          if (frameAnalysis.brightnessMap[row][col] === undefined) {
-            console.warn(
-              `Invalid brightness value at [${row}][${col}]:`,
-              frameAnalysis.brightnessMap[row][col]
-            );
-            continue;
-          }
+  //         // Safety check for brightness value
+  //         if (frameAnalysis.brightnessMap[row][col] === undefined) {
+  //           console.warn(
+  //             `Invalid brightness value at [${row}][${col}]:`,
+  //             frameAnalysis.brightnessMap[row][col]
+  //           );
+  //           continue;
+  //         }
 
-          // Brightness values are in NP3 range (0-4095), convert to display range (0-255)
-          const np3Brightness = frameAnalysis.brightnessMap[row][col];
-          let brightness = Math.round((np3Brightness / 4095) * 255);
-          // Check if this pixel was user-drawn
-          const analysisIndex = getFrameAnalysisIndex(frameIndex);
-          const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${row}-${col}`);
-          // Get display brightness, preserving user drawing and applying dot matrix settings
-          brightness = getDisplayBrightnessWithDotMatrixSettings(
-            brightness,
-            dotMatrixSettings,
-            isUserDrawn
-          );
-          const opacity = Math.min(1, brightness / 255);
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          ctx.fillStyle = '#fff';
-          ctx.beginPath();
-          ctx.arc(
-            col * cellSize + cellSize / 2,
-            row * cellSize + cellSize / 2,
-            cellSize * 0.45,
-            0,
-            2 * Math.PI
-          );
-          ctx.fill();
-          ctx.restore();
-        }
-      }
-    }
-  };
+  //         // Brightness values are in NP3 range (0-4095), convert to display range (0-255)
+  //         const np3Brightness = frameAnalysis.brightnessMap[row][col];
+  //         let brightness = Math.round((np3Brightness / 4095) * 255);
+  //         // Check if this pixel was user-drawn
+  //         const analysisIndex = getFrameAnalysisIndex(frameIndex);
+  //         const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${row}-${col}`);
+  //         // Get display brightness, preserving user drawing and applying dot matrix settings
+  //         brightness = getDisplayBrightnessWithDotMatrixSettings(
+  //           brightness,
+  //           dotMatrixSettings,
+  //           isUserDrawn
+  //         );
+  //         const opacity = Math.min(1, brightness / 255);
+  //         ctx.save();
+  //         ctx.globalAlpha = opacity;
+  //         ctx.fillStyle = '#fff';
+  //         ctx.beginPath();
+  //         ctx.arc(
+  //           col * cellSize + cellSize / 2,
+  //           row * cellSize + cellSize / 2,
+  //           cellSize * 0.45,
+  //           0,
+  //           2 * Math.PI
+  //         );
+  //         ctx.fill();
+  //         ctx.restore();
+  //       }
+  //     }
+  //   }
+  // };
 
   // Update the playback effect to draw to the canvas
   useLayoutEffect(() => {
@@ -452,7 +462,7 @@ export default function NP3Page() {
           if (frameIndex < videoResult.totalFrames && frameIndex !== lastProcessedFrame) {
             setLastProcessedFrame(frameIndex);
             setCurrentDisplayFrame(frameIndex);
-            drawDotMatrixToCanvas(frameIndex);
+            // drawDotMatrixToCanvas(frameIndex); // COMMENTED OUT: Replaced with GlyphPreview component
           }
           const progress = (currentTime / videoResult.duration) * 100;
           setVideoProgress(Math.min(progress, 100));
@@ -474,7 +484,7 @@ export default function NP3Page() {
 
   // Also draw to canvas on frame change (for manual navigation)
   useEffect(() => {
-    drawDotMatrixToCanvas(currentDisplayFrame);
+    // drawDotMatrixToCanvas(currentDisplayFrame); // COMMENTED OUT: Replaced with GlyphPreview component
     // Also update the video preview canvas for video uploads
     if (videoResult && videoResult.originalFileType === 'video') {
       drawCurrentFrameToCanvas(currentDisplayFrame);
@@ -490,7 +500,7 @@ export default function NP3Page() {
       // Draw the initial frame to the canvas
       drawCurrentFrameToCanvas(0);
     }
-  }, [videoSettings, videoResult]); // Simplified dependencies
+  }, [dotMatrixSettings, videoResult]); // Simplified dependencies
 
   // Audio element management
   useEffect(() => {
@@ -636,14 +646,26 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyR':
-          if ((event.ctrlKey || event.metaKey) && event.shiftKey) {
-            preventDefault();
-            // Only reset if video is loaded
-            if (videoResult) {
-              stopVideo();
+        // COMMENTED OUT: Ctrl/Cmd + Shift + R conflicts with browser hard reload
+        // Changed to Ctrl/Cmd + Shift + S (Stop) to avoid system shortcut conflicts
+        case 'KeyS':
+          if (event.ctrlKey || event.metaKey) {
+            if (event.shiftKey) {
+              // Ctrl/Cmd + Shift + S: Reset to beginning (Stop)
+              preventDefault();
+              if (videoResult) {
+                stopVideo();
+              } else {
+                toast.info('Upload a video first to use reset');
+              }
             } else {
-              toast.info('Upload a video first to use reset');
+              // Ctrl/Cmd + S: Save video
+              preventDefault();
+              if (videoResult) {
+                handleSaveVideo();
+              } else {
+                toast.info('Upload a video first to save');
+              }
             }
           }
           break;
@@ -664,18 +686,6 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyS':
-          if (event.ctrlKey || event.metaKey) {
-            preventDefault();
-            // Save video if available
-            if (videoResult) {
-              handleSaveVideo();
-            } else {
-              toast.info('Upload a video first to save');
-            }
-          }
-          break;
-
         case 'KeyE':
           if (event.ctrlKey || event.metaKey) {
             preventDefault();
@@ -688,34 +698,35 @@ export default function NP3Page() {
           }
           break;
 
-        case 'KeyM':
-          if (event.ctrlKey || event.metaKey) {
-            preventDefault();
-            // Toggle drawing mode
-            setDrawingMode((prev) => (prev === 'draw' ? 'erase' : 'draw'));
-            toast.info(`Switched to ${drawingMode === 'draw' ? 'erase' : 'draw'} mode`);
-          }
-          break;
+        // COMMENTED OUT: Drawing-related keyboard shortcuts - Drawing feature removed
+        // case 'KeyM':
+        //   if (event.ctrlKey || event.metaKey) {
+        //     preventDefault();
+        //     // Toggle drawing mode
+        //     setDrawingMode((prev) => (prev === 'draw' ? 'erase' : 'draw'));
+        //     toast.info(`Switched to ${drawingMode === 'draw' ? 'erase' : 'draw'} mode`);
+        //   }
+        //   break;
 
-        case 'KeyI':
-          if (event.ctrlKey || event.metaKey) {
-            preventDefault();
-            // Toggle brightness slider (I for Intensity/Illumination)
-            setShowBrightnessSlider(!showBrightnessSlider);
-          }
-          break;
+        // case 'KeyI':
+        //   if (event.ctrlKey || event.metaKey) {
+        //     preventDefault();
+        //     // Toggle brightness slider (I for Intensity/Illumination)
+        //     setShowBrightnessSlider(!showBrightnessSlider);
+        //   }
+        //   break;
 
-        case 'BracketLeft':
-          preventDefault();
-          // Decrease stroke width
-          setStrokeWidth(Math.max(1, strokeWidth - 1));
-          break;
+        // case 'BracketLeft':
+        //   preventDefault();
+        //   // Decrease stroke width
+        //   setStrokeWidth(Math.max(1, strokeWidth - 1));
+        //   break;
 
-        case 'BracketRight':
-          preventDefault();
-          // Increase stroke width
-          setStrokeWidth(Math.min(5, strokeWidth + 1));
-          break;
+        // case 'BracketRight':
+        //   preventDefault();
+        //   // Increase stroke width
+        //   setStrokeWidth(Math.min(5, strokeWidth + 1));
+        //   break;
       }
     };
 
@@ -731,10 +742,11 @@ export default function NP3Page() {
     isVideoPlaying,
     showAdvancedEditor,
     showDotMatrixSettings,
-    showCropDialog,
-    drawingMode,
-    strokeWidth,
-    showBrightnessSlider
+    showCropDialog
+    // COMMENTED OUT: Drawing-related dependencies - Drawing feature removed
+    // drawingMode,
+    // strokeWidth,
+    // showBrightnessSlider
   ]); // Removed dotMatrixSettings from dependencies
 
   /**
@@ -1158,13 +1170,15 @@ export default function NP3Page() {
     setVideoResult(null);
     setCropSettings(null);
     setSelectedPreset(null);
-    setVideoSettings({
-      gamma: 1,
+    setDotMatrixSettings({
+      dragPaintingEnabled: true,
       brightness: 0,
       contrast: 1,
-      saturation: 1,
-      hue: 0,
       threshold: 128,
+      saturation: 1,
+      filter: 1,
+      hue: 0,
+      gamma: 1,
       inversion: false
     });
 
@@ -1250,9 +1264,6 @@ export default function NP3Page() {
               // Check if this pixel was user-drawn
               const analysisIndex = getFrameAnalysisIndex(frameIndex);
               const isUserDrawn = userDrawnPixels.has(`${analysisIndex}-${rowIndex}-${colIndex}`);
-
-              // Apply video settings first
-              brightness = applyVideoSettingsToBrightness(brightness, videoSettings);
 
               // Apply dot matrix settings (but preserve user-drawn content)
               if (!isUserDrawn) {
@@ -1469,15 +1480,15 @@ export default function NP3Page() {
   /**
    * Handle applying advanced video settings
    */
-  const handleApplyVideoSettings = (settings: VideoSettings) => {
-    // console.log('NP3Page: Applying video settings:', settings);
-    // console.log('NP3Page: Previous settings:', videoSettings);
+  const handleApplyDotMatrixSettings = (settings: DotMatrixSettings) => {
+    // console.log('NP3Page: Applying dot matrix settings:', settings);
+    // console.log('NP3Page: Previous settings:', dotMatrixSettings);
 
     // Store current playback state
     const wasPlaying = isVideoPlaying;
     const currentTime = audioElement?.currentTime || 0;
 
-    setVideoSettings(settings);
+    setDotMatrixSettings(settings);
     setShowAdvancedEditor(false);
 
     // Ensure audio element is properly maintained
@@ -1776,84 +1787,85 @@ export default function NP3Page() {
     }
   };
 
+  // COMMENTED OUT: Drawing feature removed
   /**
    * Toggle pixel state when clicked
    * @param index - The index of the pixel to toggle
    */
-  const handlePixelClick = (index: number) => {
-    // For NP3, set brightness to match processed video range (0-255)
-    if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
-      const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
+  // const handlePixelClick = (index: number) => {
+  //   // For NP3, set brightness to match processed video range (0-255)
+  //   if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
+  //     const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
 
-      if (frameAnalysis) {
-        const row = Math.floor(index / 25);
-        const col = index % 25;
+  //     if (frameAnalysis) {
+  //       const row = Math.floor(index / 25);
+  //       const col = index % 25;
 
-        // Save current state for undo
-        const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+  //       // Save current state for undo
+  //       const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
 
-        // Apply stroke width effect for single clicks too
-        const centerRow = row;
-        const centerCol = col;
-        const strokeRadius = Math.floor(strokeWidth / 2);
+  //       // Apply stroke width effect for single clicks too
+  //       const centerRow = row;
+  //       const centerCol = col;
+  //       const strokeRadius = Math.floor(strokeWidth / 2);
 
-        // Apply to center pixel and surrounding pixels based on stroke width
-        for (
-          let r = Math.max(0, centerRow - strokeRadius);
-          r <= Math.min(24, centerRow + strokeRadius);
-          r++
-        ) {
-          for (
-            let c = Math.max(0, centerCol - strokeRadius);
-            c <= Math.min(24, centerCol + strokeRadius);
-            c++
-          ) {
-            if (isPixelInCircle(r, c)) {
-              // Apply drawing tool based on mode
-              if (drawingMode === 'draw') {
-                // Draw mode - set brightness to current brightness value (0-255)
-                frameAnalysis.brightnessMap[r][c] = brightnessValue;
-                // Mark as user-drawn
-                setUserDrawnPixels((prev) =>
-                  new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
-                );
-              } else {
-                // Erase mode - set brightness to 0
-                frameAnalysis.brightnessMap[r][c] = 0;
-                // Mark as user-drawn (erased)
-                setUserDrawnPixels((prev) =>
-                  new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
-                );
-              }
-            }
-          }
-        }
+  //       // Apply to center pixel and surrounding pixels based on stroke width
+  //       for (
+  //         let r = Math.max(0, centerRow - strokeRadius);
+  //         r <= Math.min(24, centerRow + strokeRadius);
+  //         r++
+  //       ) {
+  //         for (
+  //           let c = Math.max(0, centerCol - strokeRadius);
+  //           c <= Math.min(24, centerCol + strokeRadius);
+  //           c++
+  //         ) {
+  //           if (isPixelInCircle(r, c)) {
+  //             // Apply drawing tool based on mode
+  //             if (drawingMode === 'draw') {
+  //               // Draw mode - set brightness to current brightness value (0-255)
+  //               frameAnalysis.brightnessMap[r][c] = brightnessValue;
+  //               // Mark as user-drawn
+  //               setUserDrawnPixels((prev) =>
+  //                 new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+  //               );
+  //             } else {
+  //               // Erase mode - set brightness to 0
+  //               frameAnalysis.brightnessMap[r][c] = 0;
+  //               // Mark as user-drawn (erased)
+  //               setUserDrawnPixels((prev) =>
+  //                 new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+  //               );
+  //             }
+  //           }
+  //         }
+  //       }
 
-        // Add to undo stack
-        setUndoStack((prev) => [
-          ...prev,
-          {
-            frameIndex: currentFrameAnalysisIndex,
-            brightnessMap: currentBrightnessMap,
-            timestamp: Date.now()
-          }
-        ]);
+  //       // Add to undo stack
+  //       setUndoStack((prev) => [
+  //         ...prev,
+  //         {
+  //           frameIndex: currentFrameAnalysisIndex,
+  //           brightnessMap: currentBrightnessMap,
+  //           timestamp: Date.now()
+  //         }
+  //       ]);
 
-        // Clear redo stack when new modification is made
-        setRedoStack([]);
+  //       // Clear redo stack when new modification is made
+  //       setRedoStack([]);
 
-        // Update pixel states immediately to reflect the change
-        updatePixelStatesFromFrameAnalysis(frameAnalysis);
-      }
-    } else {
-      // Fallback for when no video is loaded
-      setPixelStates((prev) => {
-        const newStates = [...prev];
-        newStates[index] = !newStates[index];
-        return newStates;
-      });
-    }
-  };
+  //       // Update pixel states immediately to reflect the change
+  //       updatePixelStatesFromFrameAnalysis(frameAnalysis);
+  //     }
+  //   } else {
+  //     // Fallback for when no video is loaded
+  //     setPixelStates((prev) => {
+  //       const newStates = [...prev];
+  //       newStates[index] = !newStates[index];
+  //       return newStates;
+  //     });
+  //   }
+  // };
 
   /**
    * Undo the last modification for the current frame
@@ -2015,153 +2027,154 @@ export default function NP3Page() {
     });
   };
 
+  // COMMENTED OUT: Drawing feature removed - Mouse event handlers for drawing
   /**
    * Handle mouse move for drag painting
    */
-  const handleMouseMove = (event: React.MouseEvent<Element>) => {
-    event.preventDefault();
-    if (!isMouseDown || !dotMatrixSettings.dragPaintingEnabled || !dotMatrixContainerRef.current)
-      return;
+  // const handleMouseMove = (event: React.MouseEvent<Element>) => {
+  //   event.preventDefault();
+  //   if (!isMouseDown || !dotMatrixSettings.dragPaintingEnabled || !dotMatrixContainerRef.current)
+  //     return;
 
-    const container = dotMatrixContainerRef.current;
-    const rect = container.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+  //   const container = dotMatrixContainerRef.current;
+  //   const rect = container.getBoundingClientRect();
+  //   const x = event.clientX - rect.left;
+  //   const y = event.clientY - rect.top;
 
-    // Calculate which pixel was clicked based on the container size
-    const containerSize = Math.min(rect.width, rect.height);
-    const pixelSize = containerSize / 25;
+  //   // Calculate which pixel was clicked based on the container size
+  //   const containerSize = Math.min(rect.width, rect.height);
+  //   const pixelSize = containerSize / 25;
 
-    const col = Math.floor(x / pixelSize);
-    const row = Math.floor(y / pixelSize);
+  //   const col = Math.floor(x / pixelSize);
+  //   const row = Math.floor(y / pixelSize);
 
-    // Ensure we're within bounds
-    if (col >= 0 && col < 25 && row >= 0 && row < 25) {
-      const index = getPixelIndex(row, col);
+  //   // Ensure we're within bounds
+  //   if (col >= 0 && col < 25 && row >= 0 && row < 25) {
+  //     const index = getPixelIndex(row, col);
 
-      // Only paint if this is a different pixel than the last one
-      if (index !== lastDrawnPixel && isPixelInCircle(row, col)) {
-        setLastDrawnPixel(index);
+  //     // Only paint if this is a different pixel than the last one
+  //     if (index !== lastDrawnPixel && isPixelInCircle(row, col)) {
+  //       setLastDrawnPixel(index);
 
-        // Use the same modification tracking as handlePixelClick
-        if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
-          const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
+  //       // Use the same modification tracking as handlePixelClick
+  //       if (videoResult && currentDisplayFrame < videoResult.frameAnalyses.length) {
+  //         const frameAnalysis = getFrameAnalysis(currentDisplayFrame);
 
-          if (frameAnalysis) {
-            const pixelRow = Math.floor(index / 25);
-            const pixelCol = index % 25;
+  //         if (frameAnalysis) {
+  //           const pixelRow = Math.floor(index / 25);
+  //           const pixelCol = index % 25;
 
-            // Save current state for undo
-            const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
+  //           // Save current state for undo
+  //           const currentBrightnessMap = frameAnalysis.brightnessMap.map((row) => [...row]);
 
-            // Apply stroke width effect during dragging
-            const centerRow = pixelRow;
-            const centerCol = pixelCol;
-            const strokeRadius = Math.floor(strokeWidth / 2);
+  //           // Apply stroke width effect during dragging
+  //           const centerRow = pixelRow;
+  //           const centerCol = pixelCol;
+  //           const strokeRadius = Math.floor(strokeWidth / 2);
 
-            // Apply to center pixel and surrounding pixels based on stroke width
-            for (
-              let r = Math.max(0, centerRow - strokeRadius);
-              r <= Math.min(24, centerRow + strokeRadius);
-              r++
-            ) {
-              for (
-                let c = Math.max(0, centerCol - strokeRadius);
-                c <= Math.min(24, centerCol + strokeRadius);
-                c++
-              ) {
-                if (isPixelInCircle(r, c)) {
-                  // Apply drawing tool based on mode
-                  if (drawingMode === 'draw') {
-                    // Draw mode - set brightness to current brightness value (0-255)
-                    frameAnalysis.brightnessMap[r][c] = brightnessValue;
-                    // Mark as user-drawn
-                    setUserDrawnPixels((prev) =>
-                      new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
-                    );
-                  } else {
-                    // Erase mode - set brightness to 0
-                    frameAnalysis.brightnessMap[r][c] = 0;
-                    // Mark as user-drawn (erased)
-                    setUserDrawnPixels((prev) =>
-                      new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
-                    );
-                  }
-                }
-              }
-            }
+  //           // Apply to center pixel and surrounding pixels based on stroke width
+  //           for (
+  //             let r = Math.max(0, centerRow - strokeRadius);
+  //             r <= Math.min(24, centerRow + strokeRadius);
+  //             r++
+  //           ) {
+  //             for (
+  //               let c = Math.max(0, centerCol - strokeRadius);
+  //               c <= Math.min(24, centerCol + strokeRadius);
+  //               c++
+  //             ) {
+  //               if (isPixelInCircle(r, c)) {
+  //                 // Apply drawing tool based on mode
+  //                 if (drawingMode === 'draw') {
+  //                   // Draw mode - set brightness to current brightness value (0-255)
+  //                   frameAnalysis.brightnessMap[r][c] = brightnessValue;
+  //                   // Mark as user-drawn
+  //                   setUserDrawnPixels((prev) =>
+  //                     new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+  //                   );
+  //                 } else {
+  //                   // Erase mode - set brightness to 0
+  //                   frameAnalysis.brightnessMap[r][c] = 0;
+  //                   // Mark as user-drawn (erased)
+  //                   setUserDrawnPixels((prev) =>
+  //                     new Set(prev).add(`${currentFrameAnalysisIndex}-${r}-${c}`)
+  //                   );
+  //                 }
+  //               }
+  //             }
+  //           }
 
-            // Add to undo stack
-            setUndoStack((prev) => [
-              ...prev,
-              {
-                frameIndex: currentFrameAnalysisIndex,
-                brightnessMap: currentBrightnessMap,
-                timestamp: Date.now()
-              }
-            ]);
+  //           // Add to undo stack
+  //           setUndoStack((prev) => [
+  //             ...prev,
+  //             {
+  //               frameIndex: currentFrameAnalysisIndex,
+  //               brightnessMap: currentBrightnessMap,
+  //               timestamp: Date.now()
+  //             }
+  //           ]);
 
-            // Clear redo stack when new modification is made
-            setRedoStack([]);
+  //           // Clear redo stack when new modification is made
+  //           setRedoStack([]);
 
-            // Update pixel states immediately to reflect the change
-            updatePixelStatesFromFrameAnalysis(frameAnalysis);
-          }
-        }
-      }
-    }
-  };
+  //           // Update pixel states immediately to reflect the change
+  //           updatePixelStatesFromFrameAnalysis(frameAnalysis);
+  //         }
+  //       }
+  //     }
+  //   }
+  // };
 
   /**
    * Handle mouse down to start drag painting
    */
-  const handleMouseDown = (event: React.MouseEvent<Element>) => {
-    event.preventDefault();
-    if (!dotMatrixSettings.dragPaintingEnabled) return;
+  // const handleMouseDown = (event: React.MouseEvent<Element>) => {
+  //   event.preventDefault();
+  //   if (!dotMatrixSettings.dragPaintingEnabled) return;
 
-    setIsMouseDown(true);
-    setLastDrawnPixel(null);
+  //   setIsMouseDown(true);
+  //   setLastDrawnPixel(null);
 
-    // Determine paint mode based on current pixel state
-    const container = dotMatrixContainerRef.current;
-    if (container) {
-      const rect = container.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
+  //   // Determine paint mode based on current pixel state
+  //   const container = dotMatrixContainerRef.current;
+  //   if (container) {
+  //     const rect = container.getBoundingClientRect();
+  //     const x = event.clientX - rect.left;
+  //     const y = event.clientY - rect.top;
 
-      const containerSize = Math.min(rect.width, rect.height);
-      const pixelSize = containerSize / 25;
+  //     const containerSize = Math.min(rect.width, rect.height);
+  //     const pixelSize = containerSize / 25;
 
-      const col = Math.floor(x / pixelSize);
-      const row = Math.floor(y / pixelSize);
+  //     const col = Math.floor(x / pixelSize);
+  //     const row = Math.floor(y / pixelSize);
 
-      if (col >= 0 && col < 25 && row >= 0 && row < 25) {
-        const index = getPixelIndex(row, col);
-        if (isPixelInCircle(row, col)) {
-          // Apply the drawing action with stroke width effect
-          handlePixelClick(index);
-        }
-      }
-    }
-  };
+  //     if (col >= 0 && col < 25 && row >= 0 && row < 25) {
+  //       const index = getPixelIndex(row, col);
+  //       if (isPixelInCircle(row, col)) {
+  //         // Apply the drawing action with stroke width effect
+  //         handlePixelClick(index);
+  //       }
+  //     }
+  //   }
+  // };
 
   /**
    * Handle mouse up to stop drag painting
    */
-  const handleMouseUp = (event: React.MouseEvent<Element>) => {
-    event.preventDefault();
-    setIsMouseDown(false);
-    setLastDrawnPixel(null);
-  };
+  // const handleMouseUp = (event: React.MouseEvent<Element>) => {
+  //   event.preventDefault();
+  //   setIsMouseDown(false);
+  //   setLastDrawnPixel(null);
+  // };
 
   /**
    * Handle mouse leave to stop drag painting
    */
-  const handleMouseLeave = (event: React.MouseEvent<Element>) => {
-    event.preventDefault();
-    setIsMouseDown(false);
-    setLastDrawnPixel(null);
-  };
+  // const handleMouseLeave = (event: React.MouseEvent<Element>) => {
+  //   event.preventDefault();
+  //   setIsMouseDown(false);
+  //   setLastDrawnPixel(null);
+  // };
 
   /**
    * Calculate if a pixel should be visible in the circle based on specific pixel ranges
@@ -2402,27 +2415,6 @@ export default function NP3Page() {
    * @param settings - Video settings to apply
    * @returns Processed brightness value (0-255)
    */
-  const applyVideoSettingsToBrightness = (brightness: number, settings: VideoSettings): number => {
-    let processedBrightness = brightness;
-
-    // Brightness adjustment
-    processedBrightness = Math.max(0, Math.min(255, processedBrightness + settings.brightness));
-
-    // Contrast adjustment
-    const factor =
-      (259 * (settings.contrast * 255 + 255)) / (255 * (259 - settings.contrast * 255));
-    processedBrightness = Math.max(0, Math.min(255, factor * (processedBrightness - 128) + 128));
-
-    // Gamma correction
-    processedBrightness = Math.pow(processedBrightness / 255, 1 / settings.gamma) * 255;
-
-    // Inversion
-    if (settings.inversion) {
-      processedBrightness = 255 - processedBrightness;
-    }
-
-    return Math.max(0, Math.min(255, processedBrightness));
-  };
 
   /**
    * Apply dot matrix settings to brightness value
@@ -2517,19 +2509,20 @@ export default function NP3Page() {
     }
   }, [isVideoPlaying, videoResult, audioElement]);
 
+  // COMMENTED OUT: Replaced with GlyphPreview component (DRY principle)
   // Update mouse event handlers for canvas
-  const handleCanvasMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    handleMouseDown(event as unknown as React.MouseEvent<Element>);
-  };
-  const handleCanvasMouseUp = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    handleMouseUp(event as unknown as React.MouseEvent<Element>);
-  };
-  const handleCanvasMouseLeave = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    handleMouseLeave(event as unknown as React.MouseEvent<Element>);
-  };
-  const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    handleMouseMove(event as unknown as React.MouseEvent<Element>);
-  };
+  // const handleCanvasMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  //   handleMouseDown(event as unknown as React.MouseEvent<Element>);
+  // };
+  // const handleCanvasMouseUp = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  //   handleMouseUp(event as unknown as React.MouseEvent<Element>);
+  // };
+  // const handleCanvasMouseLeave = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  //   handleMouseLeave(event as unknown as React.MouseEvent<Element>);
+  // };
+  // const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+  //   handleMouseMove(event as unknown as React.MouseEvent<Element>);
+  // };
 
   /**
    * Validate export pipeline health before saving
@@ -2777,12 +2770,11 @@ export default function NP3Page() {
           {/* Video and Dot Matrix Display */}
           {videoResult && (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mb-8">
-              {/* Processed Video/Audio (Cropped & Black & White for video, preset panel for audio) */}
               <div className="space-y-4">
-                {videoResult.originalFileType === 'audio' ? (
-                  // Audio Preset Panel
-                  <div>
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center font-[ndot] tracking-wider uppercase mb-4">
+                {/* Audio Preset Panel - Show below preview for audio files */}
+                {videoResult.originalFileType === 'audio' && (
+                  <div className="mt-6">
+                    <h3 className="text-lg sm:text-xl font-semibold text-center font-[ndot] tracking-wider uppercase mb-4">
                       Audio Presets
                     </h3>
                     <p className="text-xs sm:text-sm text-white/50 text-center mb-6">
@@ -2842,57 +2834,6 @@ export default function NP3Page() {
                       </div>
                     )}
                   </div>
-                ) : (
-                  // Video Preview (existing code)
-                  <>
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center font-[ndot] tracking-wider uppercase">
-                      Processed Video
-                    </h3>
-                    <p className="text-xs sm:text-sm text-white/50 text-center">
-                      (Cropped & Black & White)
-                    </p>
-                    <div className="flex justify-center">
-                      {videoResult ? (
-                        <div className="relative group">
-                          {/* Real-time canvas for processed video playback */}
-                          <canvas
-                            ref={processedVideoCanvasRef}
-                            className="max-w-full h-auto rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl group-hover:shadow-white/10"
-                            style={{ maxHeight: '400px', maxWidth: '100%' }}
-                            width={400}
-                            height={400}
-                          />
-                          {/* Placeholder message */}
-                          <div
-                            className="video-placeholder hidden bg-white/5 border border-white/20 rounded-2xl p-8 text-center"
-                            style={{ maxHeight: '400px', maxWidth: '100%' }}
-                          >
-                            <div className="text-white/70 text-sm">
-                              <p className="mb-2">Processed video preview not available</p>
-                              <p className="text-xs">
-                                The dot matrix display will show the processed video data
-                              </p>
-                              <p className="text-xs mt-2">
-                                Focus on the Phone (3) Glyph Display on the right
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          className="bg-white/5 border border-white/20 rounded-2xl p-8 text-center"
-                          style={{ maxHeight: '400px', maxWidth: '100%' }}
-                        >
-                          <div className="text-white/70 text-sm">
-                            <p className="mb-2">No processed video available</p>
-                            <p className="text-xs">
-                              Upload and process a video file to see the preview
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
                 )}
               </div>
 
@@ -2932,10 +2873,9 @@ export default function NP3Page() {
                   }}
                 />
 
-                {/* Drawing Toolbar */}
-                <div className="flex justify-center">
+                {/* COMMENTED OUT: Drawing Toolbar - Drawing feature removed */}
+                {/* <div className="flex justify-center">
                   <div className="glass-effect rounded-2xl p-4 flex flex-wrap items-center justify-center gap-4 shadow-2xl">
-                    {/* Drawing Mode Toggle */}
                     <div className="flex items-center space-x-2">
                       <Button
                         variant={drawingMode === 'draw' ? 'default' : 'outline'}
@@ -2957,7 +2897,6 @@ export default function NP3Page() {
                       </Button>
                     </div>
 
-                    {/* Stroke Width Control */}
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-white/70">Stroke:</span>
                       <Button
@@ -2985,7 +2924,6 @@ export default function NP3Page() {
                       </Button>
                     </div>
 
-                    {/* Brightness Control */}
                     <div className="flex items-center space-x-2">
                       <span className="text-xs text-white/70">Brightness:</span>
                       <Button
@@ -3002,7 +2940,6 @@ export default function NP3Page() {
                       </span>
                     </div>
 
-                    {/* Current Mode Indicator */}
                     <div className="flex items-center space-x-1">
                       <span className="text-xs text-white/50">Mode:</span>
                       <span className="text-xs text-white font-medium">
@@ -3010,10 +2947,10 @@ export default function NP3Page() {
                       </span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
-                {/* Brightness Slider Popup */}
-                {showBrightnessSlider && (
+                {/* COMMENTED OUT: Brightness Slider Popup - Drawing feature removed */}
+                {/* {showBrightnessSlider && (
                   <div className="flex justify-center">
                     <div className="glass-effect rounded-2xl p-6 max-w-xs w-full shadow-2xl">
                       <div className="space-y-0">
@@ -3039,20 +2976,17 @@ export default function NP3Page() {
                               const newValue = parseInt(e.target.value);
                               setBrightnessValue(newValue);
 
-                              // Update the current frame's brightness map if we're in draw mode
                               if (
                                 videoResult &&
                                 currentDisplayFrame < videoResult.frameAnalyses.length
                               ) {
-                                const frameTime = currentDisplayFrame * 16.666; // Convert to milliseconds
+                                const frameTime = currentDisplayFrame * 16.666;
                                 const analysisIndex = Math.floor(
                                   frameTime / (1000 / videoResult.fps)
                                 );
 
                                 if (analysisIndex < videoResult.frameAnalyses.length) {
                                   const frameAnalysis = videoResult.frameAnalyses[analysisIndex];
-
-                                  // Update pixel states to reflect the new brightness value
                                   updatePixelStatesFromFrameAnalysis(frameAnalysis);
                                 }
                               }
@@ -3075,14 +3009,16 @@ export default function NP3Page() {
                       </div>
                     </div>
                   </div>
-                )}
-
+                )} */}
+                <p className="text-xs sm:text-sm text-white/50 text-center">
+                  Glyph Matrix Display Preview
+                </p>
                 <div className="flex justify-center">
                   <div className="relative">
                     {/* Responsive sizing for dot matrix */}
                     <div
                       ref={dotMatrixContainerRef}
-                      className="relative transition-all duration-300 rounded-2xl overflow-hidden shadow-2xl"
+                      className="mt-6 relative transition-all duration-300 rounded-2xl overflow-visible shadow-2xl flex justify-center items-center"
                       style={{
                         width: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
                         height: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
@@ -3090,45 +3026,27 @@ export default function NP3Page() {
                         maxHeight: `${SQUARE_SIZE * dotMatrixZoom}px`
                       }}
                     >
-                      {/* Circle overlay */}
-                      <div
-                        className="absolute inset-0 border-2 border-white/50 rounded-full pointer-events-none shadow-inner"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          top: '0px',
-                          left: '0px'
-                        }}
-                      />
-
-                      {/* Dot matrix grid */}
-                      <div className="relative flex justify-center items-center">
-                        <canvas
-                          ref={dotMatrixCanvasRef}
-                          width={Math.round(SQUARE_SIZE * dotMatrixZoom)}
-                          height={Math.round(SQUARE_SIZE * dotMatrixZoom)}
-                          style={{
-                            width: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
-                            height: `min(${SQUARE_SIZE * dotMatrixZoom}px, 90vw)`,
-                            maxWidth: `${SQUARE_SIZE * dotMatrixZoom}px`,
-                            maxHeight: `${SQUARE_SIZE * dotMatrixZoom}px`,
-                            background: 'black',
-                            borderRadius: '50%',
-                            boxShadow: '0 4px 32px rgba(0,0,0,0.7)',
-                            border: '2px solid #fff2',
-                            display: 'block'
+                      {/* Glyph Preview Component - Single source of truth for glyph matrix rendering */}
+                      {/* Use scaled unitSize directly instead of CSS transform to avoid clipping */}
+                      {currentFrameBrightnessMap ? (
+                        <GlyphPreview
+                          brightnessMap={currentFrameBrightnessMap}
+                          settings={{
+                            brightness: dotMatrixSettings.brightness,
+                            contrast: dotMatrixSettings.contrast,
+                            gamma: dotMatrixSettings.gamma,
+                            threshold: dotMatrixSettings.threshold,
+                            inversion: dotMatrixSettings.inversion
                           }}
-                          onMouseDown={handleCanvasMouseDown}
-                          onMouseUp={handleCanvasMouseUp}
-                          onMouseLeave={handleCanvasMouseLeave}
-                          onMouseMove={handleCanvasMouseMove}
+                          unitSize={UNIT_SIZE * dotMatrixZoom}
+                          showLabels={false}
+                          className="w-full"
                         />
-                        {/* Circle overlay for border */}
-                        <div
-                          className="absolute inset-0 border-2 border-white/50 rounded-full pointer-events-none shadow-inner"
-                          style={{ width: '100%', height: '100%', top: '0px', left: '0px' }}
-                        />
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-center text-white/50 h-full">
+                          <p className="text-sm">No frame data available</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -5643,8 +5561,8 @@ export default function NP3Page() {
                 </div>
               </div>
 
-              {/* Frame-by-Frame Drawing */}
-              <div className="space-y-4">
+              {/* COMMENTED OUT: Frame-by-Frame Drawing section - Drawing feature removed */}
+              {/* <div className="space-y-4">
                 <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
                   Frame-by-Frame Drawing
                 </h4>
@@ -5680,7 +5598,7 @@ export default function NP3Page() {
                     <p>Use Undo/Redo buttons to correct mistakes on the current frame</p>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Keyboard Shortcuts */}
@@ -5688,6 +5606,10 @@ export default function NP3Page() {
               <h4 className="text-lg font-medium text-white font-[ndot] tracking-wide">
                 Keyboard Shortcuts
               </h4>
+              <p className="text-xs text-white/60 mb-4">
+                Note: All shortcuts are designed to avoid conflicts with system and browser
+                shortcuts. Drawing-related shortcuts have been removed.
+              </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-white/80">
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
@@ -5715,9 +5637,12 @@ export default function NP3Page() {
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
-                    Ctrl/Cmd + Shift + R
+                    Ctrl/Cmd + Shift + S
                   </div>
                   <p className="text-xs">Reset to Beginning</p>
+                  <p className="text-xs text-white/50 mt-1">
+                    (Changed from Shift+R to avoid browser conflict)
+                  </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
@@ -5737,7 +5662,8 @@ export default function NP3Page() {
                   </div>
                   <p className="text-xs">Open Advanced Editor</p>
                 </div>
-                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                {/* COMMENTED OUT: Drawing-related keyboard shortcuts - Drawing feature removed */}
+                {/* <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                   <div className="font-mono text-xs bg-white/20 text-white px-2 py-1 rounded mb-2">
                     Ctrl/Cmd + M
                   </div>
@@ -5760,7 +5686,7 @@ export default function NP3Page() {
                     ]
                   </div>
                   <p className="text-xs">Increase Stroke Width</p>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -5771,7 +5697,8 @@ export default function NP3Page() {
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-white/80">
                 <div className="space-y-3">
-                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  {/* COMMENTED OUT: Drawing Tips section - Drawing feature removed */}
+                  {/* <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <h5 className="font-medium text-white mb-2">Drawing Tips</h5>
                     <ul className="space-y-1 text-xs">
                       <li>• Use zoom controls for precise pixel editing</li>
@@ -5781,7 +5708,7 @@ export default function NP3Page() {
                       <li>• Only visible pixels (within circle) can be modified</li>
                       <li>• Changes are saved per frame automatically</li>
                     </ul>
-                  </div>
+                  </div> */}
                   <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <h5 className="font-medium text-white mb-2">Performance Tips</h5>
                     <ul className="space-y-1 text-xs">
@@ -5911,13 +5838,13 @@ export default function NP3Page() {
       {/* Advanced Video Editor Dialog */}
       {videoResult && (
         <AdvancedVideoEditor
-          onApplySettings={handleApplyVideoSettings}
+          onApplySettings={handleApplyDotMatrixSettings}
           onCancel={() => setShowAdvancedEditor(false)}
           isOpen={showAdvancedEditor}
           currentFrameAnalysis={getCurrentFrameAnalysis()}
           currentFrameIndex={currentDisplayFrame}
           totalFrames={videoResult.displayFrames.length}
-          currentVideoSettings={videoSettings}
+          currentDotMatrixSettings={dotMatrixSettings}
           // Add playback control props
           isVideoPlaying={isVideoPlaying}
           videoProgress={videoProgress}

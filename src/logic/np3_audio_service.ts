@@ -1295,15 +1295,18 @@ export class NP3AudioService {
     audioData: AudioData,
     frameIndex: number,
     totalFrames: number,
-    params: EffectParameters
+    _params: EffectParameters
   ): number[][] {
-    const p = params as SpinnyParams;
     const brightnessMap = this.createZeroBrightnessMap();
 
+    // Calculate current time in the audio
     const currentTime = (frameIndex / totalFrames) * audioData.duration;
+
+    // Get audio samples around the current time
     const sampleIndex = Math.floor(currentTime * audioData.sampleRate);
     const channelData = audioData.audioBuffer.getChannelData(0);
 
+    // Calculate waveform amplitude for this frame
     let amplitude = 0;
     const sampleWindow = Math.floor(audioData.sampleRate * 0.02);
 
@@ -1323,72 +1326,74 @@ export class NP3AudioService {
 
     const maxAmplitude = 0.3;
     const normalizedAmplitude = Math.min(amplitude / maxAmplitude, 1.0);
-    // Sensitivity: 0 = high threshold (0.25), 1 = low threshold (0.01) - wider range for more impact
-    const audioThreshold = 0.25 - p.sensitivity * 0.24;
-
-    // Apply bladeCount parameter (3-8 blades)
-    const numBlades = Math.floor(3 + p.bladeCount * 5);
-    const centerX = 12;
-    const centerY = 12;
-    // Apply rotationSpeed parameter
-    const timeOffset = frameIndex * 0.15 * p.rotationSpeed;
+    const audioThreshold = 0.01;
 
     if (amplitude > audioThreshold) {
+      const centerX = 12;
+      const centerY = 12;
+      const timeOffset = frameIndex * 0.15;
+
       for (let row = 0; row < 25; row++) {
         for (let col = 0; col < 25; col++) {
           const distance = Math.sqrt((row - centerY) ** 2 + (col - centerX) ** 2);
-          // Apply bladeLength parameter (0-1 maps to 0.5-1.0 of max distance)
-          const maxDistance = 12 * (0.5 + p.bladeLength * 0.5);
+          const maxDistance = 12;
 
           if (distance <= maxDistance) {
+            // Calculate angle from center
             const angle = Math.atan2(row - centerY, col - centerX);
 
-            // Create fan pattern with configurable blade count
-            let bladeIntensity = 0;
-            for (let blade = 0; blade < numBlades; blade++) {
-              const bladeAngle =
-                (angle + (Math.PI * 2 * blade) / numBlades + timeOffset) % (Math.PI * 2);
-              const normalizedAngle = bladeAngle / (Math.PI * 2);
-              const bladePattern = Math.sin(normalizedAngle * Math.PI * numBlades) * 0.5 + 0.5;
-              bladeIntensity = Math.max(bladeIntensity, bladePattern);
-            }
+            // Create 3-star pattern (120 degrees apart)
+            const starAngle1 = Math.sin(angle * 3 + timeOffset) * 0.5 + 0.5;
+            const starAngle2 = Math.sin((angle + (Math.PI * 2) / 3) * 3 + timeOffset) * 0.5 + 0.5;
+            const starAngle3 = Math.sin((angle + (Math.PI * 4) / 3) * 3 + timeOffset) * 0.5 + 0.5;
 
-            // Create waveform along blades
-            const waveform = Math.sin((distance - timeOffset * 2) * 0.8) * 0.5 + 0.5;
+            // Create waveform along each star axis
+            const waveform1 = Math.sin((distance - timeOffset * 2) * 0.8) * 0.5 + 0.5;
+            const waveform2 = Math.sin((distance - timeOffset * 2 + 2) * 0.8) * 0.5 + 0.5;
+            const waveform3 = Math.sin((distance - timeOffset * 2 + 4) * 0.8) * 0.5 + 0.5;
+
+            // Combine star pattern with waveforms
+            const starIntensity = (starAngle1 + starAngle2 + starAngle3) / 3;
+            const waveformIntensity = (waveform1 + waveform2 + waveform3) / 3;
+
+            // Combine with distance and audio intensity
             const distanceFactor = Math.max(0, 1 - distance / maxDistance);
+            
+            // Calculate base intensity from pattern
+            const baseIntensity = starIntensity * waveformIntensity * distanceFactor;
+            
+            // Massive brightness boost: 70% base + 30% audio modulation
+            // This ensures it's always very visible even at low audio levels
+            const audioModulatedIntensity = baseIntensity * (0.7 + normalizedAmplitude * 0.3);
+            
+            // Ensure very strong minimum visibility floor (60% of base pattern)
+            const mirrorIntensity = Math.max(audioModulatedIntensity, baseIntensity * 0.6);
 
-            // Apply centerBrightness parameter
-            const centerGlow = p.centerBrightness * (1 - distance / maxDistance);
-            const mirrorIntensity =
-              (bladeIntensity * waveform * distanceFactor + centerGlow * 0.3) *
-              normalizedAmplitude *
-              0.8;
-
-            const finalBrightness = Math.round(4095 * mirrorIntensity * p.intensity);
-            brightnessMap[row][col] = finalBrightness;
+            // Apply significant brightness boost multiplier (2.5x)
+            const finalBrightness = Math.round(4095 * mirrorIntensity * 2.5);
+            brightnessMap[row][col] = Math.min(finalBrightness, 4095);
           }
         }
       }
     } else {
-      // When audio is silent, show a dim fan pattern
+      // When audio is silent, show a dim 3-star pattern
+      const centerX = 12;
+      const centerY = 12;
+      const timeOffset = frameIndex * 0.05;
+
       for (let row = 0; row < 25; row++) {
         for (let col = 0; col < 25; col++) {
           const distance = Math.sqrt((row - centerY) ** 2 + (col - centerX) ** 2);
           if (distance <= 12) {
             const angle = Math.atan2(row - centerY, col - centerX);
-            let bladeIntensity = 0;
-            for (let blade = 0; blade < numBlades; blade++) {
-              const bladeAngle =
-                (angle + (Math.PI * 2 * blade) / numBlades + timeOffset * 0.3) % (Math.PI * 2);
-              const normalizedAngle = bladeAngle / (Math.PI * 2);
-              const bladePattern = Math.sin(normalizedAngle * Math.PI * numBlades) * 0.3 + 0.7;
-              bladeIntensity = Math.max(bladeIntensity, bladePattern);
-            }
+            const starAngle1 = Math.sin(angle * 3 + timeOffset) * 0.3 + 0.7;
+            const starAngle2 = Math.sin((angle + (Math.PI * 2) / 3) * 3 + timeOffset) * 0.3 + 0.7;
+            const starAngle3 = Math.sin((angle + (Math.PI * 4) / 3) * 3 + timeOffset) * 0.3 + 0.7;
+
+            const starIntensity = (starAngle1 + starAngle2 + starAngle3) / 3;
             const distanceFactor = Math.max(0, 1 - distance / 12);
-            const centerGlow = p.centerBrightness * (1 - distance / 12);
-            brightnessMap[row][col] = Math.round(
-              4095 * (bladeIntensity * distanceFactor + centerGlow * 0.3) * 0.1 * p.intensity
-            );
+            // Massively increase silent pattern brightness for better visibility (with 2x multiplier)
+            brightnessMap[row][col] = Math.round(4095 * starIntensity * distanceFactor * 0.8 * 2.0);
           }
         }
       }
