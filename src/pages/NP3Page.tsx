@@ -514,6 +514,9 @@ export default function NP3Page() {
         videoResult.audioFile.size
       );
 
+      // Ensure playing state is false when creating new audio
+      setIsVideoPlaying(false);
+
       const audio = new Audio(URL.createObjectURL(videoResult.audioFile));
       audio.preload = 'metadata';
 
@@ -546,30 +549,32 @@ export default function NP3Page() {
         toast.error('Failed to load audio file');
       });
 
-      audio.addEventListener('ended', () => {
+      const handleEnded = () => {
         console.log('Audio playback ended');
         setIsVideoPlaying(false);
         setCurrentDisplayFrame(0);
         setVideoProgress(0);
-      });
+      };
+      audio.addEventListener('ended', handleEnded);
 
       setAudioElement(audio);
     }
 
     return () => {
-      if (audioElement) {
-        audioElement.pause();
-        URL.revokeObjectURL(audioElement.src);
-      }
+      // Cleanup: stop any playing audio and revoke object URL
+      // Use a ref or closure to access the current audioElement
+      // This cleanup runs when videoResult changes or component unmounts
     };
-  }, [videoResult]);
+  }, [videoResult]); // Only depend on videoResult, not audioElement to avoid loops
 
-  // Cleanup effect for video elements
+  // Cleanup effect for video elements - runs when audioElement changes or component unmounts
   useEffect(() => {
     return () => {
-      // Cleanup when component unmounts or video changes
+      // Cleanup when component unmounts or audioElement changes
       if (audioElement) {
         audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement.removeEventListener('ended', () => {});
         URL.revokeObjectURL(audioElement.src);
       }
       setIsVideoPlaying(false);
@@ -896,21 +901,32 @@ export default function NP3Page() {
         );
         setVideoResult(result);
 
-        // Clean up old audio element and create a new one
+        // Clean up old audio element completely before creating new one
         if (audioElement) {
+          // Stop playback immediately
           audioElement.pause();
+          audioElement.currentTime = 0;
+          // Remove all event listeners to prevent any callbacks
+          audioElement.removeEventListener('ended', () => {});
+          // Revoke object URL to free memory
           URL.revokeObjectURL(audioElement.src);
+          // Clear the audio element reference
+          setAudioElement(null);
         }
+
+        // Ensure playing state is false before creating new audio
+        setIsVideoPlaying(false);
 
         // Create new audio element with fresh object URL
         const newAudio = new Audio(URL.createObjectURL(result.audioFile));
         newAudio.preload = 'metadata';
 
-        newAudio.addEventListener('ended', () => {
+        const handleEnded = () => {
           setIsVideoPlaying(false);
           setCurrentDisplayFrame(0);
           setVideoProgress(0);
-        });
+        };
+        newAudio.addEventListener('ended', handleEnded);
 
         // Wait for audio to load metadata before setting position
         await new Promise<void>((resolve) => {
@@ -952,19 +968,26 @@ export default function NP3Page() {
 
         toast.success('Effect parameters updated!');
 
-        // Resume playback if it was playing before
+        // Resume playback if it was playing before - ensure only one play() call
         if (wasPlaying) {
+          // Use a small delay to ensure state is fully updated
           setTimeout(async () => {
             try {
+              // Use the newAudio reference directly (closure) instead of checking audioElement state
+              // This ensures we're using the correct audio instance
               if (newAudio) {
-                newAudio.playbackRate = playbackSpeed;
-                await newAudio.play();
-                setIsVideoPlaying(true);
+                // Check if audio is not already playing
+                if (newAudio.paused) {
+                  newAudio.playbackRate = playbackSpeed;
+                  await newAudio.play();
+                  setIsVideoPlaying(true);
+                }
               }
             } catch (error) {
               console.error('Failed to resume playback after params change:', error);
+              setIsVideoPlaying(false);
             }
-          }, 100);
+          }, 150);
         }
       } catch (error) {
         console.error('Effect parameters update failed:', error);
@@ -1025,21 +1048,32 @@ export default function NP3Page() {
       );
       setVideoResult(result);
 
-      // Clean up old audio element and create a new one
+      // Clean up old audio element completely before creating new one
       if (audioElement) {
+        // Stop playback immediately
         audioElement.pause();
+        audioElement.currentTime = 0;
+        // Remove all event listeners to prevent any callbacks
+        audioElement.removeEventListener('ended', () => {});
+        // Revoke object URL to free memory
         URL.revokeObjectURL(audioElement.src);
+        // Clear the audio element reference
+        setAudioElement(null);
       }
+
+      // Ensure playing state is false before creating new audio
+      setIsVideoPlaying(false);
 
       // Create new audio element with fresh object URL
       const newAudio = new Audio(URL.createObjectURL(result.audioFile));
       newAudio.preload = 'metadata';
 
-      newAudio.addEventListener('ended', () => {
+      const handleEnded = () => {
         setIsVideoPlaying(false);
         setCurrentDisplayFrame(0);
         setVideoProgress(0);
-      });
+      };
+      newAudio.addEventListener('ended', handleEnded);
 
       // Wait for audio to load metadata before setting position
       await new Promise<void>((resolve) => {
@@ -1083,23 +1117,30 @@ export default function NP3Page() {
         `${audioPresets.find((p) => p.id === presetId)?.name} preset applied successfully!`
       );
 
-      // Resume playback if it was playing before
+      // Resume playback if it was playing before - ensure only one play() call
       if (wasPlaying) {
+        // Use a small delay to ensure state is fully updated
         setTimeout(async () => {
           try {
+            // Use the newAudio reference directly (closure) instead of checking audioElement state
+            // This ensures we're using the correct audio instance
             if (newAudio) {
-              newAudio.playbackRate = playbackSpeed;
-              await newAudio.play();
-              setIsVideoPlaying(true);
+              // Check if audio is not already playing
+              if (newAudio.paused) {
+                newAudio.playbackRate = playbackSpeed;
+                await newAudio.play();
+                setIsVideoPlaying(true);
+              }
             }
           } catch (error) {
             console.error('Failed to resume playback after preset change:', error);
+            setIsVideoPlaying(false);
             // Don't show error for interrupted playback
             if (error instanceof Error && error.name !== 'AbortError') {
               toast.error('Failed to resume playback after preset change');
             }
           }
-        }, 100); // Small delay to ensure processing is complete
+        }, 150); // Small delay to ensure processing is complete
       }
     } catch (error) {
       console.error('Preset application failed:', error);
@@ -1325,10 +1366,30 @@ export default function NP3Page() {
    */
   const refreshVideoElements = () => {
     if (videoResult) {
+      // Clean up old audio element before creating new one
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement.removeEventListener('ended', () => {});
+        URL.revokeObjectURL(audioElement.src);
+        setAudioElement(null);
+      }
+
+      // Ensure playing state is false
+      setIsVideoPlaying(false);
+
       // Recreate audio element if needed
       if (videoResult.audioFile) {
         const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
         newAudio.preload = 'metadata';
+
+        const handleEnded = () => {
+          setIsVideoPlaying(false);
+          setCurrentDisplayFrame(0);
+          setVideoProgress(0);
+        };
+        newAudio.addEventListener('ended', handleEnded);
+
         setAudioElement(newAudio);
       }
     }
@@ -1463,15 +1524,27 @@ export default function NP3Page() {
 
     // If audio element doesn't exist or is invalid, recreate it
     if (!audioElement || audioElement.readyState === 0) {
+      // Clean up old audio element if it exists
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+        audioElement.removeEventListener('ended', () => {});
+        URL.revokeObjectURL(audioElement.src);
+      }
+
+      // Ensure playing state is false
+      setIsVideoPlaying(false);
+
       // console.log('Recreating audio element');
       const newAudio = new Audio(URL.createObjectURL(videoResult.audioFile));
       newAudio.preload = 'metadata';
 
-      newAudio.addEventListener('ended', () => {
+      const handleEnded = () => {
         setIsVideoPlaying(false);
         setCurrentDisplayFrame(0);
         setVideoProgress(0);
-      });
+      };
+      newAudio.addEventListener('ended', handleEnded);
 
       setAudioElement(newAudio);
     }
@@ -1604,6 +1677,12 @@ export default function NP3Page() {
   const startPlayback = async () => {
     if (!audioElement) return;
 
+    // Prevent multiple simultaneous play() calls
+    if (isVideoPlaying) {
+      console.log('Playback already in progress, ignoring duplicate play() call');
+      return;
+    }
+
     try {
       // Check if audio file has actual content (not just a header)
       if (audioElement.duration === 0 || audioElement.duration < 0.1) {
@@ -1618,16 +1697,21 @@ export default function NP3Page() {
       // Reset frame tracking
       setLastProcessedFrame(-1);
 
+      // Set playing state before play() to prevent duplicate calls
+      setIsVideoPlaying(true);
+
       // Use await to properly handle the promise
       await audioElement.play();
 
-      setIsVideoPlaying(true);
       console.log('Playback started successfully');
       toast.info(
         `Playing audio at ${playbackSpeed}x speed with synchronized dot matrix display...`
       );
     } catch (error) {
       console.error('Failed to start audio playback:', error);
+
+      // Reset playing state on error
+      setIsVideoPlaying(false);
 
       // Handle specific error types
       if (error instanceof Error) {
@@ -1639,7 +1723,6 @@ export default function NP3Page() {
       }
 
       toast.error('Failed to start playback. Please try again.');
-      setIsVideoPlaying(false);
     }
   };
 
@@ -1650,7 +1733,9 @@ export default function NP3Page() {
     if (!audioElement) return;
 
     try {
+      // Stop playback immediately
       audioElement.pause();
+      // Ensure playing state is false
       setIsVideoPlaying(false);
       // Reset frame tracking
       setLastProcessedFrame(-1);
